@@ -10,12 +10,14 @@ class Dispatcher(
     private val gateway: JobGateway,
     private val clock: BridgeClock,
 ) {
+    @Synchronized
     fun dispatchAll() {
         journal.liveWork()
             .filter { it.runState == RunState.ENQUEUED }
             .forEach { dispatchState(it) }
     }
 
+    @Synchronized
     fun dispatch(workId: String) {
         val state = journal.state(workId) ?: return
         if (state.runState == RunState.ENQUEUED) dispatchState(state)

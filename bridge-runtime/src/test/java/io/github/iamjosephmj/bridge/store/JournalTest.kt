@@ -8,6 +8,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -82,5 +83,16 @@ class JournalTest {
 
         // live kept
         assertThat(j.events("live")).hasSize(1)
+    }
+
+    @Test fun `appendAll with single-thread executor is visible to immediate events read`() {
+        // Test read-after-write visibility: append with real single-thread executor should block
+        val singleThreadExecutor = Executors.newSingleThreadExecutor()
+        val j = Journal(context, "single-thread-${System.nanoTime()}.db", singleThreadExecutor)
+        j.appendAll(listOf(enq("w1", 1L), enq("w2", 2L)))
+        // Immediate read should see both writes due to blocking appendAll
+        assertThat(j.events("w1")).hasSize(1)
+        assertThat(j.events("w2")).hasSize(1)
+        assertThat(j.liveWork().map { it.workId }).containsExactly("w1", "w2")
     }
 }

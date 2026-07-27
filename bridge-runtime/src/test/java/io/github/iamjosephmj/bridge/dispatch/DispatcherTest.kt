@@ -12,6 +12,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -48,5 +49,17 @@ class DispatcherTest {
         gateway.failNext = true
         dispatcher.dispatchAll()
         assertThat(journal.state("w1")!!.runState).isEqualTo(RunState.ENQUEUED)
+    }
+
+    @Test fun `read-after-write visibility with single-thread executor`() {
+        // Test that appending work immediately followed by dispatch sees the write
+        val singleThreadJournal = Journal(context, "d-single-${System.nanoTime()}.db", Executors.newSingleThreadExecutor())
+        val singleThreadDispatcher = Dispatcher(singleThreadJournal, gateway, clock)
+        singleThreadJournal.append(WorkEvent.Enqueued("w1", clock.now(), workerName = "w", generation = 1,
+            importance = 2, requiresCharging = false, requiresUnmetered = false))
+        // Immediate dispatch should see the written event (synchronous write + read-after-write visibility)
+        singleThreadDispatcher.dispatch("w1")
+        assertThat(gateway.enqueued).hasSize(1)
+        assertThat(singleThreadJournal.state("w1")!!.runState).isEqualTo(RunState.DISPATCHED)
     }
 }

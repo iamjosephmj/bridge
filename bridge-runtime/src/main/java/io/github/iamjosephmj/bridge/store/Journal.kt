@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
 
 private const val SCHEMA_VERSION = 1
 
@@ -34,11 +35,12 @@ class Journal(
     private val ioExecutor: Executor = Executors.newSingleThreadExecutor(),
 ) {
     private val db = JournalDb(context.applicationContext, dbName)
+    private var lastWriteTask: FutureTask<Unit>? = null
 
     fun append(event: WorkEvent) = appendAll(listOf(event))
 
     fun appendAll(events: List<WorkEvent>) {
-        ioExecutor.execute {
+        val task = FutureTask {
             try {
                 val w = db.writableDatabase
                 w.beginTransaction()
@@ -63,6 +65,9 @@ class Journal(
                 throw ex
             }
         }
+        lastWriteTask = task
+        ioExecutor.execute(task)
+        task.get()  // Block until write completes; propagate exceptions
     }
 
     fun events(workId: String): List<WorkEvent> {
@@ -129,6 +134,7 @@ class Journal(
     }
 
     fun close() {
+        lastWriteTask?.get()  // Wait for any pending write to complete
         ioExecutor.execute { db.close() }
     }
 }
