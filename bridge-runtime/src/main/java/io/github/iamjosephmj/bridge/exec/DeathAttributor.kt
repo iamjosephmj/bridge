@@ -33,19 +33,33 @@ class DeathAttributor(
     private val source: ProcessDeathSource,
     private val clock: BridgeClock,
 ) {
+    private fun parseBlackBoxSummary(summary: String): Triple<String, String, Int>? {
+        val parts = summary.split("|")
+        if (parts.size < 3) return null
+        val attempt = parts.last().toIntOrNull() ?: return null
+        val step = parts[parts.size - 2]
+        val workId = parts.dropLast(2).joinToString("|")
+        return Triple(workId, step, attempt)
+    }
+
     /** Call on init, before any new dispatch: settles work left RUNNING by a dead process. */
     fun attributeDeaths() {
         val running = journal.runningWork()
         if (running.isEmpty()) return
         val deaths = source.recentDeaths()
         for (work in running) {
-            val match = deaths.firstOrNull { it.summary?.startsWith("${work.workId}|") == true }
+            val match = deaths.firstOrNull { death ->
+                death.summary?.let { summary ->
+                    val parsed = parseBlackBoxSummary(summary)
+                    parsed?.first == work.workId
+                } ?: false
+            }
             if (match != null) {
-                val parts = match.summary!!.split("|")
+                val parsed = parseBlackBoxSummary(match.summary!!)!!
                 journal.append(WorkEvent.Died(
                     work.workId, clock.now(), exitReason = match.reason, rssKb = match.rssKb,
-                    step = parts.getOrElse(1) { "?" },
-                    attempt = parts.getOrNull(2)?.toIntOrNull() ?: work.attempt))
+                    step = parsed.second,
+                    attempt = parsed.third))
             } else {
                 journal.append(WorkEvent.Stopped(work.workId, clock.now(), STOP_REASON_UNKNOWN))
             }

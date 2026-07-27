@@ -54,4 +54,16 @@ class DeathAttributorTest {
         DeathAttributor(journal, FakeDeathSource(emptyList()), clock).attributeDeaths()
         assertThat(journal.state("w1")!!.runState).isEqualTo(RunState.SUCCEEDED)
     }
+
+    @Test fun `workId containing pipe is parsed correctly`() {
+        startWork("sync|photos")
+        DeathAttributor(journal, FakeDeathSource(listOf(
+            ProcessDeath(3L, reason = 2, rssKb = 256_000, summary = "sync|photos|chunk:2|1"))), clock)
+            .attributeDeaths()
+        val state = journal.state("sync|photos")!!
+        assertThat(state.runState).isEqualTo(RunState.ENQUEUED)
+        assertThat(state.lastDeath!!.exitReason).isEqualTo(2)
+        assertThat(state.lastDeath!!.step).isEqualTo("chunk:2")
+        assertThat(state.lastDeath!!.attempt).isEqualTo(1)
+    }
 }
