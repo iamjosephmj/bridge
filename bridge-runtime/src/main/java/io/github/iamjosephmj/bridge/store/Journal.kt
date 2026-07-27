@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
@@ -38,24 +39,29 @@ class Journal(
 
     fun appendAll(events: List<WorkEvent>) {
         ioExecutor.execute {
-            val w = db.writableDatabase
-            w.beginTransaction()
             try {
-                for (e in events) {
-                    w.insert("events", null, ContentValues().apply {
-                        put("work_id", e.workId); put("at", e.at)
-                        put("payload", EventCodec.encode(e))
-                    })
-                }
-                for (id in events.map { it.workId }.distinct()) {
-                    val st = foldLocked(w, id) ?: continue
-                    w.insertWithOnConflict("work_state", null, ContentValues().apply {
-                        put("work_id", id); put("run_state", st.runState.name)
-                        put("snapshot", "")
-                    }, SQLiteDatabase.CONFLICT_REPLACE)
-                }
-                w.setTransactionSuccessful()
-            } finally { w.endTransaction() }
+                val w = db.writableDatabase
+                w.beginTransaction()
+                try {
+                    for (e in events) {
+                        w.insert("events", null, ContentValues().apply {
+                            put("work_id", e.workId); put("at", e.at)
+                            put("payload", EventCodec.encode(e))
+                        })
+                    }
+                    for (id in events.map { it.workId }.distinct()) {
+                        val st = foldLocked(w, id) ?: continue
+                        w.insertWithOnConflict("work_state", null, ContentValues().apply {
+                            put("work_id", id); put("run_state", st.runState.name)
+                            put("snapshot", "")
+                        }, SQLiteDatabase.CONFLICT_REPLACE)
+                    }
+                    w.setTransactionSuccessful()
+                } finally { w.endTransaction() }
+            } catch (ex: Exception) {
+                Log.e("BridgeJournal", "appendAll failed", ex)
+                throw ex
+            }
         }
     }
 
@@ -86,18 +92,30 @@ class Journal(
 
     fun prune(olderThanMs: Long, now: Long) {
         ioExecutor.execute {
-            val w = db.writableDatabase
-            w.beginTransaction()
             try {
-                w.execSQL("""DELETE FROM events WHERE at < ? AND work_id IN
-                    (SELECT work_id FROM work_state
-                     WHERE run_state IN ('SUCCEEDED','FAILED','CANCELLED'))""",
-                    arrayOf<Any>(now - olderThanMs))
-                w.execSQL("""DELETE FROM work_state WHERE
-                    run_state IN ('SUCCEEDED','FAILED','CANCELLED') AND
-                    work_id NOT IN (SELECT DISTINCT work_id FROM events)""")
-                w.setTransactionSuccessful()
-            } finally { w.endTransaction() }
+                val w = db.writableDatabase
+                w.beginTransaction()
+                try {
+                    val cutoff = now - olderThanMs
+                    // Delete all events for terminal work items whose latest event is older than cutoff
+                    w.execSQL("""DELETE FROM events WHERE work_id IN
+                        (SELECT work_id FROM work_state
+                         WHERE run_state IN ('SUCCEEDED','FAILED','CANCELLED')
+                         AND work_id IN
+                           (SELECT work_id FROM events
+                            GROUP BY work_id
+                            HAVING MAX(at) < ?))""",
+                        arrayOf<Any>(cutoff))
+                    // Delete orphaned work_state rows
+                    w.execSQL("""DELETE FROM work_state WHERE
+                        run_state IN ('SUCCEEDED','FAILED','CANCELLED') AND
+                        work_id NOT IN (SELECT DISTINCT work_id FROM events)""")
+                    w.setTransactionSuccessful()
+                } finally { w.endTransaction() }
+            } catch (ex: Exception) {
+                Log.e("BridgeJournal", "prune failed", ex)
+                throw ex
+            }
         }
     }
 
@@ -110,5 +128,7 @@ class Journal(
         return foldWorkState(events)
     }
 
-    fun close() = db.close()
+    fun close() {
+        ioExecutor.execute { db.close() }
+    }
 }

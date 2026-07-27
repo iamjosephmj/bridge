@@ -54,4 +54,33 @@ class JournalTest {
         assertThat(j.events("old")).isEmpty()
         assertThat(j.events("live")).hasSize(1)
     }
+
+    @Test fun `prune respects per-work-item atomicity for straddling events`() {
+        val j = journal()
+        // terminal work with old Enqueued but newer Finished (straddles cutoff at 500)
+        j.append(enq("straddle", 100L))
+        j.appendAll(listOf(
+            WorkEvent.Started("straddle", 200L, 1, 1),
+            WorkEvent.Finished("straddle", 600L, success = true)))  // newer than cutoff
+        // fully old terminal work (all events < cutoff at 500)
+        j.append(enq("fullyOld", 50L))
+        j.appendAll(listOf(
+            WorkEvent.Started("fullyOld", 100L, 1, 1),
+            WorkEvent.Finished("fullyOld", 200L, success = true)))
+        // live work (not deleted regardless)
+        j.append(enq("live", 10L))
+
+        j.prune(olderThanMs = 500L, now = 1000L)  // cutoff = 500
+
+        // straddle kept intact because latest (600) >= cutoff (500)
+        assertThat(j.events("straddle")).hasSize(3)
+        assertThat(j.state("straddle")!!.runState).isEqualTo(RunState.SUCCEEDED)
+
+        // fullyOld fully removed (latest = 200 < 500)
+        assertThat(j.events("fullyOld")).isEmpty()
+        assertThat(j.state("fullyOld")).isNull()
+
+        // live kept
+        assertThat(j.events("live")).hasSize(1)
+    }
 }
