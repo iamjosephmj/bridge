@@ -15,6 +15,10 @@ class BenchApp : Application() {
             worker("bench-plain-MEDIUM_SYNC") { plain(CorpusItem.Kind.MEDIUM_SYNC) }
             worker("bench-chunked") { object : ChunkedWorker {
                 override suspend fun runChunk(ctx: RunContext, chunkIndex: Int): RunResult {
+                    // Recorded at the START of the chunk attempt (symmetric with
+                    // WmBenchWorker) so a mid-execution kill counts as an execution here too.
+                    ChunkExecutionRecorder.recordExecution(
+                        this@BenchApp, "bridge", ctx.workId, chunkIndex)
                     val kind = CorpusItem.Kind.LARGE_CHUNKED
                     simulateChunk(kind.bytes / kind.chunks, cacheDir, "${ctx.workId}-$chunkIndex")
                     return RunResult.Success

@@ -24,7 +24,6 @@ class BridgeBackend(private val context: Context) : Backend {
     override fun collect(): List<RunRecord> = CORPUS.map { item ->
         val events = Bridge.events(item.id)
         val starts = events.filterIsInstance<WorkEvent.Started>()
-        val chunks = events.filterIsInstance<WorkEvent.ChunkCompleted>()
         RunRecord(
             itemId = item.id, backend = name,
             enqueuedAt = events.filterIsInstance<WorkEvent.Enqueued>().lastOrNull()?.at ?: 0L,
@@ -32,7 +31,9 @@ class BridgeBackend(private val context: Context) : Backend {
             completedAt = events.filterIsInstance<WorkEvent.Finished>()
                 .lastOrNull { it.success }?.at,
             attempts = starts.size,
-            chunksReplayed = chunks.size - chunks.map { it.chunkIndex }.distinct().size)
+            // Measured, not assumed: see ChunkExecutionRecorder. Symmetric with the
+            // WorkManager backend's chunksReplayed computation.
+            chunksReplayed = ChunkExecutionRecorder.replayed(context, name, item.id))
     }
 
     companion object {

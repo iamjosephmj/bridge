@@ -2,10 +2,11 @@ package io.github.iamjosephmj.bench
 
 import android.content.Context
 import androidx.work.*
-import java.util.concurrent.ConcurrentHashMap
 
 /** WorkManager keeps no run history, so the bench self-instruments timestamps.
- *  Recorded in-process + flushed to SharedPreferences to survive process death. */
+ *  Recorded in-process + flushed to SharedPreferences to survive process death.
+ *  Writes use .commit() (synchronous), not .apply(): a process kill immediately after a
+ *  mark must not lose it, or the recorder fails at its one job of surviving process death. */
 object WmRecorder {
     private const val PREFS = "wm-recorder"
     lateinit var appContext: Context
@@ -17,12 +18,12 @@ object WmRecorder {
             if (key == "start") bumpAttempts(itemId)
             return
         }
-        prefs.edit().putLong(k, System.currentTimeMillis()).apply()
+        prefs.edit().putLong(k, System.currentTimeMillis()).commit()
         if (key == "start") bumpAttempts(itemId)
     }
     private fun bumpAttempts(itemId: String) {
         prefs.edit().putInt("$itemId:attempts",
-            prefs.getInt("$itemId:attempts", 0) + 1).apply()
+            prefs.getInt("$itemId:attempts", 0) + 1).commit()
     }
     fun record(itemId: String): RunRecord = RunRecord(
         itemId = itemId, backend = "workmanager",
@@ -30,7 +31,8 @@ object WmRecorder {
         firstStartAt = prefs.getLong("$itemId:start", 0L).takeIf { it != 0L },
         completedAt = prefs.getLong("$itemId:complete", 0L).takeIf { it != 0L },
         attempts = prefs.getInt("$itemId:attempts", 0),
-        chunksReplayed = 0)   // WorkManager has no chunk concept; restarts re-run everything
+        // Measured, not assumed: see ChunkExecutionRecorder. Filled in by collect() below.
+        chunksReplayed = 0)
 }
 
 class WmBenchWorker(context: Context, params: WorkerParameters) :
@@ -44,6 +46,7 @@ class WmBenchWorker(context: Context, params: WorkerParameters) :
             // No resume support: always from zero. That's the comparison point.
             for (i in 0 until chunks) {
                 if (isStopped) return Result.retry()
+                ChunkExecutionRecorder.recordExecution(applicationContext, "workmanager", itemId, i)
                 simulateChunk(bytes / chunks, applicationContext.cacheDir, "$itemId-$i")
             }
         } else {
@@ -78,5 +81,8 @@ class WorkManagerBackend(private val context: Context) : Backend {
         }
     }
 
-    override fun collect(): List<RunRecord> = CORPUS.map { WmRecorder.record(it.id) }
+    override fun collect(): List<RunRecord> = CORPUS.map { item ->
+        WmRecorder.record(item.id).copy(
+            chunksReplayed = ChunkExecutionRecorder.replayed(context, "workmanager", item.id))
+    }
 }
