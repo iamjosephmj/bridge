@@ -25,6 +25,16 @@ object WmRecorder {
         prefs.edit().putInt("$itemId:attempts",
             prefs.getInt("$itemId:attempts", 0) + 1).commit()
     }
+
+    /** Clears all marks before a fresh ENQUEUE_WM run so stale timestamps/attempts from a
+     *  prior run (static [CORPUS] ids) don't pollute this run's [record] results. Takes
+     *  `context` directly (rather than relying on [appContext] already being set) so it's
+     *  safe to call before [enqueueAll] on a fresh process. */
+    fun reset(context: Context) {
+        appContext = context.applicationContext
+        prefs.edit().clear().commit()
+    }
+
     fun record(itemId: String): RunRecord = RunRecord(
         itemId = itemId, backend = "workmanager",
         enqueuedAt = prefs.getLong("$itemId:enqueue", 0L),

@@ -45,6 +45,20 @@ object ChunkExecutionRecorder {
         return computeReplayed(totalExecutions, distinctCount)
     }
 
+    /**
+     * Clears every "$backend:*" entry before a fresh ENQUEUE_* run. Static [CORPUS] ids mean a
+     * second run against stale prefs would inflate execution counts (and thus [replayed]) with
+     * counts left over from a prior run rather than reflecting this run alone.
+     */
+    fun reset(context: Context, backend: String) {
+        val p = prefs(context)
+        val editor = p.edit()
+        for (key in p.all.keys) {
+            if (key.startsWith("$backend:")) editor.remove(key)
+        }
+        editor.commit()
+    }
+
     /** Pure arithmetic, split out so it's testable without a SharedPreferences/Context. */
     internal fun computeReplayed(totalExecutions: Int, distinctCount: Int): Int =
         (totalExecutions - distinctCount).coerceAtLeast(0)

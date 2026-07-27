@@ -10,8 +10,24 @@ import java.io.File
 class BenchReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            "bench.ENQUEUE_BRIDGE" -> BridgeBackend(context).enqueueAll(CORPUS)
-            "bench.ENQUEUE_WM" -> WorkManagerBackend(context).enqueueAll(CORPUS)
+            "bench.ENQUEUE_BRIDGE" -> {
+                // Static CORPUS ids mean a second run against stale chunk-recorder prefs
+                // would inflate chunksReplayed with counts left over from a prior run.
+                // (Bridge's own journal/event state needs no such reset: Bridge.enqueue KEEPs
+                // live work and bumps the generation for terminal work, and
+                // BridgeBackend.collect reads the LAST Enqueued event's timestamp — repeat
+                // runs are already handled there.)
+                ChunkExecutionRecorder.reset(context, "bridge")
+                BridgeBackend(context).enqueueAll(CORPUS)
+            }
+            "bench.ENQUEUE_WM" -> {
+                // Same static-CORPUS-id problem as above, plus WorkManager has its own
+                // self-instrumented timestamp/attempt prefs that must be cleared too, or a
+                // repeat run reports stale enqueue/start/complete times and attempt counts.
+                ChunkExecutionRecorder.reset(context, "workmanager")
+                WmRecorder.reset(context)
+                WorkManagerBackend(context).enqueueAll(CORPUS)
+            }
             "bench.DUMP_REPORT" -> {
                 val backend: Backend = if (intent.getStringExtra("backend") == "workmanager")
                     WorkManagerBackend(context) else BridgeBackend(context)
