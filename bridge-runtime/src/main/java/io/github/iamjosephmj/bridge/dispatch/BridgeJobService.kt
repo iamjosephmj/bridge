@@ -52,39 +52,83 @@ class WorkQueueDrainer(
 }
 
 /**
+ * All per-job-dispatch mutable state: its own coroutine scope (so cancelling one job's drain
+ * can never cancel another job's drain), its own stop flag, and its own in-flight
+ * workId -> JobWorkItem map (so completeWork always receives the instance dequeueWork gave it,
+ * scoped to the job that dequeued it).
+ */
+class JobExecution(
+    val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+) {
+    val stopped = AtomicBoolean(false)
+    val inFlight = ConcurrentHashMap<String, JobWorkItem>()
+}
+
+/**
+ * Registry of in-flight [JobExecution]s keyed by `JobParameters.jobId`. A single
+ * [BridgeJobService] component instance can receive concurrent onStartJob/onStopJob calls for
+ * distinct job ids (e.g. multiple host job classes all resolving to the same component); this
+ * registry ensures state for one job id is never shared with, or torn down by, another.
+ */
+class JobExecutions {
+    private val executions = ConcurrentHashMap<Int, JobExecution>()
+
+    /** Creates and registers a fresh execution for [jobId], replacing (and cancelling) any stale one. */
+    fun start(jobId: Int): JobExecution {
+        val execution = JobExecution()
+        executions.put(jobId, execution)?.scope?.cancel()
+        return execution
+    }
+
+    fun get(jobId: Int): JobExecution? = executions[jobId]
+
+    /** Marks [jobId]'s execution stopped, cancels its scope, and removes it from the registry. */
+    fun stop(jobId: Int): JobExecution? {
+        val execution = executions.remove(jobId) ?: return null
+        execution.stopped.set(true)
+        execution.scope.cancel()
+        return execution
+    }
+
+    /** Removes [jobId]'s execution after it drains to completion normally (not via stop()). */
+    fun finish(jobId: Int) {
+        executions.remove(jobId)
+    }
+}
+
+/**
  * Real dequeueWork drain loop. Kept thin: all branching semantics live in [WorkQueueDrainer],
  * this class only adapts JobScheduler's [JobWorkItem] API to the drainer's plain-data seam
- * (dequeue/complete/isStopped) and manages the coroutine lifecycle.
+ * (dequeue/complete/isStopped) and manages per-jobId coroutine lifecycles via [JobExecutions].
  */
 class BridgeJobService : JobService() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val stopped = AtomicBoolean(false)
-
-    // dequeueWork() returns a JobWorkItem instance that completeWork() must receive back
-    // unchanged; track the in-flight items by workId so complete() (a WorkItemPayload lambda)
-    // can look up the original item.
-    private val inFlight = ConcurrentHashMap<String, JobWorkItem>()
+    private val executions = JobExecutions()
 
     override fun onStartJob(params: JobParameters): Boolean {
         val runner = BridgeServices.runner ?: return false // not initialized; drop the job
-        stopped.set(false)
-        scope.launch {
+        val execution = executions.start(params.jobId)
+        execution.scope.launch {
             try {
-                val wantsReschedule = WorkQueueDrainer(runner, scope).drain(
-                    dequeue = { nextItem(params) },
-                    complete = { payload -> completePending(params, payload) },
-                    isStopped = { stopped.get() },
+                val wantsReschedule = WorkQueueDrainer(runner, execution.scope).drain(
+                    dequeue = { nextItem(params, execution) },
+                    complete = { payload -> completePending(params, execution, payload) },
+                    isStopped = { execution.stopped.get() },
                 )
-                if (!stopped.get()) jobFinished(params, wantsReschedule)
+                if (!execution.stopped.get()) {
+                    executions.finish(params.jobId)
+                    jobFinished(params, wantsReschedule)
+                }
             } catch (e: CancellationException) {
-                // Normal shutdown: onStopJob already cancelled the scope and returned true
-                // (reschedule) to the platform. jobFinished must NOT be called here.
+                // This job's own cancellation only (its scope, not any other job's): either
+                // onStopJob already removed it from the registry and requested reschedule via
+                // its own return true, or the worker itself threw cancellation. Either way,
+                // jobFinished must NOT be called here, and no other job's state is touched.
             }
         }
         return true
     }
 
-    private fun nextItem(params: JobParameters): Pair<WorkItemPayload, Int>? {
+    private fun nextItem(params: JobParameters, execution: JobExecution): Pair<WorkItemPayload, Int>? {
         val item = try {
             params.dequeueWork()
         } catch (e: Exception) {
@@ -99,20 +143,19 @@ class BridgeJobService : JobService() {
             return null
         }
 
-        inFlight[workId] = item
+        execution.inFlight[workId] = item
         val generation = item.intent.getIntExtra(EXTRA_GENERATION, 0)
         return WorkItemPayload(workId, generation) to item.deliveryCount
     }
 
-    private fun completePending(params: JobParameters, payload: WorkItemPayload) {
-        inFlight.remove(payload.workId)?.let {
+    private fun completePending(params: JobParameters, execution: JobExecution, payload: WorkItemPayload) {
+        execution.inFlight.remove(payload.workId)?.let {
             try { params.completeWork(it) } catch (e: Exception) { /* job already gone */ }
         }
     }
 
     override fun onStopJob(params: JobParameters): Boolean {
-        stopped.set(true)
-        scope.cancel()
+        executions.stop(params.jobId)
         return true // reschedule: undelivered items redeliver with a bumped deliveryCount
     }
 }
