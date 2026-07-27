@@ -102,4 +102,26 @@ class WorkRunnerTest {
         assertThat(outcome).isEqualTo(RunOutcome.RETRY)
         assertThat(journal.state("w1")!!.nextChunk).isEqualTo(3)
     }
+
+    @Test fun `unknown worker name journals one Finished and fails`() = runTest {
+        enqueue(worker = "nonexistent")
+        val outcome = runner().run("w1", 1, deliveryCount = 1) { false }
+        assertThat(outcome).isEqualTo(RunOutcome.FAILED)
+        val finishedEvents = journal.events("w1").filterIsInstance<WorkEvent.Finished>()
+        assertThat(finishedEvents).hasSize(1)
+        assertThat(finishedEvents.single().success).isFalse()
+    }
+
+    @Test fun `system stop between chunks at maxAttempts still yields RETRY with stopReason=1`() = runTest {
+        var calls = 0
+        registry.register("chunky") { object : ChunkedWorker {
+            override suspend fun runChunk(ctx: RunContext, chunkIndex: Int): RunResult {
+                calls++; return RunResult.Success
+            } } }
+        enqueue(worker = "chunky", chunks = 10, maxAttempts = 1)
+        val outcome = runner().run("w1", 1, deliveryCount = 1) { calls >= 2 }
+        assertThat(outcome).isEqualTo(RunOutcome.RETRY)
+        val stopped = journal.events("w1").filterIsInstance<WorkEvent.Stopped>().single()
+        assertThat(stopped.stopReason).isEqualTo(1)  // STOP_REASON_SYSTEM_STOP
+    }
 }

@@ -9,11 +9,19 @@ import io.github.iamjosephmj.bridge.api.WorkerRegistry
 import io.github.iamjosephmj.bridge.store.Journal
 import io.github.iamjosephmj.bridge.store.RunState
 import io.github.iamjosephmj.bridge.store.WorkEvent
+import kotlinx.coroutines.CancellationException
 
 enum class RunOutcome { COMPLETED, FAILED, RETRY }
 
 private const val STOP_REASON_RETRY = 0
 private const val STOP_REASON_SYSTEM_STOP = 1
+
+/** Internal signal from chunked worker: distinguishes system stop from worker results. */
+private sealed class ChunkRunResult {
+    data class WorkerResult(val result: RunResult) : ChunkRunResult()
+    object SystemStopped : ChunkRunResult()
+    object AllCompleted : ChunkRunResult()
+}
 
 class WorkRunner(
     private val journal: Journal,
@@ -40,7 +48,14 @@ class WorkRunner(
 
         try {
             val result: RunResult = if (state.chunkCount > 0 && worker is ChunkedWorker) {
-                runChunked(worker, ctx, workId, state.nextChunk, state.chunkCount, isStopped)
+                when (val chunkResult = runChunked(worker, ctx, workId, state.nextChunk, state.chunkCount, isStopped)) {
+                    is ChunkRunResult.SystemStopped -> {
+                        journal.append(WorkEvent.Stopped(workId, clock.now(), STOP_REASON_SYSTEM_STOP))
+                        return RunOutcome.RETRY
+                    }
+                    is ChunkRunResult.WorkerResult -> chunkResult.result
+                    ChunkRunResult.AllCompleted -> RunResult.Success
+                }
             } else {
                 blackBox.stamp(workId, "run", deliveryCount)
                 worker.run(ctx)
@@ -52,6 +67,8 @@ class WorkRunner(
                     .let { RunOutcome.FAILED }
                 is RunResult.Retry -> retryOrFail(workId, deliveryCount, state.maxAttempts, before)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             return retryOrFail(workId, deliveryCount, state.maxAttempts, before)
         } finally {
@@ -59,20 +76,20 @@ class WorkRunner(
         }
     }
 
-    /** Returns Success when all chunks done, Retry when stopped mid-way, Failure/Retry per chunk result. */
+    /** Returns AllCompleted when all chunks done, SystemStopped when stop signal fires, WorkerResult per chunk result. */
     private suspend fun runChunked(worker: ChunkedWorker, ctx: RunContext, workId: String,
                                    fromChunk: Int, chunkCount: Int,
-                                   isStopped: () -> Boolean): RunResult {
+                                   isStopped: () -> Boolean): ChunkRunResult {
         for (idx in fromChunk until chunkCount) {
-            if (isStopped()) return RunResult.Retry
+            if (isStopped()) return ChunkRunResult.SystemStopped
             blackBox.stamp(workId, "chunk:$idx", ctx.attempt)
             when (val r = worker.runChunk(ctx, idx)) {
                 is RunResult.Success ->
                     journal.append(WorkEvent.ChunkCompleted(workId, clock.now(), idx))
-                else -> return r
+                else -> return ChunkRunResult.WorkerResult(r)
             }
         }
-        return RunResult.Success
+        return ChunkRunResult.AllCompleted
     }
 
     private fun finish(workId: String, before: CostSnapshot, success: Boolean) {
