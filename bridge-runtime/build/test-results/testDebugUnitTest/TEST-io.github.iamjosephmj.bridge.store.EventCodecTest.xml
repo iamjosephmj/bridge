@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="io.github.iamjosephmj.bridge.store.EventCodecTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-07-27T22:26:02.008Z" hostname="joseph-ROG-Strix-G814JV-G814JV" time="0.014">
-  <properties/>
-  <testcase name="round-trips every event type" classname="io.github.iamjosephmj.bridge.store.EventCodecTest" time="0.014"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

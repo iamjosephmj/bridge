@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="io.github.iamjosephmj.bridge.exec.CostMeterTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-27T22:26:01.522Z" hostname="joseph-ROG-Strix-G814JV-G814JV" time="0.002">
-  <properties/>
-  <testcase name="snapshot delta is field-wise and clamped at zero" classname="io.github.iamjosephmj.bridge.exec.CostMeterTest" time="0.001"/>
-  <testcase name="fake meter returns snapshots in order then repeats the last" classname="io.github.iamjosephmj.bridge.exec.CostMeterTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

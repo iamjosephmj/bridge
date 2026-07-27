@@ -1,2 +1,0 @@
-07-28 00:25:36.793 30690 30707 I TestRunner: started: unconstrained_work_executes_via_real_jobscheduler(io.github.iamjosephmj.bridge.EndToEndTest)
-07-28 00:25:36.815 30690 30707 I TestRunner: finished: unconstrained_work_executes_via_real_jobscheduler(io.github.iamjosephmj.bridge.EndToEndTest)

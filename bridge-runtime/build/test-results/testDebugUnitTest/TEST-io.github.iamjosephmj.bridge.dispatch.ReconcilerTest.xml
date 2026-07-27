@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="io.github.iamjosephmj.bridge.dispatch.ReconcilerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-27T22:26:01.418Z" hostname="joseph-ROG-Strix-G814JV-G814JV" time="0.101">
-  <properties/>
-  <testcase name="force-stop cancels gateway, batches Stopped for live work, and re-dispatches" classname="io.github.iamjosephmj.bridge.dispatch.ReconcilerTest" time="0.039"/>
-  <testcase name="no force-stop leaves dispatched work untouched and appends no force-stop Stopped events" classname="io.github.iamjosephmj.bridge.dispatch.ReconcilerTest" time="0.06"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

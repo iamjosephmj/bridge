@@ -1,9 +1,0 @@
-io.github.iamjosephmj.bridge.bridge-runtime-pngs-0 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/generated/res/pngs/debug
-io.github.iamjosephmj.bridge.bridge-runtime-updated_navigation_xml-1 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/generated/updated_navigation_xml/debug
-io.github.iamjosephmj.bridge.bridge-runtime-mergeDebugResources-2 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/incremental/debug/mergeDebugResources/merged.dir
-io.github.iamjosephmj.bridge.bridge-runtime-mergeDebugResources-3 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/incremental/debug/mergeDebugResources/stripped.dir
-io.github.iamjosephmj.bridge.bridge-runtime-debug-4 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_res/debug/mergeDebugResources
-io.github.iamjosephmj.bridge.bridge-runtime-debug-5 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/packaged_res/debug/packageDebugResources
-io.github.iamjosephmj.bridge.bridge-runtime-debug-6 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/debug/res
-io.github.iamjosephmj.bridge.bridge-runtime-main-7 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/res
-gradleHome-0 /home/joseph/.gradle
