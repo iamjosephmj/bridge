@@ -313,6 +313,29 @@ tier is visible in diagnostics, never silently absorbed:
   corpus, then force-stops, reboots, clears caches, toggles Doze
   (`adb shell dumpsys deviceidle`), and asserts zero lost work from the
   journal.
+- **Benchmark harness (first-class M1 deliverable):** a dedicated app module
+  (`bench/`) that runs the *same declarative workload corpus* through two
+  backends — WorkManager 2.10 and Bridge — and produces the comparison numbers
+  that validate (or refute) the scheduling claims:
+  - **Metrics:** time-to-first-execution and time-to-completion per work item;
+    work-loss rate after force-stop / reboot / Doze cycles; retry-from-zero vs.
+    chunk-resume progress waste (bytes re-transferred); measured per-run cost
+    via HealthStats snapshots (taken by the harness itself, so WorkManager runs
+    are measured the same way Bridge's are); cold starts attributed to jobs
+    (API 35+).
+  - **Corpus:** small ping (4 KB), medium sync (5 MB), large chunked transfer
+    (200 MB), periodic 15-min work, deadline work — each under constraint
+    profiles (none / unmetered+charging / expedited).
+  - **Scenario driver:** scripted `adb` scenarios (force-stop, reboot,
+    `dumpsys deviceidle` force-idle/unforce cycles, standby-bucket demotion via
+    `am set-standby-bucket`) so runs are reproducible across devices.
+  - **Output:** one JSON report per (device, backend, scenario); a report
+    generator renders the side-by-side table. The device matrix prioritizes
+    Pixel (baseline), MIUI/HyperOS, ColorOS, One UI.
+  - **Honesty rule:** the harness ships publicly with the library; results are
+    published whether they flatter Bridge or not — flat results still validate
+    the glass-box half, and the harness itself doubles as the OEM behavior
+    dataset collector.
 
 ## 7. Risks
 
@@ -329,8 +352,10 @@ tier is visible in diagnostics, never silently absorbed:
 
 - **M1 — Core scheduler (v0.1):** L1 journal, L2 host jobs + conformance
   self-test + reconciliation, L5 leases/black box/HealthStats, minimal L6
-  runtime API. Signature capability: chunk-exact resumable transfer surviving
-  quota kill, force-stop, and reboot.
+  runtime API, **and the benchmark harness (§6)** — the empirical proof is a
+  deliverable of the same milestone as the claims it tests. Signature
+  capability: chunk-exact resumable transfer surviving quota kill, force-stop,
+  and reboot, with published side-by-side numbers vs. WorkManager.
 - **M2 — Glass box (v0.2):** L3 signal hub complete, `whyPending()`, ledger,
   diagnostics; simulator released with it. Signature demo: same stalled job —
   WorkManager says `ENQUEUED`, Bridge explains it.
