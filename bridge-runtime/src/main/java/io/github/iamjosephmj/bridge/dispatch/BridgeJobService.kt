@@ -97,9 +97,35 @@ class JobExecutions {
 }
 
 /**
- * Real dequeueWork drain loop. Kept thin: all branching semantics live in [WorkQueueDrainer],
- * this class only adapts JobScheduler's [JobWorkItem] API to the drainer's plain-data seam
- * (dequeue/complete/isStopped) and manages per-jobId coroutine lifecycles via [JobExecutions].
+ * Runs a single 1:1-fallback job (one JobInfo per work item, see [OneToOneJobGateway]) to
+ * completion. Extracted from [BridgeJobService] for the same reason [WorkQueueDrainer] is: so
+ * the outcome/reschedule decision is testable without a real [JobService]/[JobParameters]
+ * round-trip. There is no JobWorkItem here (the 1:1 path never calls dequeueWork), so there is
+ * only ever one item and no `complete` callback — the platform's own jobFinished retires the
+ * whole job.
+ *
+ * A real per-delivery attempt count isn't available on this path (JobScheduler redelivers the
+ * whole job, not a per-item counter), so `deliveryCount` is fixed at 1 — acceptable for M1's
+ * fallback path since it only exists for devices whose scheduler can't sustain the richer
+ * multiplexed path in the first place.
+ */
+class OneToOneDispatcher(private val runner: WorkRunner) {
+    /**
+     * Returns `true`/`false` as the wantsReschedule flag to pass to `jobFinished`, or `null` if
+     * [isStopped] flipped true (onStopJob already tore this execution down) — in that case the
+     * caller must NOT call `jobFinished` at all, matching the multiplexed path's contract.
+     */
+    suspend fun run(workId: String, generation: Int, isStopped: () -> Boolean): Boolean? {
+        val outcome = runner.run(workId, generation, deliveryCount = 1, isStopped)
+        return if (isStopped()) null else outcome == RunOutcome.RETRY
+    }
+}
+
+/**
+ * Real dequeueWork drain loop. Kept thin: all branching semantics live in [WorkQueueDrainer]
+ * (multiplexed path) / [OneToOneDispatcher] (1:1 fallback path); this class only adapts
+ * JobScheduler's APIs to those plain-data seams and manages per-jobId coroutine lifecycles via
+ * [JobExecutions].
  */
 class BridgeJobService : JobService() {
     private val executions = JobExecutions()
@@ -107,6 +133,29 @@ class BridgeJobService : JobService() {
     override fun onStartJob(params: JobParameters): Boolean {
         val runner = BridgeServices.runner ?: return false // not initialized; drop the job
         val execution = executions.start(params.jobId)
+
+        // 1:1 fallback jobs (OneToOneJobGateway) carry the single workId/generation they were
+        // scheduled for in the JobInfo's extras and never enqueue a JobWorkItem, so there is
+        // nothing to dequeueWork() — detect them up front rather than dequeuing first.
+        val oneToOneWorkId = params.extras.getString(EXTRA_WORK_ID)
+        if (oneToOneWorkId != null) {
+            val generation = params.extras.getInt(EXTRA_GENERATION, 0)
+            execution.scope.launch {
+                try {
+                    val wantsReschedule = OneToOneDispatcher(runner)
+                        .run(oneToOneWorkId, generation, isStopped = { execution.stopped.get() })
+                    if (wantsReschedule != null) {
+                        executions.finish(params.jobId)
+                        jobFinished(params, wantsReschedule)
+                    }
+                } catch (e: CancellationException) {
+                    // Same contract as the multiplexed path below: this job's own cancellation
+                    // only; jobFinished must NOT be called here.
+                }
+            }
+            return true
+        }
+
         execution.scope.launch {
             try {
                 val wantsReschedule = WorkQueueDrainer(runner, execution.scope).drain(

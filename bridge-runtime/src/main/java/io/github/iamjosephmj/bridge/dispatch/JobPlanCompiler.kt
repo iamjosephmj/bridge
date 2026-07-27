@@ -4,13 +4,22 @@ import android.app.job.JobInfo
 import android.content.ComponentName
 import android.content.Context
 import android.os.Build
+import android.os.PersistableBundle
 
 object JobPlanCompiler {
+    /**
+     * @param jobId defaults to [hostClass]'s fixed jobId (the multiplexed path); callers that
+     * need one JobInfo per work item (the 1:1 fallback path) pass a per-item jobId instead.
+     * @param extras attached verbatim to the built JobInfo (the 1:1 path uses this to carry
+     * the workId/generation since it never touches JobWorkItem/dequeueWork).
+     */
     fun jobInfo(context: Context, hostClass: HostJobClass,
-                serviceComponent: ComponentName): JobInfo {
-        val b = JobInfo.Builder(hostClass.jobId, serviceComponent)
+                serviceComponent: ComponentName, jobId: Int = hostClass.jobId,
+                extras: PersistableBundle? = null): JobInfo {
+        val b = JobInfo.Builder(jobId, serviceComponent)
             .setBackoffCriteria(30_000L, JobInfo.BACKOFF_POLICY_EXPONENTIAL)
             .setPersisted(false)   // reconciler reschedules; WorkManager-proven pattern
+        if (extras != null) b.setExtras(extras)
         when (hostClass) {
             HostJobClass.DEFAULT ->
                 b.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)

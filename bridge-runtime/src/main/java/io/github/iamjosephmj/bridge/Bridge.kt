@@ -44,7 +44,11 @@ object Bridge {
         clock = b.clock
         val j = Journal(appContext, b.dbName,
             b.ioExecutor ?: Executors.newSingleThreadExecutor())
-        val gw = b.gateway ?: SystemJobGateway(appContext)
+        val gw = b.gateway ?: SelectingJobGateway(
+            SystemJobGateway(appContext),
+            OneToOneJobGateway(appContext),
+            Conformance(appContext.getSharedPreferences(
+                "bridge.conformance", Context.MODE_PRIVATE)))
         val d = Dispatcher(j, gw, b.clock)
         val runner = WorkRunner(j, b.registry, SystemBlackBox(appContext),
             b.costMeter ?: HealthStatsCostMeter(appContext), b.clock)

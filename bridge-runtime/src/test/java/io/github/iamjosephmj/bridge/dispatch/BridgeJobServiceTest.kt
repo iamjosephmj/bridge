@@ -102,4 +102,43 @@ class BridgeJobServiceTest {
         }
         assertThat(completed).isEmpty()
     }
+
+    @Test fun `OneToOneDispatcher completes successfully with no reschedule`() = runTest {
+        registry.register("ok") { object : BridgeWorker {
+            override suspend fun run(ctx: RunContext) = RunResult.Success } }
+        enqueue("w1", "ok")
+        val wantsReschedule = OneToOneDispatcher(runner).run("w1", 1, isStopped = { false })
+        assertThat(wantsReschedule).isFalse()
+        assertThat(journal.state("w1")!!.runState).isEqualTo(RunState.SUCCEEDED)
+    }
+
+    @Test fun `OneToOneDispatcher requests reschedule on RETRY`() = runTest {
+        registry.register("flaky") { object : BridgeWorker {
+            override suspend fun run(ctx: RunContext) = RunResult.Retry } }
+        enqueue("w1", "flaky")
+        val wantsReschedule = OneToOneDispatcher(runner).run("w1", 1, isStopped = { false })
+        assertThat(wantsReschedule).isTrue()
+    }
+
+    @Test fun `OneToOneDispatcher returns null when stopped, caller must not call jobFinished`() = runTest {
+        registry.register("ok") { object : BridgeWorker {
+            override suspend fun run(ctx: RunContext) = RunResult.Success } }
+        enqueue("w1", "ok")
+        val wantsReschedule = OneToOneDispatcher(runner).run("w1", 1, isStopped = { true })
+        assertThat(wantsReschedule).isNull()
+    }
+
+    @Test fun `OneToOneDispatcher propagates worker cancellation`() = runTest {
+        registry.register("cancelled") { object : BridgeWorker {
+            override suspend fun run(ctx: RunContext): RunResult {
+                throw CancellationException("stopped")
+            } } }
+        enqueue("w1", "cancelled")
+        try {
+            OneToOneDispatcher(runner).run("w1", 1, isStopped = { false })
+            throw AssertionError("expected CancellationException")
+        } catch (e: CancellationException) {
+            // expected: normal shutdown signal, not a crash
+        }
+    }
 }
