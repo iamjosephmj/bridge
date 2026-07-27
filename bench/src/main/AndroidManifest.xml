@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:name=".BenchApp" android:label="Bridge Bench">
+        <receiver android:name=".BenchReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="bench.ENQUEUE_BRIDGE" />
+                <action android:name="bench.ENQUEUE_WM" />
+                <action android:name="bench.DUMP_REPORT" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

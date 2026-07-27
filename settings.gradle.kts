@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "bridge"
 include(":app")
 include(":bridge-runtime")
+include(":bench")
