@@ -1,0 +1,4 @@
+io.github.iamjosephmj.bridge.test.bridge-runtime-mergeDebugUnitTestResources-0 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/incremental/debugUnitTest/mergeDebugUnitTestResources/merged.dir
+io.github.iamjosephmj.bridge.test.bridge-runtime-mergeDebugUnitTestResources-1 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/incremental/debugUnitTest/mergeDebugUnitTestResources/stripped.dir
+io.github.iamjosephmj.bridge.test.bridge-runtime-debugUnitTest-2 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_res/debugUnitTest/mergeDebugUnitTestResources
+gradleHome-0 /home/joseph/.gradle

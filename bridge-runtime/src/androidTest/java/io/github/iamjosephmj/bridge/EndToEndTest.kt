@@ -1,0 +1,70 @@
+package io.github.iamjosephmj.bridge
+
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.google.common.truth.Truth.assertThat
+import io.github.iamjosephmj.bridge.api.*
+import io.github.iamjosephmj.bridge.store.RunState
+import org.junit.BeforeClass
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
+/**
+ * End-to-end smoke test through the REAL JobScheduler on a device.
+ *
+ * Bridge.initialize is idempotent per-process, and both test methods below run in the
+ * same instrumentation process. If each test method called Bridge.initialize with only
+ * its own worker registered, whichever test ran second would find the registry already
+ * initialized (a no-op) and its worker would never be registered, causing its job to
+ * silently never dispatch to a real worker. To avoid that, both workers ("smoke" and
+ * "chunky") are registered together in a single initialize call that runs once for the
+ * whole class (via a companion/@BeforeClass), and the test methods only enqueue + await.
+ */
+@RunWith(AndroidJUnit4::class)
+class EndToEndTest {
+
+    companion object {
+        @JvmStatic
+        @BeforeClass
+        fun setUpBridge() {
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            Bridge.initialize(context) {
+                worker("smoke") { object : BridgeWorker {
+                    override suspend fun run(ctx: RunContext): RunResult {
+                        smokeLatch.countDown(); return RunResult.Success
+                    } } }
+                worker("chunky") { object : ChunkedWorker {
+                    override suspend fun runChunk(ctx: RunContext, chunkIndex: Int): RunResult {
+                        chunkyLatch.countDown(); return RunResult.Success
+                    } } }
+            }
+        }
+
+        // Latches are recreated per test via reset(); declared here so the workers
+        // (registered once) can always reach the "current" latch.
+        @JvmStatic var smokeLatch = CountDownLatch(1)
+        @JvmStatic var chunkyLatch = CountDownLatch(5)
+    }
+
+    @Test fun unconstrained_work_executes_via_real_jobscheduler() {
+        smokeLatch = CountDownLatch(1)
+        Bridge.enqueue(workRequest("smoke-${System.currentTimeMillis()}", "smoke"))
+        // Unconstrained DEFAULT host job should run promptly on an unthrottled test device.
+        assertThat(smokeLatch.await(60, TimeUnit.SECONDS)).isTrue()
+    }
+
+    @Test fun chunked_work_records_progress() {
+        chunkyLatch = CountDownLatch(5)
+        val name = "chunky-${System.currentTimeMillis()}"
+        Bridge.enqueue(workRequest(name, "chunky") { chunks(count = 5) })
+        assertThat(chunkyLatch.await(60, TimeUnit.SECONDS)).isTrue()
+        // Poll briefly for the terminal state (Finished lands just after the last chunk).
+        val deadline = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < deadline &&
+               Bridge.state(name)?.runState != RunState.SUCCEEDED) Thread.sleep(200)
+        assertThat(Bridge.state(name)!!.runState).isEqualTo(RunState.SUCCEEDED)
+        assertThat(Bridge.state(name)!!.nextChunk).isEqualTo(5)
+    }
+}

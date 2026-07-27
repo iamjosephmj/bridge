@@ -1,0 +1,32 @@
+EXECUTING: /home/joseph/Android/Sdk/build-tools/36.0.0/aapt dump badging /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/outputs/apk/androidTest/debug/bridge-runtime-debug-androidTest.apk
+CURRENT_WORKING_DIRECTORY: /home/joseph/AndroidStudioProjects/bridge
+START_TIME: 2026-07-28 00:25:36.818
+START_TIME-NANOS: 2026-07-28 00:25:36.818818595
+ENVIRONMENT:
+
+*****************************************
+STDOUT/STDERR BELOW
+===================
+package: name='io.github.iamjosephmj.bridge.test' versionCode='' versionName='' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+sdkVersion:'26'
+targetSdkVersion:'36'
+uses-permission: name='android.permission.RECEIVE_BOOT_COMPLETED'
+uses-permission: name='android.permission.ACCESS_NETWORK_STATE'
+uses-permission: name='android.permission.REORDER_TASKS'
+application: label='' icon=''
+application-debuggable
+feature-group: label=''
+  uses-feature: name='android.hardware.faketouch'
+  uses-implied-feature: name='android.hardware.faketouch' reason='default feature for all apps'
+other-activities
+other-receivers
+other-services
+supports-screens: 'small' 'normal' 'large' 'xlarge'
+supports-any-density: 'true'
+locales: '--_--'
+densities: '160'
+===================
+END_TIME: 2026-07-28 00:25:36.844
+END_TIME-NANOS: 2026-07-28 00:25:36.844851834
+DURATION: 26ms
+EXIT CODE: 0

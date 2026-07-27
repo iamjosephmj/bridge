@@ -1,0 +1,116 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="io.github.iamjosephmj.bridge.test" >
+4
+5    <uses-sdk
+5-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest15182112342660831584.xml:5:5-74
+6        android:minSdkVersion="26"
+6-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest15182112342660831584.xml:5:15-41
+7        android:targetSdkVersion="36" />
+7-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest15182112342660831584.xml:5:42-71
+8
+9    <instrumentation
+9-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest15182112342660831584.xml:9:5-11:83
+10        android:name="androidx.test.runner.AndroidJUnitRunner"
+10-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest15182112342660831584.xml:9:22-76
+11        android:label="Tests for io.github.iamjosephmj.bridge.test"
+11-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest15182112342660831584.xml:11:22-81
+12        android:targetPackage="io.github.iamjosephmj.bridge.test" />
+12-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest15182112342660831584.xml:10:22-79
+13
+14    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+14-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-81
+14-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:22-78
+15    <!--
+16         Required by JobPlanCompiler: every host job class sets a network-type constraint
+17         (setRequiredNetworkType), and JobScheduler.enqueue/schedule throws SecurityException
+18         at the binder layer without this permission. Found via the real-device instrumented
+19         smoke test (Task 13) — jobs were silently never created on API 36 without it.
+20    -->
+21    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+21-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:14:5-79
+21-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:14:22-76
+22    <uses-permission android:name="android.permission.REORDER_TASKS" />
+22-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:24:5-72
+22-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:24:22-69
+23
+24    <application android:debuggable="true" >
+24-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest15182112342660831584.xml:7:5-46
+24-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest15182112342660831584.xml:7:18-43
+25        <service
+25-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:17:9-20:72
+26            android:name="io.github.iamjosephmj.bridge.dispatch.BridgeJobService"
+26-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:18:13-82
+27            android:exported="false"
+27-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:19:13-37
+28            android:permission="android.permission.BIND_JOB_SERVICE" />
+28-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:20:13-69
+29
+30        <receiver
+30-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:22:9-29:20
+31            android:name="io.github.iamjosephmj.bridge.dispatch.BridgeRescheduleReceiver"
+31-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:23:13-90
+32            android:exported="false" >
+32-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:24:13-37
+33            <intent-filter>
+33-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:25:13-28:29
+34                <action android:name="android.intent.action.BOOT_COMPLETED" />
+34-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:26:17-79
+34-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:26:25-76
+35                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+35-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:27:17-84
+35-->[:bridge-runtime] /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:27:25-81
+36            </intent-filter>
+37        </receiver>
+38
+39        <activity
+39-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:27:9-34:20
+40            android:name="androidx.test.core.app.InstrumentationActivityInvoker$BootstrapActivity"
+40-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:28:13-99
+41            android:exported="true"
+41-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:29:13-36
+42            android:theme="@style/WhiteBackgroundTheme" >
+42-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:30:13-56
+43            <intent-filter android:priority="-100" >
+43-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:31:13-33:29
+43-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:31:28-51
+44                <category android:name="android.intent.category.LAUNCHER" />
+44-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:32:17-77
+44-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:32:27-74
+45            </intent-filter>
+46        </activity>
+47        <activity
+47-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:35:9-42:20
+48            android:name="androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity"
+48-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:36:13-95
+49            android:exported="true"
+49-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:37:13-36
+50            android:theme="@style/WhiteBackgroundTheme" >
+50-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:38:13-56
+51            <intent-filter android:priority="-100" >
+51-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:31:13-33:29
+51-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:31:28-51
+52                <category android:name="android.intent.category.LAUNCHER" />
+52-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:32:17-77
+52-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:32:27-74
+53            </intent-filter>
+54        </activity>
+55        <activity
+55-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:43:9-50:20
+56            android:name="androidx.test.core.app.InstrumentationActivityInvoker$EmptyFloatingActivity"
+56-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:44:13-103
+57            android:exported="true"
+57-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:45:13-36
+58            android:theme="@style/WhiteBackgroundDialogTheme" >
+58-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:46:13-62
+59            <intent-filter android:priority="-100" >
+59-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:31:13-33:29
+59-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:31:28-51
+60                <category android:name="android.intent.category.LAUNCHER" />
+60-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:32:17-77
+60-->[androidx.test:core:1.6.1] /home/joseph/.gradle/caches/9.5.0/transforms/552f2710fbfc9945034d2e15377e7d4e/transformed/core-1.6.1/AndroidManifest.xml:32:27-74
+61            </intent-filter>
+62        </activity>
+63    </application>
+64
+65</manifest>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-07-27T22:26:00.652Z" hostname="joseph-ROG-Strix-G814JV-G814JV" time="0.327">
+  <properties/>
+  <testcase name="drains queue, completes successful items, no reschedule" classname="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" time="0.087"/>
+  <testcase name="OneToOneDispatcher propagates worker cancellation" classname="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" time="0.028"/>
+  <testcase name="empty queue drains immediately with no reschedule" classname="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" time="0.015"/>
+  <testcase name="OneToOneDispatcher returns null when stopped, caller must not call jobFinished" classname="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" time="0.025"/>
+  <testcase name="worker cancellation propagates out of drain" classname="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" time="0.053"/>
+  <testcase name="OneToOneDispatcher requests reschedule on RETRY" classname="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" time="0.041"/>
+  <testcase name="RETRY outcome leaves item uncompleted and requests reschedule" classname="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" time="0.023"/>
+  <testcase name="OneToOneDispatcher completes successfully with no reschedule" classname="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" time="0.026"/>
+  <testcase name="isStopped true before any dequeue drains nothing" classname="io.github.iamjosephmj.bridge.dispatch.BridgeJobServiceTest" time="0.025"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,5 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Required by JobPlanCompiler: every host job class sets a network-type constraint
+         (setRequiredNetworkType), and JobScheduler.enqueue/schedule throws SecurityException
+         at the binder layer without this permission. Found via the real-device instrumented
+         smoke test (Task 13) — jobs were silently never created on API 36 without it. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application>
         <service
             android:name="io.github.iamjosephmj.bridge.dispatch.BridgeJobService"

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="io.github.iamjosephmj.bridge.store.JournalTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-27T22:26:02.025Z" hostname="joseph-ROG-Strix-G814JV-G814JV" time="0.158">
+  <properties/>
+  <testcase name="append then read round-trips and folds" classname="io.github.iamjosephmj.bridge.store.JournalTest" time="0.015"/>
+  <testcase name="prune respects per-work-item atomicity for straddling events" classname="io.github.iamjosephmj.bridge.store.JournalTest" time="0.019"/>
+  <testcase name="liveWork excludes terminal work" classname="io.github.iamjosephmj.bridge.store.JournalTest" time="0.02"/>
+  <testcase name="appendAll with single-thread executor is visible to immediate events read" classname="io.github.iamjosephmj.bridge.store.JournalTest" time="0.031"/>
+  <testcase name="state survives reopen" classname="io.github.iamjosephmj.bridge.store.JournalTest" time="0.033"/>
+  <testcase name="prune drops old terminal events but keeps live work" classname="io.github.iamjosephmj.bridge.store.JournalTest" time="0.038"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

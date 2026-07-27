@@ -1,0 +1,51 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="io.github.iamjosephmj.bridge" >
+4
+5    <uses-sdk android:minSdkVersion="26" />
+5-->INJECTED
+5-->INJECTED
+6
+7    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+7-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:2:5-81
+7-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:2:22-78
+8    <!--
+9         Required by JobPlanCompiler: every host job class sets a network-type constraint
+10         (setRequiredNetworkType), and JobScheduler.enqueue/schedule throws SecurityException
+11         at the binder layer without this permission. Found via the real-device instrumented
+12         smoke test (Task 13) — jobs were silently never created on API 36 without it.
+13    -->
+14    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+14-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:7:5-79
+14-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:7:22-76
+15
+16    <application>
+16-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:8:5-21:19
+17        <service
+17-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:9:9-12:40
+18            android:name="io.github.iamjosephmj.bridge.dispatch.BridgeJobService"
+18-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:10:13-82
+19            android:exported="false"
+19-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:12:13-37
+20            android:permission="android.permission.BIND_JOB_SERVICE" />
+20-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:11:13-69
+21
+22        <receiver
+22-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:14:9-20:20
+23            android:name="io.github.iamjosephmj.bridge.dispatch.BridgeRescheduleReceiver"
+23-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:14:19-96
+24            android:exported="false" >
+24-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:15:13-37
+25            <intent-filter>
+25-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:16:13-19:29
+26                <action android:name="android.intent.action.BOOT_COMPLETED" />
+26-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:17:17-79
+26-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:17:25-76
+27                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+27-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:18:17-84
+27-->/home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:18:25-81
+28            </intent-filter>
+29        </receiver>
+30    </application>
+31
+32</manifest>

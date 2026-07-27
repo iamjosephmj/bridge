@@ -1,0 +1,5 @@
+io.github.iamjosephmj.bridge.test.bridge-runtime-updated_navigation_xml-0 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/generated/updated_navigation_xml/debugAndroidTest
+io.github.iamjosephmj.bridge.test.bridge-runtime-packageDebugAndroidTestResources-1 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/incremental/debugAndroidTest/packageDebugAndroidTestResources/merged.dir
+io.github.iamjosephmj.bridge.test.bridge-runtime-packageDebugAndroidTestResources-2 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/incremental/debugAndroidTest/packageDebugAndroidTestResources/stripped.dir
+io.github.iamjosephmj.bridge.test.bridge-runtime-debugAndroidTest-3 /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources
+gradleHome-0 /home/joseph/.gradle

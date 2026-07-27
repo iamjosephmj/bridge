@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="io.github.iamjosephmj.bridge.dispatch.JobExecutionsTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-27T22:26:01.222Z" hostname="joseph-ROG-Strix-G814JV-G814JV" time="0.014">
+  <properties/>
+  <testcase name="start for an already-registered jobId cancels the stale execution and replaces it" classname="io.github.iamjosephmj.bridge.dispatch.JobExecutionsTest" time="0.011"/>
+  <testcase name="stop on an unknown jobId is a no-op" classname="io.github.iamjosephmj.bridge.dispatch.JobExecutionsTest" time="0.001"/>
+  <testcase name="stop removes only that jobId from the registry" classname="io.github.iamjosephmj.bridge.dispatch.JobExecutionsTest" time="0.0"/>
+  <testcase name="finish removes the entry without touching other jobIds" classname="io.github.iamjosephmj.bridge.dispatch.JobExecutionsTest" time="0.0"/>
+  <testcase name="stopping one jobId does not cancel or stop another jobId's execution" classname="io.github.iamjosephmj.bridge.dispatch.JobExecutionsTest" time="0.0"/>
+  <testcase name="start assigns independent executions per jobId" classname="io.github.iamjosephmj.bridge.dispatch.JobExecutionsTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

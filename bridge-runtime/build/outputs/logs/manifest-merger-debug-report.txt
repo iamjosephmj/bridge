@@ -1,0 +1,50 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:1:1-22:12
+INJECTED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:1:1-22:12
+	package
+		INJECTED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:1:11-69
+uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
+ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:2:5-81
+	android:name
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:2:22-78
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:7:5-79
+	android:name
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:7:22-76
+application
+ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:8:5-21:19
+service#io.github.iamjosephmj.bridge.dispatch.BridgeJobService
+ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:9:9-12:40
+	android:exported
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:12:13-37
+	android:permission
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:11:13-69
+	android:name
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:10:13-82
+receiver#io.github.iamjosephmj.bridge.dispatch.BridgeRescheduleReceiver
+ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:14:9-20:20
+	android:exported
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:15:13-37
+	android:name
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:14:19-96
+intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.MY_PACKAGE_REPLACED
+ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:16:13-19:29
+action#android.intent.action.BOOT_COMPLETED
+ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:17:17-79
+	android:name
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:17:25-76
+action#android.intent.action.MY_PACKAGE_REPLACED
+ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:18:17-84
+	android:name
+		ADDED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml:18:25-81
+uses-sdk
+INJECTED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml
+INJECTED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/joseph/AndroidStudioProjects/bridge/bridge-runtime/src/main/AndroidManifest.xml
