@@ -42,10 +42,11 @@ class SystemJobGateway(private val context: Context) : JobGateway {
 class FakeJobGateway : JobGateway {
     val enqueued = mutableListOf<Pair<HostJobClass, WorkItemPayload>>()
     var failNext = false
+    var cancelledAll = false
     override fun enqueue(hostClass: HostJobClass, payload: WorkItemPayload): Boolean {
         if (failNext) { failNext = false; return false }
         enqueued += hostClass to payload
         return true
     }
-    override fun cancelAll() { enqueued.clear() }
+    override fun cancelAll() { cancelledAll = true; enqueued.clear() }
 }

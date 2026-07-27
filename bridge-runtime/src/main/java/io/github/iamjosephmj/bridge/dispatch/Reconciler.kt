@@ -12,12 +12,13 @@ import io.github.iamjosephmj.bridge.store.WorkEvent
 const val STOP_REASON_FORCE_STOP = 2
 
 /** WorkManager's ForceStopRunnable pattern: a sentinel broadcast PendingIntent the OS
- *  wipes on force-stop. Missing sentinel => force-stop (or first run) happened. */
-class ForceStopDetector(private val context: Context) {
+ *  wipes on force-stop. Missing sentinel => force-stop (or first run) happened.
+ *  Open so tests can subclass and override [wasForceStoppedOrFirstRun] with a fake result. */
+open class ForceStopDetector(private val context: Context) {
     private val intent = Intent("io.github.iamjosephmj.bridge.SENTINEL")
         .setPackage(context.packageName)
 
-    fun wasForceStoppedOrFirstRun(): Boolean {
+    open fun wasForceStoppedOrFirstRun(): Boolean {
         val existing = PendingIntent.getBroadcast(context, 0, intent,
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
         if (existing != null) return false
@@ -38,11 +39,10 @@ class Reconciler(
         deathAttributor.attributeDeaths()
         if (forceStopDetector.wasForceStoppedOrFirstRun()) {
             gateway.cancelAll()
-            journal.liveWork()
+            val events = journal.liveWork()
                 .filter { it.runState == RunState.DISPATCHED || it.runState == RunState.RUNNING }
-                .forEach {
-                    journal.append(WorkEvent.Stopped(it.workId, clock.now(), STOP_REASON_FORCE_STOP))
-                }
+                .map { WorkEvent.Stopped(it.workId, clock.now(), STOP_REASON_FORCE_STOP) }
+            if (events.isNotEmpty()) journal.appendAll(events)
         }
         dispatcher.dispatchAll()
     }

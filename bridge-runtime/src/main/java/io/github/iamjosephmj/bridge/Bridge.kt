@@ -27,6 +27,15 @@ object Bridge {
     private var dispatcher: Dispatcher? = null
     private var clock: BridgeClock = SystemBridgeClock()
 
+    /**
+     * Initializes Bridge: builds the journal/dispatcher/runner, then performs synchronous
+     * reconciliation (death attribution, force-stop recovery, dispatch of any live work).
+     * Idempotent — subsequent calls are no-ops once initialized.
+     *
+     * This reconciliation does synchronous DB work on the calling thread and its cost scales
+     * with the size of any live-work backlog. Prefer calling this off the main thread (e.g. a
+     * background thread from `Application.onCreate`) when large backlogs are possible.
+     */
     @Synchronized
     fun initialize(context: Context, block: BridgeConfigBuilder.() -> Unit) {
         if (journal != null) return   // idempotent
