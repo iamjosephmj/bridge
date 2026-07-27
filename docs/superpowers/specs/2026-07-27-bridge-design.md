@@ -53,8 +53,9 @@ ROM.
 - Exact-time alarms as a product (Bridge uses windowed and while-idle alarms
   internally, but is not an AlarmManager replacement).
 - ART/runtime modification, bytecode transformation of user code, or
-  continuation serialization. (Possible future direction; explicitly out of
-  scope for this design.)
+  continuation *serialization*. (Possible future direction; explicitly out of
+  scope for this design. Note: replay-based durability — §4.7 — achieves
+  resume-after-death semantics without serialization and IS in scope, as M5.)
 - Multi-process support in v1 (single-process apps first; the journal design
   does not preclude it later).
 - KMP/iOS in v1.
@@ -278,7 +279,52 @@ bridge.enqueue("photo-backup") {
 
 Chains/graphs: v1 supports WorkManager-equivalent chaining (sequence, merge,
 unique-name policies) in the compat façade and runtime. Richer graph semantics
-(branching, compensation) are explicitly deferred.
+(branching, compensation) arrive via durable coroutines (§4.7) rather than a
+graph DSL.
+
+### 4.7 Durable coroutines + BridgeDispatcher (M5)
+
+The crown API tier: background logic written as ordinary suspend functions
+that survive process death — powered by **deterministic replay**, not
+continuation serialization (Temporal's model, on-device).
+
+```kotlin
+bridge.durable("publish-post", constraints = { network() }) { ctx ->
+    val media = ctx.step("upload") { uploader.upload(draft.attachments) }
+    ctx.delay(2.hours)              // journaled timer -> AlarmManager window; survives death
+    ctx.await { charging() }        // parks; host job re-wakes the process
+    val post = ctx.step("create") { api.createPost(draft.text, media) }
+    ctx.step("commit") { db.markPublished(post.id) }
+}
+```
+
+- **Replay engine.** Runs as a `BridgeWorker` under the existing L5 runner
+  (lease, black box, cost meter unchanged). After process death, the block
+  re-executes from the top; completed `step()`s return their journaled result
+  instantly; the run reattaches at the first live step/timer/await. Journal
+  event: `StepCompleted(name, resultJson)` — the generalization of M1's
+  `ChunkCompleted(index)` (chunked work becomes the indexed special case;
+  event unification happens in M5, M1 keeps `ChunkCompleted`).
+- **Determinism contract (v1, deliberately narrow):** effects only inside
+  `step()`; time via `ctx.now()`, randomness via `ctx.random()`; step results
+  serializable; code between steps deterministic. Mid-flight code changes are
+  guarded by a per-block structure hash journaled at first execution — a hash
+  mismatch on replay fails the workflow explicitly rather than diverging
+  silently. No `async` fan-out inside durable blocks in v1.
+- **`ctx.delay()`** implements the coroutine `Delay` interface against the
+  journal + L2 timed dispatch: the timer is an event plus an alarm window, so
+  the process may die and be rewoken to a replay that skips straight past the
+  elapsed timer.
+- **`ctx.await { constraints }`** parks the continuation until the signal hub
+  (L3) satisfies the predicate; the wake is a real host job, never a poller.
+- **`BridgeDispatcher`** (independent of durability, usable with any
+  coroutine): a `CoroutineDispatcher`/`ContinuationInterceptor` +
+  `CoroutineContext` elements (`Importance`, constraints) providing
+  lease checks at every suspension point, automatic black-box stamps per
+  resumption, thermal/priority-aware parallelism, and per-coroutine cost
+  attribution.
+- **ART tier (future, out of scope):** true frame serialization replaces the
+  replay engine under the same API, removing the `step()` discipline.
 
 ## 5. Platform degradation matrix
 
@@ -363,6 +409,10 @@ tier is visible in diagnostics, never silently absorbed:
   window strategy, quota budgeting.
 - **M4 — Compat + rhythm (v0.4):** `bridge-compat` façade, migration guide,
   rhythm-model placement, cost flagging.
+- **M5 — Durable coroutines (v0.5):** replay engine, `durable {}` /
+  `ctx.step/delay/await`, `BridgeDispatcher`, `StepCompleted` event
+  unification (§4.7). Signature demo: a suspend function surviving process
+  death, reboot, and Doze mid-`delay(2.hours)`.
 
 Each milestone is independently shippable and demoable.
 
