@@ -6,43 +6,50 @@ import androidx.work.*
 /** WorkManager keeps no run history, so the bench self-instruments timestamps.
  *  Recorded in-process + flushed to SharedPreferences to survive process death.
  *  Writes use .commit() (synchronous), not .apply(): a process kill immediately after a
- *  mark must not lose it, or the recorder fails at its one job of surviving process death. */
+ *  mark must not lose it, or the recorder fails at its one job of surviving process death.
+ *
+ *  Every method takes a [Context] (like [ChunkExecutionRecorder]) instead of a shared
+ *  lateinit: a retried worker can be the FIRST bench code to run in a freshly relaunched
+ *  process (force-stop scenario), and a lateinit that call sites must remember to set
+ *  crashes exactly there — killing the retry the scenario exists to measure. */
 object WmRecorder {
     private const val PREFS = "wm-recorder"
-    lateinit var appContext: Context
-    private val prefs by lazy { appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+    private fun prefs(context: Context) =
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun mark(itemId: String, key: String, onlyFirst: Boolean = false) {
+    fun mark(context: Context, itemId: String, key: String, onlyFirst: Boolean = false) {
+        val p = prefs(context)
         val k = "$itemId:$key"
-        if (onlyFirst && prefs.contains(k)) {
-            if (key == "start") bumpAttempts(itemId)
+        if (onlyFirst && p.contains(k)) {
+            if (key == "start") bumpAttempts(context, itemId)
             return
         }
-        prefs.edit().putLong(k, System.currentTimeMillis()).commit()
-        if (key == "start") bumpAttempts(itemId)
+        p.edit().putLong(k, System.currentTimeMillis()).commit()
+        if (key == "start") bumpAttempts(context, itemId)
     }
-    private fun bumpAttempts(itemId: String) {
-        prefs.edit().putInt("$itemId:attempts",
-            prefs.getInt("$itemId:attempts", 0) + 1).commit()
+    private fun bumpAttempts(context: Context, itemId: String) {
+        val p = prefs(context)
+        p.edit().putInt("$itemId:attempts",
+            p.getInt("$itemId:attempts", 0) + 1).commit()
     }
 
     /** Clears all marks before a fresh ENQUEUE_WM run so stale timestamps/attempts from a
-     *  prior run (static [CORPUS] ids) don't pollute this run's [record] results. Takes
-     *  `context` directly (rather than relying on [appContext] already being set) so it's
-     *  safe to call before [enqueueAll] on a fresh process. */
+     *  prior run (static [CORPUS] ids) don't pollute this run's [record] results. */
     fun reset(context: Context) {
-        appContext = context.applicationContext
-        prefs.edit().clear().commit()
+        prefs(context).edit().clear().commit()
     }
 
-    fun record(itemId: String): RunRecord = RunRecord(
-        itemId = itemId, backend = "workmanager",
-        enqueuedAt = prefs.getLong("$itemId:enqueue", 0L),
-        firstStartAt = prefs.getLong("$itemId:start", 0L).takeIf { it != 0L },
-        completedAt = prefs.getLong("$itemId:complete", 0L).takeIf { it != 0L },
-        attempts = prefs.getInt("$itemId:attempts", 0),
-        // Measured, not assumed: see ChunkExecutionRecorder. Filled in by collect() below.
-        chunksReplayed = 0)
+    fun record(context: Context, itemId: String): RunRecord {
+        val p = prefs(context)
+        return RunRecord(
+            itemId = itemId, backend = "workmanager",
+            enqueuedAt = p.getLong("$itemId:enqueue", 0L),
+            firstStartAt = p.getLong("$itemId:start", 0L).takeIf { it != 0L },
+            completedAt = p.getLong("$itemId:complete", 0L).takeIf { it != 0L },
+            attempts = p.getInt("$itemId:attempts", 0),
+            // Measured, not assumed: see ChunkExecutionRecorder. Filled in by collect() below.
+            chunksReplayed = 0)
+    }
 }
 
 class WmBenchWorker(context: Context, params: WorkerParameters) :
@@ -51,7 +58,7 @@ class WmBenchWorker(context: Context, params: WorkerParameters) :
         val itemId = inputData.getString("itemId")!!
         val bytes = inputData.getLong("bytes", 0L)
         val chunks = inputData.getInt("chunks", 0)
-        WmRecorder.mark(itemId, "start", onlyFirst = true)
+        WmRecorder.mark(applicationContext, itemId, "start", onlyFirst = true)
         if (chunks > 0) {
             // No resume support: always from zero. That's the comparison point.
             for (i in 0 until chunks) {
@@ -62,7 +69,7 @@ class WmBenchWorker(context: Context, params: WorkerParameters) :
         } else {
             simulateChunk(bytes, applicationContext.cacheDir, itemId)
         }
-        WmRecorder.mark(itemId, "complete")
+        WmRecorder.mark(applicationContext, itemId, "complete")
         return Result.success()
     }
 }
@@ -71,10 +78,9 @@ class WorkManagerBackend(private val context: Context) : Backend {
     override val name = "workmanager"
 
     override fun enqueueAll(items: List<CorpusItem>) {
-        WmRecorder.appContext = context.applicationContext
         val wm = WorkManager.getInstance(context)
         for (item in items) {
-            WmRecorder.mark(item.id, "enqueue")
+            WmRecorder.mark(context, item.id, "enqueue")
             val constraints = if (item.profile == CorpusItem.Profile.UNMETERED_CHARGING) {
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.UNMETERED)
@@ -92,7 +98,7 @@ class WorkManagerBackend(private val context: Context) : Backend {
     }
 
     override fun collect(): List<RunRecord> = CORPUS.map { item ->
-        WmRecorder.record(item.id).copy(
+        WmRecorder.record(context, item.id).copy(
             chunksReplayed = ChunkExecutionRecorder.replayed(context, "workmanager", item.id))
     }
 }
