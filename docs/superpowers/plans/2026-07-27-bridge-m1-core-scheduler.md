@@ -3167,12 +3167,24 @@ git commit -m "feat(bench): scenario driver scripts and report comparison"
 - Create: `README.md` (project root)
 - No new library code — this is the milestone gate.
 
-- [ ] **Step 1: Full local verification**
+- [x] **Step 1: Full local verification**
 
 Run: `./gradlew :bridge-runtime:testDebugUnitTest :bench:testDebugUnitTest :bridge-runtime:assembleDebug :bench:assembleDebug`
 Expected: all green.
 
-- [ ] **Step 2: Instrumented + bench acceptance on an emulator**
+- [x] **Step 2: Instrumented + bench acceptance on an emulator**
+
+> **Run recorded 2026-07-28, real device (Pixel 6 Pro, API 36).** All criteria met, one
+> semantic note: Bridge's `large_chunked-none` measured `chunksReplayed == 1`, not 0 —
+> the ChunkExecutionRecorder counts a chunk killed MID-execution as executed (recorded at
+> chunk start, deliberately symmetric with the WorkManager backend), and a force-stop
+> almost always lands mid-chunk. Bridge replayed exactly that one interrupted chunk and
+> resumed; WorkManager restarted from zero (`chunksReplayed == 20`, attempts 2). Getting
+> here surfaced three harness bugs, fixed on this branch: bridge records had to be sliced
+> to the current run's events (static corpus ids accumulate journal history), corpus
+> pacing was too fast for the +20s force-stop to interrupt anything (~1ms/MB → ~200ms/MB),
+> and WmRecorder's process-global lateinit context crashed the retried worker in the
+> relaunched process (now passed per call, like ChunkExecutionRecorder).
 
 ```bash
 ./gradlew :bridge-runtime:connectedDebugAndroidTest
@@ -3189,7 +3201,7 @@ Acceptance criteria (from spec M1):
 
 If the chunked force-stop criterion fails, debug before closing M1 — it is the signature claim.
 
-- [ ] **Step 3: Write root `README.md`**
+- [x] **Step 3: Write root `README.md`**
 
 ```markdown
 # Bridge
@@ -3206,7 +3218,7 @@ per-run cost via HealthStats.
 Status: M1 (core scheduler v0.1) — see plan for progress.
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add README.md bench/scripts/reports 2>/dev/null || git add README.md
