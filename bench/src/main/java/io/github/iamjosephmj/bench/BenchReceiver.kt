@@ -15,8 +15,8 @@ class BenchReceiver : BroadcastReceiver() {
                 // would inflate chunksReplayed with counts left over from a prior run.
                 // (Bridge's own journal/event state needs no such reset: Bridge.enqueue KEEPs
                 // live work and bumps the generation for terminal work, and
-                // BridgeBackend.collect reads the LAST Enqueued event's timestamp — repeat
-                // runs are already handled there.)
+                // BridgeBackend.recordFor slices the event list to the last Enqueued event —
+                // repeat runs are already handled there.)
                 ChunkExecutionRecorder.reset(context, "bridge")
                 BridgeBackend(context).enqueueAll(CORPUS)
             }
