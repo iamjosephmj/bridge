@@ -16,6 +16,9 @@ interface Backend {
 fun simulateChunk(bytes: Long, scratchDir: java.io.File, tag: String) {
     val f = java.io.File(scratchDir, "scratch-$tag.bin")
     f.writeBytes(ByteArray(minOf(bytes, 1_000_000L).toInt()))
-    Thread.sleep(bytes / 1_000_000L + 5)   // ~1ms per MB
+    // ~200ms per MB: paces a 5MB chunk at ~1s, so LARGE_CHUNKED (40 chunks) spans ~40s and
+    // is still mid-flight when the force-stop scenario kills the process at +20s. At the
+    // original ~1ms/MB the whole corpus finished in ~2s and force-stop interrupted nothing.
+    Thread.sleep(bytes / 1_000_000L * 200 + 5)
     f.delete()
 }
