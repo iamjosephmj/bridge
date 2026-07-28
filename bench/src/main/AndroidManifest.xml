@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application android:name=".BenchApp" android:label="Bridge Bench">
-        <receiver android:name=".BenchReceiver" android:exported="false">
+        <receiver android:name=".BenchReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="bench.ENQUEUE_BRIDGE" />
                 <action android:name="bench.ENQUEUE_WM" />
