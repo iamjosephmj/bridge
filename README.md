@@ -39,29 +39,23 @@ Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same w
 
 </div>
 
-### <b>Raw numbers</b> (for citing)
+### <b>The measurements</b> <sub>(raw markdown tables, citable: [`docs/RESULTS.md`](docs/RESULTS.md))</sub>
 <br>
 
-**1 vs 20 — force-stop replay.** `force-stop` scenario, `large_chunked` (200 MB / 40 chunks), process killed mid-run and relaunched:
+<div align="center">
 
-| metric | bridge | workmanager |
-|---|---|---|
-| attempts | 2 | 2 |
-| chunks replayed | **1** | **20** |
-| time to complete | 61,350 ms | 72,346 ms |
+<img src="docs/assets/panel-forcestop.svg" alt="Force-stop replay, measured: attempts 2 vs 2; chunks replayed 1 vs 20; time to complete 61,350 ms vs 72,346 ms (bridge vs workmanager)" width="920">
 
-<sub>Bridge re-executed only the chunk in flight at the kill; every completed chunk's result survived. WorkManager, with no resume primitive, restarted from chunk 0.</sub>
+<sub>Bridge re-executed only the chunk in flight at the kill; every completed chunk's result survived. WorkManager, with no resume primitive, restarted from chunk 0. <a href="docs/RESULTS.md#1-vs-20--force-stop-replay">raw numbers →</a></sub>
 
-**The stall verdict.** `stall` scenario: unplugged, demoted to RARE, deep Doze forced — then both APIs asked "why?":
+<br>
+<br>
 
-| item | workmanager says | bridge says |
-|---|---|---|
-| ping | **RUNNING** | `DeferredByDoze(deep) [REPORTED]` |
-| medium_sync | SUCCEEDED | `DeferredByDoze(deep) [REPORTED]` |
-| large_chunked | **RUNNING** | `DeferredByDoze(deep) [REPORTED]` |
-| large_chunked-uc | **RUNNING** | `DeferredByDoze(deep) [REPORTED]` |
+<img src="docs/assets/panel-stall.svg" alt="Stall verdicts: for ping, medium_sync, large_chunked and large_chunked-uc, workmanager says RUNNING or SUCCEEDED while bridge says DeferredByDoze(deep) [REPORTED]" width="920">
 
-<sub>WorkManager reports <b>RUNNING</b> for jobs the forced idle has stopped — a stale answer, not just an empty one. Bridge's verdicts carry <code>basis=REPORTED</code>: they come from <code>getPendingJobReasons</code>, the platform's own explanation, not inference.</sub>
+<sub>WorkManager reports <b>RUNNING</b> for jobs the forced idle has stopped — a stale answer, not just an empty one. Bridge's verdicts carry <code>basis=REPORTED</code>: they come from <code>getPendingJobReasons</code>, the platform's own explanation, not inference. <a href="docs/RESULTS.md#the-stall-verdict">raw numbers →</a></sub>
+
+</div>
 
 
 <div align="center"><sub>And the crown result: a durable coroutine force-stopped mid-<code>delay(20s)</code>, relaunched after the timer elapsed while the process was dead — <b>SUCCEEDED</b>, each step executed exactly once. That's TIER 3, below.</sub></div>
@@ -279,15 +273,13 @@ Contract: effects belong inside `step()`; code between steps must be determinist
 
 <b>Device-verified (Pixel 6 Pro, API 36):</b> durable block force-stopped mid-`delay(20s)`, relaunched after the timer elapsed while the process was dead:
 
-| metric | value |
-|---|---|
-| state | SUCCEEDED |
-| firstStepExecutions | **1** (ran before the kill, replayed after) |
-| secondStepExecutions | **1** (ran only after relaunch) |
-| step events journaled | 2 |
-| parks | 1 |
+<div align="center">
 
-<sub>Step counters persist in on-device storage precisely because process memory does not — that is the scenario. The simulator's signature demo additionally survives death at +30 min and deep Doze 1–3 h mid-<code>delay(2h)</code>.</sub>
+<img src="docs/assets/panel-durable.svg" alt="Durable acceptance, device-verified: state SUCCEEDED; firstStepExecutions 1 (ran before the kill, replayed after); secondStepExecutions 1 (ran only after relaunch); step events journaled 2; parks 1" width="920">
+
+</div>
+
+<sub>Step counters persist in on-device storage precisely because process memory does not — that is the scenario. The simulator's signature demo additionally survives death at +30 min and deep Doze 1–3 h mid-<code>delay(2h)</code>. <a href="docs/RESULTS.md#durable-acceptance--force-stop-mid-delay">raw numbers →</a></sub>
 
 
 ### <b><kbd>TIER 4</kbd>&nbsp; Simulator — practice on dry land: JVM device regimes in milliseconds</b>
@@ -315,24 +307,13 @@ The simulator is deliberately honest about what it is: a logic assertion under a
 
 ## Bridge vs WorkManager
 
-| capability | Bridge | WorkManager | |
-|---|---|---|---|
-| Resume interrupted work at the exact chunk | Yes — chunk ledger | No — restarts from zero | **device-verified** (1 vs 20 chunks replayed) |
-| Explain stalled work | Typed verdict + platform evidence (`[REPORTED]`) | `ENQUEUED` (and can report stale `RUNNING`) | **device-verified** (stall scenario) |
-| Durable coroutines (suspend blocks surviving death) | Yes — deterministic replay, journaled steps/timers/awaits | No | **device-verified** (force-stop mid-delay) |
-| Chains resume at the failed link | Yes — links compile to chunks | No — chain restarts | verified in instrumented suite |
-| Per-run history with death forensics | `ledger()`: `ApplicationExitInfo`, device context, cost | None (keeps no run history) | |
-| Measured per-run cost | HealthStats deltas; flags "expensive work declared unimportant" | None | |
-| Deadline escalation | `mustCompleteBy`: DEFAULT → EXPEDITED → while-idle alarm, each step journaled | Expedited flag only | |
-| Importance-aware quota budgeting | LOW/MIN sheds explicitly in demoted buckets, never silently | Silent platform deferral | |
-| Doze strategy | Maintenance-window burst-drain, doze-exit freshness dispatch, rhythm prediction | Platform default | |
-| Constraints | charging, network/unmetered, battery/storage-not-low, device-idle | same, plus content-URI triggers | |
-| Periodic + initial delay | Yes (journaled generations / exact-path latency) | Yes | |
-| **Where WorkManager still wins** | | | |
-| OEM maturity | one device of hardware evidence | a decade across every OEM's process killer | honest gap |
-| `Data` payloads, tags, observers (LiveData/Flow), content-URI triggers | not yet | yes | roadmap |
-| Multi-branch chains | sequential only | yes | roadmap |
-| Ecosystem (Hilt integration, docs, Stack Overflow mass) | new | vast | |
+<div align="center">
+
+<img src="docs/assets/scorecard.svg" alt="Bridge vs WorkManager scorecard: bridge leads on resumption, explanation, durable coroutines, chains, forensics, cost, deadlines, quota and doze strategy; WorkManager still wins on OEM maturity, Data payloads/tags/observers, multi-branch chains and ecosystem" width="1000">
+
+<sub>Filled mint dot = has it; hollow dot = does not. The mint goes to whoever actually wins the row — including the four rows WorkManager still does. <a href="docs/RESULTS.md#bridge-vs-workmanager">raw table →</a></sub>
+
+</div>
 
 ---
 

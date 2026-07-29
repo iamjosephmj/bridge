@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="Stall verdicts: for ping, medium_sync, large_chunked and large_chunked-uc, workmanager says RUNNING or SUCCEEDED while bridge says DeferredByDoze(deep) [REPORTED]">
+  <rect x="0" y="0" width="1200" height="300" rx="16" fill="#0B1113"/>
+  <rect x="0.5" y="0.5" width="1199" height="299" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
+  <text x="48" y="52" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="600" fill="#E9F4F2">the stall verdict</text>
+  <text x="48" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#75898B">unplugged · demoted to RARE · deep Doze forced — then both APIs asked "why?"</text>
+  <text x="430" y="106" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#75898B">workmanager says</text>
+  <text x="750" y="106" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" font-weight="700" fill="#4DD8C4">bridge says</text>
+  <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.00s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="0.00s" dur="0.45s" fill="freeze"/>
+    <text x="48" y="138" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#E9F4F2">ping</text>
+    <text x="430" y="138" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700" fill="#4A5D5F">RUNNING</text>
+    <text x="750" y="138" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#4DD8C4">DeferredByDoze(deep) <tspan fill="#7BEFD8">[REPORTED]</tspan></text>
+  </g>
+  <line x1="48" y1="151" x2="1152" y2="151" stroke="#16211F" stroke-width="1"/>
+  <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.09s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="0.09s" dur="0.45s" fill="freeze"/>
+    <text x="48" y="176" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#E9F4F2">medium_sync</text>
+    <text x="430" y="176" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="400" fill="#4A5D5F">SUCCEEDED</text>
+    <text x="750" y="176" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#4DD8C4">DeferredByDoze(deep) <tspan fill="#7BEFD8">[REPORTED]</tspan></text>
+  </g>
+  <line x1="48" y1="189" x2="1152" y2="189" stroke="#16211F" stroke-width="1"/>
+  <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.18s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="0.18s" dur="0.45s" fill="freeze"/>
+    <text x="48" y="214" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#E9F4F2">large_chunked</text>
+    <text x="430" y="214" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700" fill="#4A5D5F">RUNNING</text>
+    <text x="750" y="214" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#4DD8C4">DeferredByDoze(deep) <tspan fill="#7BEFD8">[REPORTED]</tspan></text>
+  </g>
+  <line x1="48" y1="227" x2="1152" y2="227" stroke="#16211F" stroke-width="1"/>
+  <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.27s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="0.27s" dur="0.45s" fill="freeze"/>
+    <text x="48" y="252" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#E9F4F2">large_chunked-uc</text>
+    <text x="430" y="252" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700" fill="#4A5D5F">RUNNING</text>
+    <text x="750" y="252" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#4DD8C4">DeferredByDoze(deep) <tspan fill="#7BEFD8">[REPORTED]</tspan></text>
+  </g>
+  <text x="48" y="280" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F">bold RUNNING = jobs the forced idle had already stopped — a stale answer</text>
+  <text x="1152" y="280" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F" text-anchor="end">Pixel 6 Pro · API 36</text>
+</svg>
