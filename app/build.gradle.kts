@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "tech.ssemaj.bridge"
-        minSdk = 24
+        minSdk = 26   // bridge-runtime's floor
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -38,6 +38,12 @@ android {
 }
 
 dependencies {
+    // Bridge library modules this app showcases.
+    implementation(project(":bridge-runtime"))
+    implementation(project(":bridge-glassbox"))
+    implementation(project(":bridge-compat"))
+    implementation(libs.kotlinx.coroutines.android)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
