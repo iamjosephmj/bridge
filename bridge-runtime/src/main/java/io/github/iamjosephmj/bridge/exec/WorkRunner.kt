@@ -34,8 +34,26 @@ class WorkRunner(
 ) {
     suspend fun run(workId: String, generation: Int, deliveryCount: Int,
                     isStopped: () -> Boolean): RunOutcome {
-        val state = journal.state(workId) ?: return RunOutcome.COMPLETED
-        if (state.generation != generation) return RunOutcome.COMPLETED
+        var state = journal.state(workId) ?: return RunOutcome.COMPLETED
+        // Periodic re-fire from the platform: a terminal cycle rolls to a fresh generation.
+        // (CANCELLED does not roll — cancellation ends the series.)
+        if (state.periodicMs > 0 &&
+            state.runState in setOf(RunState.SUCCEEDED, RunState.FAILED)) {
+            journal.append(WorkEvent.Enqueued(workId, clock.now(), state.workerName,
+                state.generation + 1, importance = state.importance,
+                requiresCharging = state.requiresCharging,
+                requiresUnmetered = state.requiresUnmetered,
+                chunkCount = state.chunkCount, estimatedUpBytes = state.estimatedUpBytes,
+                maxAttempts = state.maxAttempts,
+                requiresNetwork = state.requiresNetwork,
+                requiresBatteryNotLow = state.requiresBatteryNotLow,
+                requiresStorageNotLow = state.requiresStorageNotLow,
+                requiresDeviceIdle = state.requiresDeviceIdle,
+                periodicMs = state.periodicMs))
+            state = journal.state(workId)!!
+        }
+        // Periodic work ignores the payload-generation guard: the platform job outlives cycles.
+        if (state.generation != generation && state.periodicMs == 0L) return RunOutcome.COMPLETED
         if (state.runState !in setOf(RunState.ENQUEUED, RunState.DISPATCHED)) {
             return RunOutcome.COMPLETED
         }

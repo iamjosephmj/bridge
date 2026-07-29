@@ -65,4 +65,5 @@ class SelectingJobGateway(
     }
 
     override fun cancelAll() { multiplexed.cancelAll(); oneToOne.cancelAll() }
+    override fun cancel(workId: String) { oneToOne.cancel(workId) }
 }

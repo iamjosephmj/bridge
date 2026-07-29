@@ -61,6 +61,21 @@ class ConstraintsParityTest {
         assertThat(info.isRequireCharging).isFalse()
     }
 
+    @Test fun `periodic and latency compile to platform JobInfo shapes`() {
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val periodic = JobPlanCompiler.jobInfo(ctx, HostJobClass.DEFAULT,
+            ComponentName("p", "c"), jobId = 720_002,
+            itemConstraints = ItemConstraints(0, false, false, false, false,
+                periodicMs = 30 * 60_000L))
+        assertThat(periodic.isPeriodic).isTrue()
+        assertThat(periodic.intervalMillis).isEqualTo(30 * 60_000L)
+        val delayed = JobPlanCompiler.jobInfo(ctx, HostJobClass.DEFAULT,
+            ComponentName("p", "c"), jobId = 720_003,
+            itemConstraints = ItemConstraints(0, false, false, false, false,
+                minLatencyMs = 5_000L))
+        assertThat(delayed.minLatencyMillis).isEqualTo(5_000L)
+    }
+
     @Test fun `dispatcher attaches exact constraints and selecting gateway honors them`() {
         val journal = InMemoryJournal()
         journal.append(WorkEvent.Enqueued("w", 1L, "worker", 1, importance = 2,

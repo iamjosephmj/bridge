@@ -73,6 +73,10 @@ class Dispatcher(
                     batteryNotLow = state.requiresBatteryNotLow,
                     storageNotLow = state.requiresStorageNotLow,
                     deviceIdle = state.requiresDeviceIdle,
+                    minLatencyMs = if (state.initialDelayMs > 0)
+                        (state.enqueuedAt + state.initialDelayMs - clock.now()).coerceAtLeast(0L)
+                    else 0L,
+                    periodicMs = state.periodicMs,
                 ) else null
                 val ok = gateway.enqueue(decision.tier,
                     WorkItemPayload(state.workId, state.generation, exact))

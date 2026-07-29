@@ -42,4 +42,6 @@ val WorkState.needsExactConstraints: Boolean
         // Constraint-free work must also go 1:1: JobScheduler.enqueue() forbids timing
         // constraints and JobInfo.build() forbids NO constraints, so a multiplexed
         // constraint-free host job is unrepresentable. schedule()+1ms latency is legal.
-        hasNoConstraints
+        hasNoConstraints ||
+        // Timing shapes are illegal for enqueue()-style jobs; both ride exact JobInfos.
+        initialDelayMs > 0 || periodicMs > 0

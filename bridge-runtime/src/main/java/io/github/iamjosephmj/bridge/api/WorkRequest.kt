@@ -11,6 +11,8 @@ class WorkRequest internal constructor(
     val requiresBatteryNotLow: Boolean = false,
     val requiresStorageNotLow: Boolean = false,
     val requiresDeviceIdle: Boolean = false,
+    val initialDelayMs: Long = 0L,
+    val periodicMs: Long = 0L,
 )
 
 class WorkRequestBuilder internal constructor(
@@ -22,6 +24,8 @@ class WorkRequestBuilder internal constructor(
     private var batteryNotLow = false
     private var storageNotLow = false
     private var deviceIdle = false
+    private var initialDelayMs = 0L
+    private var periodicMs = 0L
     private var chunkCount = 0
     private var estimatedUpBytes = 0L
     private var maxAttempts = 3
@@ -36,6 +40,10 @@ class WorkRequestBuilder internal constructor(
     fun storageNotLow() { storageNotLow = true }
     /** Runs only while the device is idle (JobInfo.setRequiresDeviceIdle). */
     fun deviceIdle() { deviceIdle = true }
+    /** Don't start before enqueue + delay (JobInfo.setMinimumLatency on an exact JobInfo). */
+    fun initialDelay(ms: Long) { require(ms > 0); initialDelayMs = ms }
+    /** Repeats every [ms] (>= 15 min, the platform floor). Each cycle is a new generation. */
+    fun periodic(ms: Long) { require(ms >= 15 * 60_000L) { "period must be >= 15min" }; periodicMs = ms }
     fun chunks(count: Int, estimatedUpBytes: Long = 0L) {
         require(count > 0) { "chunk count must be positive" }
         chunkCount = count; this.estimatedUpBytes = estimatedUpBytes
@@ -49,7 +57,8 @@ class WorkRequestBuilder internal constructor(
     internal fun build() = WorkRequest(name, workerName, importance,
         charging, unmetered, chunkCount, estimatedUpBytes, maxAttempts, deadlineMs,
         requiresNetwork = network, requiresBatteryNotLow = batteryNotLow,
-        requiresStorageNotLow = storageNotLow, requiresDeviceIdle = deviceIdle)
+        requiresStorageNotLow = storageNotLow, requiresDeviceIdle = deviceIdle,
+        initialDelayMs = initialDelayMs, periodicMs = periodicMs)
 }
 
 fun workRequest(name: String, workerName: String,

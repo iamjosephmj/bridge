@@ -153,6 +153,17 @@ class CompatTest {
         assertThat(Bridge.state("u")!!.generation).isEqualTo(gen1 + 1)
     }
 
+    @Test fun `periodic and initial delay map through`() {
+        BridgeWorkManager.enqueueUniquePeriodicWork("beat", ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequest.Builder(RecordingWorker::class.java, 30 * 60_000L).build())
+        assertThat(Bridge.state("beat")!!.periodicMs).isEqualTo(30 * 60_000L)
+
+        BridgeWorkManager.enqueueUniqueWork("later", ExistingWorkPolicy.KEEP,
+            OneTimeWorkRequest.Builder(RecordingWorker::class.java)
+                .setInitialDelay(60_000L).build())
+        assertThat(Bridge.state("later")!!.initialDelayMs).isEqualTo(60_000L)
+    }
+
     @Test fun `cancelUniqueWork maps to CANCELLED`() {
         BridgeWorkManager.enqueueUniqueWork("c", ExistingWorkPolicy.KEEP,
             request(RecordingWorker::class.java))

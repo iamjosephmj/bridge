@@ -23,6 +23,8 @@ sealed interface WorkEvent {
         val requiresBatteryNotLow: Boolean = false,
         val requiresStorageNotLow: Boolean = false,
         val requiresDeviceIdle: Boolean = false,
+        val initialDelayMs: Long = 0L,
+        val periodicMs: Long = 0L,
     ) : WorkEvent
 
     @Serializable @SerialName("dispatched")

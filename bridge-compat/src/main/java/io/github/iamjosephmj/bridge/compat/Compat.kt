@@ -50,13 +50,30 @@ class Constraints private constructor(
 class OneTimeWorkRequest private constructor(
     val workerClass: Class<out Worker>,
     val constraints: Constraints,
+    val initialDelayMs: Long,
 ) {
     class Builder(private val workerClass: Class<out Worker>) {
         private var constraints = Constraints.NONE
+        private var initialDelayMs = 0L
         fun setConstraints(value: Constraints) = apply { constraints = value }
-        fun build() = OneTimeWorkRequest(workerClass, constraints)
+        fun setInitialDelay(ms: Long) = apply { require(ms > 0); initialDelayMs = ms }
+        fun build() = OneTimeWorkRequest(workerClass, constraints, initialDelayMs)
     }
 }
+
+class PeriodicWorkRequest private constructor(
+    val workerClass: Class<out Worker>,
+    val constraints: Constraints,
+    val intervalMs: Long,
+) {
+    class Builder(private val workerClass: Class<out Worker>, private val intervalMs: Long) {
+        private var constraints = Constraints.NONE
+        fun setConstraints(value: Constraints) = apply { constraints = value }
+        fun build() = PeriodicWorkRequest(workerClass, constraints, intervalMs)
+    }
+}
+
+enum class ExistingPeriodicWorkPolicy { KEEP, UPDATE }
 
 enum class ExistingWorkPolicy { KEEP, REPLACE }
 

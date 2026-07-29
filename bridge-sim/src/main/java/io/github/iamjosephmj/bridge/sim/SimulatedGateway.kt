@@ -37,8 +37,14 @@ class SimulatedGateway(
 
     fun runnable(atMs: Long): List<WorkItemPayload> = parked.values.filter { p ->
         val state = journal.state(p.workId) ?: return@filter false
-        if (state.generation != p.generation) return@filter false
-        if (state.runState !in setOf(RunState.ENQUEUED, RunState.DISPATCHED)) return@filter false
+        if (state.generation != p.generation && state.periodicMs == 0L) return@filter false
+        val terminalPeriodicDue = state.periodicMs > 0 &&
+            state.runState in setOf(RunState.SUCCEEDED, RunState.FAILED) &&
+            atMs >= (journal.events(p.workId)
+                .lastOrNull { it is WorkEvent.Finished }?.at ?: 0L) + state.periodicMs
+        if (state.runState !in setOf(RunState.ENQUEUED, RunState.DISPATCHED) &&
+            !terminalPeriodicDue) return@filter false
+        if (atMs < state.enqueuedAt + state.initialDelayMs) return@filter false
 
         if ((timeline.valueAt(SignalKind.BG_RESTRICTED, atMs) as? SignalValue.Flag)?.on == true)
             return@filter false
