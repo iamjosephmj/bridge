@@ -6,8 +6,10 @@ import android.database.sqlite.SQLiteDatabase
 /**
  * Small string key/value store persisted in the journal's SQLite database (`kv` table),
  * with an in-memory-first read path: every row is loaded once at construction and all
- * reads are served from the in-memory map — synchronous, allocation-free, no I/O. Writes
- * update memory first, then persist through the same database in a transaction, so kv
+ * reads are served from a ConcurrentHashMap — synchronous, lock-free, never blocked by a
+ * writer's disk I/O. Writes persist to the database FIRST and only then update memory
+ * (under the write monitor), so memory can never claim a value durability lost, and a
+ * reader on the dispatch hot path never waits on an fsync. kv
  * state shares one durability story with the work journal (same file, same WAL) instead
  * of a second one in SharedPreferences.
  *
@@ -21,7 +23,7 @@ import android.database.sqlite.SQLiteDatabase
  */
 class KvStore internal constructor(private val db: SQLiteDatabase) {
 
-    private val map = HashMap<String, String>()
+    private val map = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     init {
         // Belt and braces alongside the schema migration: the table must exist before load.
@@ -31,20 +33,23 @@ class KvStore internal constructor(private val db: SQLiteDatabase) {
         }
     }
 
-    @Synchronized fun get(key: String): String? = map[key]
+    // Lock-free: reads never contend with the write path's SQLite transaction.
+    fun get(key: String): String? = map[key]
 
-    @Synchronized fun getInt(key: String, default: Int): Int =
+    fun getInt(key: String, default: Int): Int =
         map[key]?.toIntOrNull() ?: default
 
     fun put(key: String, value: String) = putAll(mapOf(key to value))
 
     fun putInt(key: String, value: Int) = put(key, value.toString())
 
-    /** Atomically writes several entries: memory first, then one DB transaction. */
+    /**
+     * Atomically writes several entries: one DB transaction first, then memory — a failed
+     * write leaves the map untouched, so memory never diverges ahead of durability.
+     */
     @Synchronized
     fun putAll(entries: Map<String, String>) {
         if (entries.isEmpty()) return
-        map.putAll(entries)
         db.beginTransaction()
         try {
             for ((k, v) in entries) {
@@ -53,6 +58,7 @@ class KvStore internal constructor(private val db: SQLiteDatabase) {
             }
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
+        map.putAll(entries)
     }
 
     /**
