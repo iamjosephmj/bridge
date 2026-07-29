@@ -8,9 +8,12 @@ import android.content.Intent
 import android.os.Build
 import android.os.PersistableBundle
 
+/** Network requirement for an exact per-item constraint set. */
+enum class NetworkNeed { NONE, ANY, UNMETERED }
+
 /** Exact per-item constraint set for work no multiplexed host class expresses. */
 data class ItemConstraints(
-    val network: Int,            // 0 none, 1 any, 2 unmetered
+    val network: NetworkNeed,
     val charging: Boolean,
     val batteryNotLow: Boolean,
     val storageNotLow: Boolean,

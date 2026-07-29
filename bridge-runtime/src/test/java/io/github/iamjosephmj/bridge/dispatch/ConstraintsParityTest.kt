@@ -44,7 +44,7 @@ class ConstraintsParityTest {
         val info = JobPlanCompiler.jobInfo(
             ApplicationProvider.getApplicationContext(), HostJobClass.DEFAULT,
             ComponentName("p", "c"), jobId = 720_001,
-            itemConstraints = ItemConstraints(network = 2, charging = true,
+            itemConstraints = ItemConstraints(network = NetworkNeed.UNMETERED, charging = true,
                 batteryNotLow = true, storageNotLow = true, deviceIdle = true))
         assertThat(info.isRequireCharging).isTrue()
         assertThat(info.isRequireBatteryNotLow).isTrue()
@@ -65,13 +65,13 @@ class ConstraintsParityTest {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val periodic = JobPlanCompiler.jobInfo(ctx, HostJobClass.DEFAULT,
             ComponentName("p", "c"), jobId = 720_002,
-            itemConstraints = ItemConstraints(0, false, false, false, false,
+            itemConstraints = ItemConstraints(NetworkNeed.NONE, false, false, false, false,
                 periodicMs = 30 * 60_000L))
         assertThat(periodic.isPeriodic).isTrue()
         assertThat(periodic.intervalMillis).isEqualTo(30 * 60_000L)
         val delayed = JobPlanCompiler.jobInfo(ctx, HostJobClass.DEFAULT,
             ComponentName("p", "c"), jobId = 720_003,
-            itemConstraints = ItemConstraints(0, false, false, false, false,
+            itemConstraints = ItemConstraints(NetworkNeed.NONE, false, false, false, false,
                 minLatencyMs = 5_000L))
         assertThat(delayed.minLatencyMillis).isEqualTo(5_000L)
     }
@@ -84,7 +84,7 @@ class ConstraintsParityTest {
         Dispatcher(journal, fake, FakeClock(1L)).dispatch("w")
         val payload = fake.enqueued.single().second
         assertThat(payload.constraints).isEqualTo(ItemConstraints(
-            network = 0, charging = true, batteryNotLow = false,
+            network = NetworkNeed.NONE, charging = true, batteryNotLow = false,
             storageNotLow = false, deviceIdle = false))
 
         // SelectingJobGateway must route exact-constraint payloads 1:1 even in MULTIPLEXED.

@@ -4,6 +4,7 @@ import io.github.iamjosephmj.bridge.BridgeClock
 import io.github.iamjosephmj.bridge.policy.Decision
 import io.github.iamjosephmj.bridge.policy.PolicyEngine
 import io.github.iamjosephmj.bridge.signals.SignalSnapshot
+import io.github.iamjosephmj.bridge.store.DecisionKind
 import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.RunState
 import io.github.iamjosephmj.bridge.store.WorkEvent
@@ -52,11 +53,11 @@ class Dispatcher(
             }
         }
         when (decision) {
-            is Decision.Hold -> { journalDecision(state, "hold", decision.why); return }
-            is Decision.Shed -> { journalDecision(state, "shed", decision.why); return }
+            is Decision.Hold -> { journalDecision(state, DecisionKind.HOLD.wire, decision.why); return }
+            is Decision.Shed -> { journalDecision(state, DecisionKind.SHED.wire, decision.why); return }
             is Decision.Admit -> {
                 if (decision.why != null) {
-                    journalDecision(state, "admit:${decision.tier.name}", decision.why)
+                    journalDecision(state, "${DecisionKind.ADMIT.wire}:${decision.tier.name}", decision.why)
                 }
                 if (decision.why == PolicyEngine.ESCALATE_ALARM_WHY && state.deadlineMs > 0) {
                     // Final tier: also arm a while-idle alarm shortly before the deadline.
@@ -65,9 +66,9 @@ class Dispatcher(
                 }
                 val exact = if (state.needsExactConstraints) ItemConstraints(
                     network = when {
-                        state.requiresUnmetered -> 2
-                        state.requiresNetwork -> 1
-                        else -> 0
+                        state.requiresUnmetered -> NetworkNeed.UNMETERED
+                        state.requiresNetwork -> NetworkNeed.ANY
+                        else -> NetworkNeed.NONE
                     },
                     charging = state.requiresCharging,
                     batteryNotLow = state.requiresBatteryNotLow,
