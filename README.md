@@ -9,12 +9,12 @@
 
 <br>
 
-<b>Bridge is a reimplementation of Android background work on what <code>system_server</code> actually offers:</b><br>
-JobWorkItem-multiplexed dispatch, an append-only event journal, chunk-exact resumption,<br>
-death forensics via <code>ApplicationExitInfo</code>, and measured per-run cost via <code>HealthStats</code>.
+<b>Force-stop it mid-upload — it resumes at the exact chunk.<br>
+Ask it why nothing is running — it answers, with the platform's own evidence.<br>
+Any scheduler survives a kill. This one remembers.</b>
 
-When the process dies mid-run, Bridge resumes at the exact chunk — or the exact coroutine step — it was on.<br>
-When work stalls, Bridge tells you <i>why</i>, with the platform's own evidence attached.
+<sub>Bridge rebuilds Android background work on what <code>system_server</code> actually offers: an append-only event journal,<br>
+JobWorkItem-multiplexed dispatch, death forensics via <code>ApplicationExitInfo</code>, measured cost via <code>HealthStats</code>.</sub>
 
 </div>
 
@@ -22,15 +22,13 @@ When work stalls, Bridge tells you <i>why</i>, with the platform's own evidence 
 
 ## The two numbers
 
-Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same workload corpus on both backends. Raw reports: [`bench/scripts/reports/`](bench/scripts/reports/).
+One physical <b>Pixel 6 Pro, API 36</b> (2026-07). Same workloads, both backends. Raw reports: [`bench/scripts/reports/`](bench/scripts/reports/).
 
 <div align="center">
 
 <img src="docs/assets/killdemo.svg" alt="Animated force-stop demo: both schedulers get killed at chunk 6. Bridge resumes at chunk 6; WorkManager starts over from chunk 0. Measured: 1 chunk replayed vs 20." width="920">
 
-<sub><b>Try killing it. It doesn't mind.</b> Measured on device: Bridge replayed <b>1</b> chunk; WorkManager replayed <b>20</b>.</sub>
-
-<sub><i>WorkManager reschedules your work after a kill. Bridge resumes it — mid-transfer, at the exact chunk. Both survive; only one remembers.</i></sub>
+<sub><b>Try killing it. It doesn't mind.</b> Measured on device: Bridge replayed <b>1</b> chunk; WorkManager replayed <b>20</b> — rescheduled, not resumed.</sub>
 
 <br>
 <br>
@@ -55,18 +53,18 @@ Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same w
 
 <img src="docs/assets/panel-stall.svg" alt="Stall verdicts: for ping, medium_sync, large_chunked and large_chunked-uc, workmanager says RUNNING or SUCCEEDED while bridge says DeferredByDoze(deep) [REPORTED]" width="920">
 
-<sub>WorkManager reports <b>RUNNING</b> for jobs the forced idle has stopped — a stale answer, not just an empty one. Bridge's verdicts carry <code>basis=REPORTED</code>: they come from <code>getPendingJobReasons</code>, the platform's own explanation, not inference. <a href="docs/RESULTS.md#the-stall-verdict">raw numbers →</a></sub>
+<sub>The bold <b>RUNNING</b>s are stale — the forced idle had already stopped those jobs. Bridge's verdicts carry <code>basis=REPORTED</code>: <code>getPendingJobReasons</code>, the platform's own explanation, not inference. <a href="docs/RESULTS.md#the-stall-verdict">raw numbers →</a></sub>
 
 </div>
 
 
-<div align="center"><sub>And the crown result: a durable coroutine force-stopped mid-<code>delay(20s)</code>, relaunched after the timer elapsed while the process was dead — <b>SUCCEEDED</b>, each step executed exactly once. That's TIER 3, below.</sub></div>
+<div align="center"><sub>And the crown result: a durable coroutine force-stopped mid-<code>delay(20s)</code>, timer elapsing while the process was dead — <b>SUCCEEDED</b>, each step exactly once. That's TIER 3.</sub></div>
 
 ---
 
-## The tiers
+## The ladder
 
-Bridge is a ladder, not a leap. Each tier is independently useful and independently reversible — climb exactly as far as your app needs, and no further.
+Bridge is a ladder, not a leap. **Climb exactly as far as your app needs** — every tier is useful alone, and every step is reversible.
 
 <div align="center">
 
@@ -83,7 +81,7 @@ Bridge is a ladder, not a leap. Each tier is independently useful and independen
 
 <div align="center"><img src="docs/assets/tier0-glassbox.svg" alt="A scan sweeps across pending jobs and a verdict appears: 7 pending — DeferredByDoze(deep) [REPORTED]" width="920"></div>
 
-Works even in pure-WorkManager apps: WorkManager's jobs are your app's own JobScheduler jobs, so their platform pending reasons (API 34+) are readable here.
+Not using Bridge yet? Doesn't matter. **Your WorkManager jobs are your app's own JobScheduler jobs**, so the platform will testify about them anyway (pending reasons, API 34+) — two lines and you can read the transcript.
 
 ```kotlin
 // Application.onCreate
@@ -103,7 +101,9 @@ Log.i(TAG, GlassBox.explain().render())
 
 <div align="center"><img src="docs/assets/tier1-compat.svg" alt="The androidx.work import gets struck through and swapped for bridge.compat while a broken chain re-links at exactly the broken link" width="920"></div>
 
-An `androidx.work`-shaped façade. For the covered surface, migration is an import change:
+Your workers stay put. The import changes. Your chains quietly gain a memory.
+
+An `androidx.work`-shaped façade — for the covered surface, **migration is an import change**:
 
 ```kotlin
 // before: import androidx.work.*
@@ -123,7 +123,7 @@ BridgeWorkManager.enqueueUniqueWork("sync", ExistingWorkPolicy.KEEP,
         .build())
 ```
 
-Chains compile to <i>one</i> Bridge item whose links are chunks — so an interrupted chain resumes at the failed link, which WorkManager cannot do:
+Chains compile to <i>one</i> Bridge item whose links are chunks — so **an interrupted chain resumes at the failed link**, which WorkManager cannot do:
 
 ```kotlin
 BridgeWorkManager.beginUniqueWork("publish", ExistingWorkPolicy.KEEP, uploadRequest)
@@ -139,6 +139,8 @@ Also covered: `PeriodicWorkRequest` + `enqueueUniquePeriodicWork` (KEEP/UPDATE),
 <br>
 
 <div align="center"><img src="docs/assets/tier2-runtime.svg" alt="Constraint chips light up one by one — charging, unmetered, batteryNotLow, deviceIdle — then the work dispatches as a multiplexed JobWorkItem" width="920"></div>
+
+The whole engine — everything the demos above actually run on.
 
 **Enqueue with the full constraint DSL**
 
@@ -166,7 +168,7 @@ Bridge.enqueue(workRequest("heartbeat", "sync") {
 })
 ```
 
-Enqueue has KEEP semantics per unique name. `Bridge.initializeAsync` keeps journal-open + reconciliation off the main thread; early callers can suspend on `Bridge.awaitReady()`.
+Enqueue has **KEEP semantics** per unique name. `initializeAsync` keeps journal-open + reconciliation off the main thread; early callers suspend on `Bridge.awaitReady()`.
 
 **Chunked resumption — the 1-vs-20 primitive**
 
@@ -189,11 +191,11 @@ Bridge.enqueue(workRequest("backup", "photo-backup") {
 })
 ```
 
-Every completed chunk is journaled. Stop, crash, or force-stop mid-run, and the next attempt starts at `WorkState.nextChunk` — not chunk 0. This is the exact configuration behind the device-verified 1-vs-20 result.
+Every completed chunk is journaled. Stop, crash, or force-stop mid-run — **the next attempt starts at `WorkState.nextChunk`, not chunk 0**. This is the exact configuration behind the 1-vs-20 result up top.
 
 **Diagnostics — whyPending, ledger, report**
 
-All three are total functions — no nulls to defend against; unknown names get an `UnknownWork` verdict:
+Three questions Bridge always answers: *why isn't it running*, *what happened last time*, *how is everything*. All three are **total functions** — no nulls to defend against; unknown names get an `UnknownWork` verdict:
 
 ```kotlin
 Bridge.whyPending("photo-backup").render(now)
@@ -242,7 +244,7 @@ Inside `bridge-runtime`, layers stack strictly — each depends only on those be
 
 <div align="center"><img src="docs/assets/tier3-durable.svg" alt="A heartbeat trace flatlines at a force-stop tick, then resumes at exactly the same point and finishes SUCCEEDED — each step ran once" width="920"></div>
 
-Background logic as ordinary suspend functions, made durable via deterministic replay (Temporal's model, on-device) — not continuation serialization:
+The crown. Background logic as **ordinary suspend functions that shrug off process death** — Temporal's deterministic-replay model, on-device. No continuation serialization anywhere:
 
 ```kotlin
 // Must run on a path that executes at every process start (Application.onCreate) —
@@ -271,9 +273,9 @@ val end = handle.await()         // same, returning SUCCEEDED / FAILED / CANCELL
 handle.whyPending()              // e.g. DurableParked(delay until 14:02)
 ```
 
-Contract: effects belong inside `step()`; code between steps must be deterministic (time via `now()`, randomness via `random()`). Shape changes mid-flight fail explicitly via a positional structure guard, never silently corrupt. Parks are first-class (`RunResult.Parked`): they never burn attempts and never read as crashes.
+The contract is small: **effects live inside `step()`**, and code between steps stays deterministic (time via `now()`, randomness via `random()`). Shape changes mid-flight fail loudly via a positional structure guard — never silent corruption. Parks are first-class (`RunResult.Parked`): they never burn attempts and never read as crashes.
 
-<b>Device-verified (Pixel 6 Pro, API 36):</b> durable block force-stopped mid-`delay(20s)`, relaunched after the timer elapsed while the process was dead:
+<b>Device-verified:</b> force-stopped mid-`delay(20s)`, relaunched after the timer elapsed while the process was dead:
 
 <div align="center">
 
@@ -281,7 +283,7 @@ Contract: effects belong inside `step()`; code between steps must be determinist
 
 </div>
 
-<sub>Step counters persist in on-device storage precisely because process memory does not — that is the scenario. The simulator's signature demo additionally survives death at +30 min and deep Doze 1–3 h mid-<code>delay(2h)</code>. <a href="docs/RESULTS.md#durable-acceptance--force-stop-mid-delay">raw numbers →</a></sub>
+<sub>Step counters persist on-device precisely because process memory does not — that is the scenario. The simulator's signature demo additionally survives death at +30 min and deep Doze 1–3 h mid-<code>delay(2h)</code>. <a href="docs/RESULTS.md#durable-acceptance--force-stop-mid-delay">raw numbers →</a></sub>
 
 
 ### <b><kbd>TIER 4</kbd>&nbsp; Simulator — practice on dry land: JVM device regimes in milliseconds</b>
@@ -289,7 +291,7 @@ Contract: effects belong inside `step()`; code between steps must be determinist
 
 <div align="center"><img src="docs/assets/tier4-sim.svg" alt="A tiny device with a fast-forwarding clock: multi-day Doze regimes asserted in milliseconds on the JVM" width="920"></div>
 
-[`bridge-sim`](bridge-sim/README.md) scripts signal timelines and a fake clock over the <i>real</i> journal / dispatcher / runner / diagnoser: multi-day device regimes assert in milliseconds on the JVM (7 canonical scenarios ship as tests, including the stall mirror of the device result and the durable signature demo).
+Three days of Doze in a few milliseconds of JUnit. [`bridge-sim`](bridge-sim/README.md) scripts signal timelines and a fake clock over the <i>real</i> journal / dispatcher / runner / diagnoser. **7 canonical scenarios ship as tests**, including the stall mirror of the device result and the durable signature demo.
 
 ```kotlin
 simulate {
@@ -302,12 +304,14 @@ simulate {
 }
 ```
 
-The simulator is deliberately honest about what it is: a logic assertion under a scripted regime, not a device guarantee — the [gating model](bridge-sim/README.md#the-gating-model-is-deliberately-simple) makes no attempt to reproduce OEM heuristics. Device truth comes from the instrumented suite and the benchmark harness ([`bench/`](bench/README.md), with its own [honesty rules](bench/README.md#honesty-rules)).
+It is honest about what it is: **a logic assertion under a scripted regime, not a device guarantee** — the [gating model](bridge-sim/README.md#the-gating-model-is-deliberately-simple) makes no attempt to reproduce OEM heuristics. Device truth comes from the instrumented suite and the benchmark harness ([`bench/`](bench/README.md), with its own [honesty rules](bench/README.md#honesty-rules)).
 
 
 ---
 
 ## Bridge vs WorkManager
+
+One scorecard, no euphemisms — the rows WorkManager still wins are right there at the bottom, in mint.
 
 <div align="center">
 
@@ -321,11 +325,15 @@ The simulator is deliberately honest about what it is: a logic assertion under a
 
 ## Performance
 
+Cheap enough to forget it's there.
+
 - **Cold start: 318–334 ms measured including Bridge init** (Pixel 6 Pro). `initializeAsync` runs journal-open + reconciliation on a background dispatcher, so `Application.onCreate` returns without paying for it; `scope().launch` and `handle.await()` tolerate pre-init by gating on readiness internally.
 - **~zero steady-state main-thread cost** — journal writes go through a dedicated I/O executor; signal snapshots and diagnosis are pull-based, computed only when you ask.
 - **KvStore** — in-memory-first reads over a `kv` table in `bridge.db` (lock-free `ConcurrentHashMap` reads, DB-before-memory writes), so hot-path metadata never touches disk on read.
 
 ## Status & roadmap — honestly
+
+The receipts above are real. Here is what they don't cover yet.
 
 - **Hardware evidence is one device**: every "device-verified" number above comes from a single Pixel 6 Pro on API 36. That is real evidence and it is also just one point. An OEM matrix (Samsung, Xiaomi, OnePlus, Oppo — the aggressive-killer crowd) is the top validation priority.
 - **Remaining WorkManager gaps**: `Data` payloads, tags, LiveData/Flow observers, content-URI triggers, multi-branch chains. Keep work that needs these on WorkManager (the compat façade keeps both runnable side by side).
