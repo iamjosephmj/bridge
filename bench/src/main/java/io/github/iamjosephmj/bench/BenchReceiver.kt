@@ -42,7 +42,7 @@ class BenchReceiver : BroadcastReceiver() {
  "firstStepExecutions": ${prefs.getInt("first", 0)},
  "secondStepExecutions": ${prefs.getInt("second", 0)},
  "stepEventsJournaled": ${events.count { it is io.github.iamjosephmj.bridge.store.WorkEvent.StepCompleted && !it.name.startsWith("${'$'}sys") }},
- "parks": ${events.count { it is io.github.iamjosephmj.bridge.store.WorkEvent.Stopped && it.stopReason == 2 }},
+ "parks": ${events.count { it is io.github.iamjosephmj.bridge.store.WorkEvent.Stopped && it.stopReason == io.github.iamjosephmj.bridge.store.StopReason.PARKED.code }},
  "deaths": ${events.count { it is io.github.iamjosephmj.bridge.store.WorkEvent.Died }}}"""
                 val out = File(context.getExternalFilesDir(null),
                     "report-durable-fs-${System.currentTimeMillis()}.json")

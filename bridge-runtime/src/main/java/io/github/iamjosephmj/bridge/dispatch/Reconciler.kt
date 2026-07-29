@@ -7,9 +7,8 @@ import io.github.iamjosephmj.bridge.BridgeClock
 import io.github.iamjosephmj.bridge.exec.DeathAttributor
 import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.RunState
+import io.github.iamjosephmj.bridge.store.StopReason
 import io.github.iamjosephmj.bridge.store.WorkEvent
-
-const val STOP_REASON_FORCE_STOP = 2
 
 /** WorkManager's ForceStopRunnable pattern: a sentinel broadcast PendingIntent the OS
  *  wipes on force-stop. Missing sentinel => force-stop (or first run) happened.
@@ -41,7 +40,7 @@ class Reconciler(
             gateway.cancelAll()
             val events = journal.liveWork()
                 .filter { it.runState == RunState.DISPATCHED || it.runState == RunState.RUNNING }
-                .map { WorkEvent.Stopped(it.workId, clock.now(), STOP_REASON_FORCE_STOP) }
+                .map { WorkEvent.Stopped(it.workId, clock.now(), StopReason.FORCE_STOP.code) }
             if (events.isNotEmpty()) journal.appendAll(events)
         }
         dispatcher.dispatchAll()

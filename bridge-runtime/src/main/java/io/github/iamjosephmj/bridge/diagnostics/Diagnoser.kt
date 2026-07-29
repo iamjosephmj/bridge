@@ -6,6 +6,7 @@ import io.github.iamjosephmj.bridge.signals.SignalSlice
 import io.github.iamjosephmj.bridge.signals.SignalSnapshot
 import io.github.iamjosephmj.bridge.signals.SignalValue
 import io.github.iamjosephmj.bridge.store.RunState
+import io.github.iamjosephmj.bridge.store.StopReason
 import io.github.iamjosephmj.bridge.store.WorkEvent
 import io.github.iamjosephmj.bridge.store.WorkState
 
@@ -65,7 +66,8 @@ object Diagnoser {
         val genEvents = events.filter {
             it !is WorkEvent.Enqueued || it.generation == state.generation }
         val crashes = genEvents.count { it is WorkEvent.Died } +
-            genEvents.count { it is WorkEvent.Stopped && it.stopReason == 0 /* retry */ }
+            genEvents.count { it is WorkEvent.Stopped &&
+                StopReason.from(it.stopReason) == StopReason.RETRY }
         // "Between attempts" = the latest crash comes after the latest start; re-dispatch
         // records (Dispatched/PolicyDecision) after the crash don't clear the throttle.
         val lastStart = genEvents.indexOfLast { it is WorkEvent.Started }

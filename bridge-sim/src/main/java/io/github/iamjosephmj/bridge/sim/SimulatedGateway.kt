@@ -8,6 +8,7 @@ import io.github.iamjosephmj.bridge.signals.SignalKind
 import io.github.iamjosephmj.bridge.signals.SignalValue
 import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.RunState
+import io.github.iamjosephmj.bridge.store.StopReason
 import io.github.iamjosephmj.bridge.store.WorkEvent
 
 /**
@@ -99,7 +100,7 @@ class SimulatedGateway(
         val evs = journal.events(p.workId)
         val lastCrash = evs.indexOfLast {
             (it is WorkEvent.Stopped &&
-                it.stopReason != io.github.iamjosephmj.bridge.exec.STOP_REASON_PARKED) ||
+                StopReason.from(it.stopReason) != StopReason.PARKED) ||
                 it is WorkEvent.Died }
         val lastStart = evs.indexOfLast { it is WorkEvent.Started }
         if (lastCrash > lastStart && atMs < evs[lastCrash].at + crashBackoffMs)
