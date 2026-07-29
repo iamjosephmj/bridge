@@ -90,8 +90,8 @@ class ConstraintsParityTest {
         // SelectingJobGateway must route exact-constraint payloads 1:1 even in MULTIPLEXED.
         val mux = FakeJobGateway(); val oneToOne = FakeJobGateway()
         val selecting = SelectingJobGateway(mux, oneToOne,
-            Conformance(ApplicationProvider.getApplicationContext<android.content.Context>()
-                .getSharedPreferences("t-${System.nanoTime()}", 0)))
+            Conformance(io.github.iamjosephmj.bridge.store.KvStore(
+                android.database.sqlite.SQLiteDatabase.create(null))))
         selecting.enqueue(HostJobClass.DEFAULT, payload)
         assertThat(mux.enqueued).isEmpty()
         assertThat(oneToOne.enqueued).hasSize(1)

@@ -8,7 +8,7 @@ import android.util.Log
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
-private const val SCHEMA_VERSION = 1
+private const val SCHEMA_VERSION = 2
 
 private class JournalDb(context: Context, name: String) :
     SQLiteOpenHelper(context, name, null, SCHEMA_VERSION) {
@@ -24,8 +24,38 @@ private class JournalDb(context: Context, name: String) :
             work_id TEXT PRIMARY KEY,
             run_state TEXT NOT NULL,
             snapshot TEXT NOT NULL)""")   // snapshot = full event list is folded on read; column kept for queries
+        db.execSQL(CREATE_KV)
     }
-    override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) {
+        // v1 -> v2: kv table for scheduler bookkeeping (KvStore). Additive, so IF NOT
+        // EXISTS is the whole migration and existing installs keep their journal intact.
+        db.execSQL(CREATE_KV)
+    }
+    override fun onDowngrade(db: SQLiteDatabase, old: Int, new: Int) {
+        // Tolerant on purpose — the default SQLiteOpenHelper behavior is to THROW, which
+        // turns an app-store rollback (or sideloading an older build over a newer one)
+        // into a crash loop at process start: the on-disk db keeps the newer version
+        // stamp, and every open dies before Bridge can run at all. Rollbacks do happen
+        // in the wild, so we never throw here. All schema history is additive, so a
+        // newer db is a superset of what this code needs: ensure every table this
+        // version reads exists (IF NOT EXISTS is a no-op when it already does) and
+        // carry on; SQLiteOpenHelper then re-stamps the version down for us. Any
+        // extra tables/columns a future version added are simply ignored.
+        db.execSQL("""CREATE TABLE IF NOT EXISTS events (
+            seq INTEGER PRIMARY KEY AUTOINCREMENT,
+            work_id TEXT NOT NULL,
+            at INTEGER NOT NULL,
+            payload TEXT NOT NULL)""")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_work ON events(work_id)")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS work_state (
+            work_id TEXT PRIMARY KEY,
+            run_state TEXT NOT NULL,
+            snapshot TEXT NOT NULL)""")
+        db.execSQL(CREATE_KV)
+    }
+    private companion object {
+        const val CREATE_KV = "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)"
+    }
 }
 
 class Journal(
@@ -35,6 +65,14 @@ class Journal(
 ) : EventJournal {
     private val db = JournalDb(context.applicationContext, dbName)
     private val listeners = java.util.concurrent.CopyOnWriteArrayList<(WorkEvent) -> Unit>()
+
+    /**
+     * The [KvStore] living in this journal's database — the narrow doorway to the `kv`
+     * table (the [android.database.sqlite.SQLiteDatabase] itself is never handed out).
+     * Lazy so the full-table load happens once, on first use.
+     */
+    private val kv by lazy { KvStore(db.writableDatabase) }
+    fun kvStore(): KvStore = kv
 
     override fun append(event: WorkEvent) = appendAll(listOf(event))
 

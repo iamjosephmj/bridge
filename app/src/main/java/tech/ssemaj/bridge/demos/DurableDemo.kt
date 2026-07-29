@@ -1,6 +1,7 @@
 package tech.ssemaj.bridge.demos
 
 import io.github.iamjosephmj.bridge.Bridge
+import io.github.iamjosephmj.bridge.BridgeConfigBuilder
 import io.github.iamjosephmj.bridge.api.DurableBlock
 import io.github.iamjosephmj.bridge.api.DurableHandle
 
@@ -23,8 +24,9 @@ private val durableDemoBlock: DurableBlock = {
     step("commit") { "committed $token" }
 }
 
-/** Registration only (no enqueue) — must run at every process start for death replay. */
-fun registerDurableDemo() = Bridge.registerDurable(Names.DURABLE, durableDemoBlock)
+/** Registration only (no enqueue) — must run at every process start for death replay.
+ * Lives in the [BridgeConfigBuilder] block so it works with [Bridge.initializeAsync]. */
+fun BridgeConfigBuilder.registerDurableDemo() = durable(Names.DURABLE, durableDemoBlock)
 
 /** Starts (or KEEPs, if already live) an instance of the durable block. */
 fun launchDurableDemo(): DurableHandle =

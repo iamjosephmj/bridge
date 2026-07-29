@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.PersistableBundle
+import io.github.iamjosephmj.bridge.store.KvStore
 
 /** Network requirement for an exact per-item constraint set. */
 enum class NetworkNeed { NONE, ANY, UNMETERED }
@@ -64,19 +65,17 @@ class SystemJobGateway(private val context: Context) : JobGateway {
  * 1:1 fallback path for devices whose JobScheduler can't sustain the multiplexed
  * (JobWorkItem/dequeueWork) style: one JobInfo per work item instead of one JobInfo shared by
  * many items. Each workId is assigned a unique jobId from a persistent monotonic counter
- * (SharedPreferences "bridge.jobids", starting at 720_000), so distinct work items never
- * collide on the same job slot and the mapping survives process death; workId/generation
- * travel in the JobInfo's extras (there is no JobWorkItem to carry them) and BridgeJobService
- * reads them back out in onStartJob.
+ * (journal [KvStore], keys "jobid.next" / "jobid.<workId>", starting at 720_000), so
+ * distinct work items never collide on the same job slot and the mapping survives process
+ * death; workId/generation travel in the JobInfo's extras (there is no JobWorkItem to
+ * carry them) and BridgeJobService reads them back out in onStartJob.
  */
-class OneToOneJobGateway(private val context: Context) : JobGateway {
+class OneToOneJobGateway(private val context: Context, private val kv: KvStore) : JobGateway {
     private val scheduler: JobScheduler = run {
         val js = context.getSystemService(JobScheduler::class.java)
         if (Build.VERSION.SDK_INT >= 34) js.forNamespace("bridge-1to1") else js
     }
     private val component = ComponentName(context, BridgeJobService::class.java)
-    private val prefs = context.applicationContext
-        .getSharedPreferences(JOB_ID_PREFS, Context.MODE_PRIVATE)
 
     /**
      * Unique, persistent per-workId job slot for the 1:1 path. First sight of a workId
@@ -87,10 +86,10 @@ class OneToOneJobGateway(private val context: Context) : JobGateway {
     @Synchronized
     fun oneToOneJobId(workId: String): Int {
         val key = KEY_ID_PREFIX + workId
-        val existing = prefs.getInt(key, -1)
+        val existing = kv.getInt(key, -1)
         if (existing != -1) return existing
-        val next = prefs.getInt(KEY_NEXT_ID, ONE_TO_ONE_JOB_ID_BASE)
-        prefs.edit().putInt(key, next).putInt(KEY_NEXT_ID, next + 1).apply()
+        val next = kv.getInt(KEY_NEXT_ID, ONE_TO_ONE_JOB_ID_BASE)
+        kv.putAll(mapOf(key to next.toString(), KEY_NEXT_ID to (next + 1).toString()))
         return next
     }
 
@@ -112,16 +111,15 @@ class OneToOneJobGateway(private val context: Context) : JobGateway {
 
     override fun cancel(workId: String) {
         // Look up the persisted mapping without allocating a fresh id for unknown workIds.
-        val id = prefs.getInt(KEY_ID_PREFIX + workId, -1)
+        val id = kv.getInt(KEY_ID_PREFIX + workId, -1)
         if (id == -1) return
         try { scheduler.cancel(id) } catch (_: Exception) { }
     }
 
     companion object {
         private const val ONE_TO_ONE_JOB_ID_BASE = 720_000
-        private const val JOB_ID_PREFS = "bridge.jobids"
-        private const val KEY_NEXT_ID = "next-id"
-        private const val KEY_ID_PREFIX = "id."
+        private const val KEY_NEXT_ID = "jobid.next"
+        private const val KEY_ID_PREFIX = "jobid."
     }
 }
 

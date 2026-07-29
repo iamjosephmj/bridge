@@ -1,6 +1,6 @@
 package io.github.iamjosephmj.bridge.dispatch
 
-import android.content.SharedPreferences
+import io.github.iamjosephmj.bridge.store.KvStore
 
 /**
  * Dispatch strategy Bridge uses to talk to JobScheduler. Starts out MULTIPLEXED (many work
@@ -11,22 +11,22 @@ import android.content.SharedPreferences
 enum class DispatchMode { MULTIPLEXED, ONE_TO_ONE }
 
 /**
- * Persists the current [DispatchMode] plus a consecutive-enqueue-failure counter in
- * [SharedPreferences] so the fallback decision survives process death. Three consecutive
+ * Persists the current [DispatchMode] plus a consecutive-enqueue-failure counter in the
+ * journal's [KvStore] so the fallback decision survives process death (reads are served
+ * from KvStore's memory map — free at dispatch time). Three consecutive
  * multiplexed-enqueue failures trip the breaker to ONE_TO_ONE permanently (until the app is
- * reinstalled / prefs cleared) — there is deliberately no automatic recovery back to
+ * reinstalled / data cleared) — there is deliberately no automatic recovery back to
  * MULTIPLEXED, since a device whose scheduler can't sustain multiplexing now is unlikely to
  * become able to mid-session.
  */
-class Conformance(private val prefs: SharedPreferences) {
+class Conformance(private val kv: KvStore) {
     var mode: DispatchMode
-        get() = DispatchMode.valueOf(
-            prefs.getString(KEY_MODE, DispatchMode.MULTIPLEXED.name)!!)
-        private set(value) { prefs.edit().putString(KEY_MODE, value.name).apply() }
+        get() = DispatchMode.valueOf(kv.get(KEY_MODE) ?: DispatchMode.MULTIPLEXED.name)
+        private set(value) { kv.put(KEY_MODE, value.name) }
 
     private var failures: Int
-        get() = prefs.getInt(KEY_FAILURES, 0)
-        set(value) { prefs.edit().putInt(KEY_FAILURES, value).apply() }
+        get() = kv.getInt(KEY_FAILURES, 0)
+        set(value) { kv.putInt(KEY_FAILURES, value) }
 
     fun recordEnqueueFailure() {
         failures += 1
@@ -36,8 +36,8 @@ class Conformance(private val prefs: SharedPreferences) {
     fun recordEnqueueSuccess() { failures = 0 }
 
     private companion object {
-        const val KEY_MODE = "mode"
-        const val KEY_FAILURES = "failures"
+        const val KEY_MODE = "conformance.mode"
+        const val KEY_FAILURES = "conformance.failures"
         const val FAILURE_THRESHOLD = 3
     }
 }

@@ -1,8 +1,10 @@
 package io.github.iamjosephmj.bridge.dispatch
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import io.github.iamjosephmj.bridge.store.KvStore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -19,7 +21,8 @@ class OneToOneJobGatewayTest {
     // the exposed lookup instead; enqueue/cancelAll are verified by return value / not
     // throwing.
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val gateway = OneToOneJobGateway(context)
+    private val db = SQLiteDatabase.create(null)
+    private val gateway = OneToOneJobGateway(context, KvStore(db))
 
     @Test fun `enqueue schedules successfully`() {
         assertThat(gateway.enqueue(HostJobClass.DEFAULT, WorkItemPayload("w1", 3))).isTrue()
@@ -44,7 +47,8 @@ class OneToOneJobGatewayTest {
 
     @Test fun `assigned jobIds persist across gateway instances`() {
         val id = gateway.oneToOneJobId("w1")
-        assertThat(OneToOneJobGateway(context).oneToOneJobId("w1")).isEqualTo(id)
+        // Fresh KvStore over the same database = a process restart in miniature.
+        assertThat(OneToOneJobGateway(context, KvStore(db)).oneToOneJobId("w1")).isEqualTo(id)
     }
 
     @Test fun `cancel of unknown workId does not allocate a mapping`() {
