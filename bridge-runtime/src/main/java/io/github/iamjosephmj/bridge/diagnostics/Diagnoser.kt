@@ -38,6 +38,7 @@ object Diagnoser {
                 return Verdict(state.workId, state.runState, Diagnosis.Finished,
                     emptyList(), evidence, Basis.INFERRED, pendingSince, notes)
             RunState.ENQUEUED, RunState.DISPATCHED -> Unit
+            RunState.UNKNOWN -> return null   // query-only state; facade substitutes UnknownWork
         }
 
         val matches = mutableListOf<Pair<Diagnosis, Basis>>()

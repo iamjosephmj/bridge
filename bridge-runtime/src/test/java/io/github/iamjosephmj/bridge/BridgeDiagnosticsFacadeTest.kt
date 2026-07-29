@@ -43,7 +43,7 @@ class BridgeDiagnosticsFacadeTest {
     @Test fun `whyPending explains charging constraint`() {
         init()
         Bridge.enqueue(workRequest("sync", "ok") { charging() })
-        val v = Bridge.whyPending("sync")!!
+        val v = Bridge.whyPending("sync")
         assertThat(v.diagnosis).isEqualTo(Diagnosis.AwaitingConstraint("charging"))
         assertThat(v.state).isEqualTo(RunState.DISPATCHED)
     }
@@ -52,7 +52,7 @@ class BridgeDiagnosticsFacadeTest {
         init()
         bucket.value = SignalValue.Bucket(40)
         Bridge.enqueue(workRequest("sync", "ok"))
-        val v = Bridge.whyPending("sync")!!
+        val v = Bridge.whyPending("sync")
         assertThat(v.diagnosis).isEqualTo(Diagnosis.DeferredByStandbyBucket(40))
         assertThat(v.render(now = 61_000L)).contains("DeferredByStandbyBucket(RARE)")
     }
@@ -61,7 +61,7 @@ class BridgeDiagnosticsFacadeTest {
         init()
         bucket.value = SignalValue.Bucket(40)
         Bridge.enqueue(workRequest("sync", "ok"))
-        val ledger = Bridge.ledger("sync")!!
+        val ledger = Bridge.ledger("sync")
         assertThat(ledger.runs).hasSize(1)   // dispatched, in flight
 
         val report = Bridge.report()
@@ -71,9 +71,11 @@ class BridgeDiagnosticsFacadeTest {
         assertThat(report.render(2000L)).contains("sync")
     }
 
-    @Test fun `unknown names return null, never throw`() {
+    @Test fun `unknown names are total - UnknownWork verdict, empty ledger`() {
         init()
-        assertThat(Bridge.whyPending("nope")).isNull()
-        assertThat(Bridge.ledger("nope")).isNull()
+        val v = Bridge.whyPending("nope")
+        assertThat(v.diagnosis).isEqualTo(Diagnosis.UnknownWork)
+        assertThat(v.state.name).isEqualTo("UNKNOWN")
+        assertThat(Bridge.ledger("nope").runs).isEmpty()
     }
 }

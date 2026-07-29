@@ -88,7 +88,7 @@ object BridgeWorkManager {
         RunState.SUCCEEDED -> WorkInfoState.SUCCEEDED
         RunState.FAILED -> WorkInfoState.FAILED
         RunState.CANCELLED -> WorkInfoState.CANCELLED
-        null -> null
+        RunState.UNKNOWN, null -> null
     }
 
     fun cancelUniqueWork(name: String) = Bridge.cancel(name)

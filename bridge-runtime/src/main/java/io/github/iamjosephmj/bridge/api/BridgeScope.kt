@@ -30,6 +30,6 @@ class BridgeScope internal constructor() {
 /** Handle to a launched durable — queries delegate to the Bridge facade. */
 class DurableHandle internal constructor(val name: String) {
     fun state(): WorkState? = Bridge.state(name)
-    fun whyPending(): Verdict? = Bridge.whyPending(name)
+    fun whyPending(): Verdict = Bridge.whyPending(name)
     fun cancel() = Bridge.cancel(name)
 }
