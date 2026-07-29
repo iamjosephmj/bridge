@@ -15,6 +15,8 @@ data class ItemConstraints(
     val batteryNotLow: Boolean,
     val storageNotLow: Boolean,
     val deviceIdle: Boolean,
+    val minLatencyMs: Long = 0L, // remaining initial delay at dispatch time
+    val periodicMs: Long = 0L,   // JobInfo.setPeriodic interval
 )
 
 data class WorkItemPayload(
@@ -29,6 +31,8 @@ const val EXTRA_GENERATION = "bridge.EXTRA_GENERATION"
 interface JobGateway {
     fun enqueue(hostClass: HostJobClass, payload: WorkItemPayload): Boolean
     fun cancelAll()
+    /** Cancel one item's platform job where representable (the 1:1 path; periodic needs it). */
+    fun cancel(workId: String) {}
 }
 
 class SystemJobGateway(private val context: Context) : JobGateway {
@@ -82,6 +86,10 @@ class OneToOneJobGateway(private val context: Context) : JobGateway {
     }
 
     override fun cancelAll() { scheduler.cancelAll() }
+
+    override fun cancel(workId: String) {
+        try { scheduler.cancel(oneToOneJobId(workId)) } catch (_: Exception) { }
+    }
 
     companion object {
         private const val ONE_TO_ONE_JOB_ID_BASE = 720_000

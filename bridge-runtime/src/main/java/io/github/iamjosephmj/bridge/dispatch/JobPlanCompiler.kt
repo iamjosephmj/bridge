@@ -19,8 +19,8 @@ object JobPlanCompiler {
                 itemConstraints: ItemConstraints? = null): JobInfo {
         val b = JobInfo.Builder(jobId, serviceComponent)
             .setPersisted(false)   // reconciler reschedules; WorkManager-proven pattern
-        // Platform rule: an idle-mode job ignores backoff and build() rejects the combo.
-        if (itemConstraints?.deviceIdle != true) {
+        // Platform rules: idle-mode jobs reject backoff; periodic jobs reject latency.
+        if (itemConstraints?.deviceIdle != true && (itemConstraints?.periodicMs ?: 0L) <= 0L) {
             b.setBackoffCriteria(30_000L, JobInfo.BACKOFF_POLICY_EXPONENTIAL)
         }
         if (extras != null) b.setExtras(extras)
@@ -34,10 +34,16 @@ object JobPlanCompiler {
             if (itemConstraints.batteryNotLow) b.setRequiresBatteryNotLow(true)
             if (itemConstraints.storageNotLow) b.setRequiresStorageNotLow(true)
             if (itemConstraints.deviceIdle) b.setRequiresDeviceIdle(true)
-            val empty = itemConstraints.network == 0 && !itemConstraints.charging &&
-                !itemConstraints.batteryNotLow && !itemConstraints.storageNotLow &&
-                !itemConstraints.deviceIdle
-            if (empty) b.setMinimumLatency(1L)   // build() rejects zero constraints
+            if (itemConstraints.periodicMs > 0) {
+                b.setPeriodic(itemConstraints.periodicMs)
+            } else if (itemConstraints.minLatencyMs > 0) {
+                b.setMinimumLatency(itemConstraints.minLatencyMs)
+            } else {
+                val empty = itemConstraints.network == 0 && !itemConstraints.charging &&
+                    !itemConstraints.batteryNotLow && !itemConstraints.storageNotLow &&
+                    !itemConstraints.deviceIdle
+                if (empty) b.setMinimumLatency(1L)   // build() rejects zero constraints
+            }
             if (Build.VERSION.SDK_INT >= 35) b.setTraceTag("bridge:exact")
             return b.build()
         }

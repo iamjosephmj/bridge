@@ -14,6 +14,9 @@ data class WorkState(
     val requiresBatteryNotLow: Boolean = false,
     val requiresStorageNotLow: Boolean = false,
     val requiresDeviceIdle: Boolean = false,
+    val initialDelayMs: Long = 0L,
+    val periodicMs: Long = 0L,
+    val enqueuedAt: Long = 0L,
 )
 
 fun foldWorkState(events: List<WorkEvent>): WorkState? {
@@ -32,6 +35,9 @@ fun foldWorkState(events: List<WorkEvent>): WorkState? {
                 requiresBatteryNotLow = e.requiresBatteryNotLow,
                 requiresStorageNotLow = e.requiresStorageNotLow,
                 requiresDeviceIdle = e.requiresDeviceIdle,
+                initialDelayMs = e.initialDelayMs,
+                periodicMs = e.periodicMs,
+                enqueuedAt = e.at,
             )
             is WorkEvent.Dispatched -> s?.copy(runState = RunState.DISPATCHED)
             is WorkEvent.Started -> s?.copy(runState = RunState.RUNNING, attempt = e.attempt)

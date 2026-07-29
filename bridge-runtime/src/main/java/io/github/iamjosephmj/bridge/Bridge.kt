@@ -42,6 +42,7 @@ object Bridge {
     private var clock: BridgeClock = SystemBridgeClock()
     private var registry: WorkerRegistry? = null
     private var durableDeps: DurableDeps? = null
+    private var gateway: JobGateway? = null
     private var signalHub: SignalHub? = null
     private var signalLog: SignalLog? = null
     private var conformance: Conformance? = null
@@ -73,6 +74,7 @@ object Bridge {
         val hub = SignalHub(sources, log, b.clock)
         signalLog = log; signalHub = hub
         registry = b.registry
+        gateway = gw
         val alarmGw = SystemAlarmGateway(appContext)
         val d = Dispatcher(j, gw, b.clock,
             policy = PolicyEngine(android.os.Build.VERSION.SDK_INT),
@@ -123,7 +125,9 @@ object Bridge {
             requiresNetwork = request.requiresNetwork,
             requiresBatteryNotLow = request.requiresBatteryNotLow,
             requiresStorageNotLow = request.requiresStorageNotLow,
-            requiresDeviceIdle = request.requiresDeviceIdle))
+            requiresDeviceIdle = request.requiresDeviceIdle,
+            initialDelayMs = request.initialDelayMs,
+            periodicMs = request.periodicMs))
         dispatcher!!.dispatch(request.name)
         pokeHub()
         return request.name
@@ -197,6 +201,7 @@ object Bridge {
 
     fun cancel(name: String) {
         journal?.append(WorkEvent.Cancelled(name, clock.now()))
+        try { gateway?.cancel(name) } catch (_: Exception) { }   // ends a periodic series
     }
 
     fun reconcileIfInitialized() { dispatcher?.dispatchAll() }
@@ -206,7 +211,7 @@ object Bridge {
     fun reset() {
         journal?.close(); journal = null; dispatcher = null
         signalHub = null; signalLog = null; conformance = null; registry = null
-        durableDeps = null
+        durableDeps = null; gateway = null
         BridgeServices.runner = null
     }
 }

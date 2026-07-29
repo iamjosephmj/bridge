@@ -45,6 +45,18 @@ object BridgeWorkManager {
                         request: OneTimeWorkRequest): WorkContinuation =
         WorkContinuation(this, name, policy, mutableListOf(request))
 
+    fun enqueueUniquePeriodicWork(name: String, policy: ExistingPeriodicWorkPolicy,
+                                  request: PeriodicWorkRequest): String {
+        if (policy == ExistingPeriodicWorkPolicy.UPDATE) Bridge.cancel(name)
+        val workerName = "compat:" + request.workerClass.name
+        Bridge.registerWorker(workerName) { CompatChainWorker(listOf(request.workerClass)) }
+        return Bridge.enqueue(workRequest(name, workerName) {
+            applyConstraints(listOf(request.constraints))
+            periodic(request.intervalMs)
+            chunks(1)
+        })
+    }
+
     internal fun enqueueChain(name: String, policy: ExistingWorkPolicy,
                               requests: List<OneTimeWorkRequest>): String {
         require(requests.isNotEmpty())
@@ -52,16 +64,22 @@ object BridgeWorkManager {
         val links = requests.map { it.workerClass }
         val workerName = "compat:" + links.joinToString(",") { it.name }
         Bridge.registerWorker(workerName) { CompatChainWorker(links) }
-        val all = requests.map { it.constraints }
+        val delay = requests.maxOf { it.initialDelayMs }
         return Bridge.enqueue(workRequest(name, workerName) {
-            if (all.any { it.requiresCharging }) charging()
-            if (all.any { it.requiredNetworkType == NetworkType.UNMETERED }) unmetered()
-            else if (all.any { it.requiredNetworkType == NetworkType.CONNECTED }) network()
-            if (all.any { it.requiresBatteryNotLow }) batteryNotLow()
-            if (all.any { it.requiresStorageNotLow }) storageNotLow()
-            if (all.any { it.requiresDeviceIdle }) deviceIdle()
+            applyConstraints(requests.map { it.constraints })
+            if (delay > 0) initialDelay(delay)
             chunks(links.size)
         })
+    }
+
+    private fun io.github.iamjosephmj.bridge.api.WorkRequestBuilder.applyConstraints(
+        all: List<Constraints>) {
+        if (all.any { it.requiresCharging }) charging()
+        if (all.any { it.requiredNetworkType == NetworkType.UNMETERED }) unmetered()
+        else if (all.any { it.requiredNetworkType == NetworkType.CONNECTED }) network()
+        if (all.any { it.requiresBatteryNotLow }) batteryNotLow()
+        if (all.any { it.requiresStorageNotLow }) storageNotLow()
+        if (all.any { it.requiresDeviceIdle }) deviceIdle()
     }
 
     fun getWorkInfoState(name: String): WorkInfoState? = when (Bridge.state(name)?.runState) {

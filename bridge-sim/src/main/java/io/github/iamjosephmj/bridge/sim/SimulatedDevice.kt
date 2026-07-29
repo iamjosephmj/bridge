@@ -95,7 +95,9 @@ class SimulatedDevice internal constructor() {
             requiresNetwork = request.requiresNetwork,
             requiresBatteryNotLow = request.requiresBatteryNotLow,
             requiresStorageNotLow = request.requiresStorageNotLow,
-            requiresDeviceIdle = request.requiresDeviceIdle))
+            requiresDeviceIdle = request.requiresDeviceIdle,
+            initialDelayMs = request.initialDelayMs,
+            periodicMs = request.periodicMs))
         // Sync sources before the dispatch decision — policy must see the scripted present.
         for (src in sources) src.value = timeline.valueAt(src.kind, clock.now())
         dispatcher.dispatch(request.name)
@@ -129,7 +131,13 @@ class SimulatedDevice internal constructor() {
             }
             when (outcome) {
                 io.github.iamjosephmj.bridge.exec.RunOutcome.COMPLETED,
-                io.github.iamjosephmj.bridge.exec.RunOutcome.FAILED -> gateway.remove(payload.workId)
+                io.github.iamjosephmj.bridge.exec.RunOutcome.FAILED ->
+                    // Periodic platform jobs outlive their cycles; cancelled series drop.
+                    if ((journal.state(payload.workId)?.periodicMs ?: 0L) == 0L ||
+                        journal.state(payload.workId)?.runState ==
+                            io.github.iamjosephmj.bridge.store.RunState.CANCELLED) {
+                        gateway.remove(payload.workId)
+                    } else Unit
                 io.github.iamjosephmj.bridge.exec.RunOutcome.RETRY -> Unit   // stays parked, backoff gates it
             }
         }
