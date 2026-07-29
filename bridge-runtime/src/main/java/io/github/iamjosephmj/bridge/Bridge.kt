@@ -23,7 +23,7 @@ class BridgeConfigBuilder internal constructor() {
 }
 
 object Bridge {
-    private var journal: Journal? = null
+    private var journal: EventJournal? = null
     private var dispatcher: Dispatcher? = null
     private var clock: BridgeClock = SystemBridgeClock()
 

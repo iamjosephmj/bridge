@@ -33,13 +33,13 @@ class Journal(
     context: Context,
     dbName: String = "bridge.db",
     private val ioExecutor: Executor = Executors.newSingleThreadExecutor(),
-) {
+) : EventJournal {
     private val db = JournalDb(context.applicationContext, dbName)
     private var lastWriteTask: FutureTask<Unit>? = null
 
-    fun append(event: WorkEvent) = appendAll(listOf(event))
+    override fun append(event: WorkEvent) = appendAll(listOf(event))
 
-    fun appendAll(events: List<WorkEvent>) {
+    override fun appendAll(events: List<WorkEvent>) {
         val task = FutureTask {
             try {
                 val w = db.writableDatabase
@@ -70,7 +70,7 @@ class Journal(
         task.get()  // Block until write completes; propagate exceptions
     }
 
-    fun events(workId: String): List<WorkEvent> {
+    override fun events(workId: String): List<WorkEvent> {
         val out = mutableListOf<WorkEvent>()
         db.readableDatabase.rawQuery(
             "SELECT payload FROM events WHERE work_id = ? ORDER BY seq", arrayOf(workId)).use { c ->
@@ -79,12 +79,14 @@ class Journal(
         return out
     }
 
-    fun state(workId: String): WorkState? = foldWorkState(events(workId))
+    override fun state(workId: String): WorkState? = foldWorkState(events(workId))
 
-    fun liveWork(): List<WorkState> = statesWhere(
+    override fun liveWork(): List<WorkState> = statesWhere(
         "run_state IN ('ENQUEUED','DISPATCHED','RUNNING')")
 
-    fun runningWork(): List<WorkState> = statesWhere("run_state = 'RUNNING'")
+    override fun runningWork(): List<WorkState> = statesWhere("run_state = 'RUNNING'")
+
+    override fun allWork(): List<WorkState> = statesWhere("1=1")
 
     private fun statesWhere(where: String): List<WorkState> {
         val ids = mutableListOf<String>()
@@ -95,7 +97,7 @@ class Journal(
         return ids.mapNotNull { state(it) }
     }
 
-    fun prune(olderThanMs: Long, now: Long) {
+    override fun prune(olderThanMs: Long, now: Long) {
         ioExecutor.execute {
             try {
                 val w = db.writableDatabase
@@ -133,7 +135,7 @@ class Journal(
         return foldWorkState(events)
     }
 
-    fun close() {
+    override fun close() {
         lastWriteTask?.get()  // Wait for any pending write to complete
         ioExecutor.execute { db.close() }
     }

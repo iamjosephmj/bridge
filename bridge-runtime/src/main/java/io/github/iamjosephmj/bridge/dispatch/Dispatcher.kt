@@ -1,12 +1,12 @@
 package io.github.iamjosephmj.bridge.dispatch
 
 import io.github.iamjosephmj.bridge.BridgeClock
-import io.github.iamjosephmj.bridge.store.Journal
+import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.RunState
 import io.github.iamjosephmj.bridge.store.WorkEvent
 
 class Dispatcher(
-    private val journal: Journal,
+    private val journal: EventJournal,
     private val gateway: JobGateway,
     private val clock: BridgeClock,
 ) {

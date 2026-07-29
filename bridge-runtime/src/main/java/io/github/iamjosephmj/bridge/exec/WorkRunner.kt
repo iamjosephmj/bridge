@@ -6,7 +6,7 @@ import io.github.iamjosephmj.bridge.api.ChunkedWorker
 import io.github.iamjosephmj.bridge.api.RunContext
 import io.github.iamjosephmj.bridge.api.RunResult
 import io.github.iamjosephmj.bridge.api.WorkerRegistry
-import io.github.iamjosephmj.bridge.store.Journal
+import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.RunState
 import io.github.iamjosephmj.bridge.store.WorkEvent
 import kotlinx.coroutines.CancellationException
@@ -24,7 +24,7 @@ private sealed class ChunkRunResult {
 }
 
 class WorkRunner(
-    private val journal: Journal,
+    private val journal: EventJournal,
     private val registry: WorkerRegistry,
     private val blackBox: BlackBox,
     private val costMeter: CostMeter,
