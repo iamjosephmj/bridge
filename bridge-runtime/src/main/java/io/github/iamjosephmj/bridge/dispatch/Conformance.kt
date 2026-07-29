@@ -55,7 +55,8 @@ class SelectingJobGateway(
     private val conformance: Conformance,
 ) : JobGateway {
     override fun enqueue(hostClass: HostJobClass, payload: WorkItemPayload): Boolean {
-        if (conformance.mode == DispatchMode.ONE_TO_ONE) {
+        // Exact per-item constraints can only ride a per-item JobInfo.
+        if (conformance.mode == DispatchMode.ONE_TO_ONE || payload.constraints != null) {
             return oneToOne.enqueue(hostClass, payload)
         }
         val ok = multiplexed.enqueue(hostClass, payload)

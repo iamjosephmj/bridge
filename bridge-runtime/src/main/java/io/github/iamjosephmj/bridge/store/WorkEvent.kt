@@ -19,6 +19,10 @@ sealed interface WorkEvent {
         val estimatedUpBytes: Long = 0L,
         val maxAttempts: Int = 3,
         val deadlineMs: Long = 0L,           // 0 = no deadline (mustCompleteBy)
+        val requiresNetwork: Boolean = false,
+        val requiresBatteryNotLow: Boolean = false,
+        val requiresStorageNotLow: Boolean = false,
+        val requiresDeviceIdle: Boolean = false,
     ) : WorkEvent
 
     @Serializable @SerialName("dispatched")

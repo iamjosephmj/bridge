@@ -10,6 +10,10 @@ data class WorkState(
     val estimatedUpBytes: Long,
     val lastStopReason: Int?, val lastDeath: WorkEvent.Died?,
     val deadlineMs: Long = 0L,
+    val requiresNetwork: Boolean = false,
+    val requiresBatteryNotLow: Boolean = false,
+    val requiresStorageNotLow: Boolean = false,
+    val requiresDeviceIdle: Boolean = false,
 )
 
 fun foldWorkState(events: List<WorkEvent>): WorkState? {
@@ -24,6 +28,10 @@ fun foldWorkState(events: List<WorkEvent>): WorkState? {
                 requiresUnmetered = e.requiresUnmetered, estimatedUpBytes = e.estimatedUpBytes,
                 lastStopReason = null, lastDeath = null,
                 deadlineMs = e.deadlineMs,
+                requiresNetwork = e.requiresNetwork,
+                requiresBatteryNotLow = e.requiresBatteryNotLow,
+                requiresStorageNotLow = e.requiresStorageNotLow,
+                requiresDeviceIdle = e.requiresDeviceIdle,
             )
             is WorkEvent.Dispatched -> s?.copy(runState = RunState.DISPATCHED)
             is WorkEvent.Started -> s?.copy(runState = RunState.RUNNING, attempt = e.attempt)

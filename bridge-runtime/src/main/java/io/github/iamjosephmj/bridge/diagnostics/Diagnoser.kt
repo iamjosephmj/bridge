@@ -102,6 +102,10 @@ object Diagnoser {
         }
         if (state.requiresCharging) matches += Diagnosis.AwaitingConstraint("charging") to Basis.INFERRED
         if (state.requiresUnmetered) matches += Diagnosis.AwaitingConstraint("unmetered") to Basis.INFERRED
+        if (state.requiresNetwork) matches += Diagnosis.AwaitingConstraint("network") to Basis.INFERRED
+        if (state.requiresBatteryNotLow) matches += Diagnosis.AwaitingConstraint("battery-not-low") to Basis.INFERRED
+        if (state.requiresStorageNotLow) matches += Diagnosis.AwaitingConstraint("storage-not-low") to Basis.INFERRED
+        if (state.requiresDeviceIdle) matches += Diagnosis.AwaitingConstraint("device-idle") to Basis.INFERRED
 
         // 4. Weakest inference: enqueued but never handed to the scheduler this generation.
         val dispatchedThisGen = events.any {

@@ -58,6 +58,12 @@ class SimScope internal constructor(internal val device: SimulatedDevice) {
     fun thermal(status: Int, fromMs: Long = 0L) =
         timeline.set(SignalKind.THERMAL, SignalValue.Count(status), fromMs)
 
+    fun batteryLow(on: Boolean, fromMs: Long = 0L) =
+        timeline.set("batteryLow", SignalValue.Flag(on), fromMs)
+
+    fun storageLow(on: Boolean, fromMs: Long = 0L) =
+        timeline.set("storageLow", SignalValue.Flag(on), fromMs)
+
     /** Escape hatch: script any signal directly. */
     fun signal(kind: SignalKind, value: SignalValue, fromMs: Long = 0L) =
         timeline.set(kind, value, fromMs)

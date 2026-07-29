@@ -116,7 +116,11 @@ object Bridge {
             chunkCount = request.chunkCount,
             estimatedUpBytes = request.estimatedUpBytes,
             maxAttempts = request.maxAttempts,
-            deadlineMs = request.deadlineMs))
+            deadlineMs = request.deadlineMs,
+            requiresNetwork = request.requiresNetwork,
+            requiresBatteryNotLow = request.requiresBatteryNotLow,
+            requiresStorageNotLow = request.requiresStorageNotLow,
+            requiresDeviceIdle = request.requiresDeviceIdle))
         dispatcher!!.dispatch(request.name)
         pokeHub()
         return request.name

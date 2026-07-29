@@ -52,11 +52,14 @@ object BridgeWorkManager {
         val links = requests.map { it.workerClass }
         val workerName = "compat:" + links.joinToString(",") { it.name }
         Bridge.registerWorker(workerName) { CompatChainWorker(links) }
-        val charging = requests.any { it.constraints.requiresCharging }
-        val unmetered = requests.any { it.constraints.requiredNetworkType == NetworkType.UNMETERED }
+        val all = requests.map { it.constraints }
         return Bridge.enqueue(workRequest(name, workerName) {
-            if (charging) charging()
-            if (unmetered) unmetered()
+            if (all.any { it.requiresCharging }) charging()
+            if (all.any { it.requiredNetworkType == NetworkType.UNMETERED }) unmetered()
+            else if (all.any { it.requiredNetworkType == NetworkType.CONNECTED }) network()
+            if (all.any { it.requiresBatteryNotLow }) batteryNotLow()
+            if (all.any { it.requiresStorageNotLow }) storageNotLow()
+            if (all.any { it.requiresDeviceIdle }) deviceIdle()
             chunks(links.size)
         })
     }

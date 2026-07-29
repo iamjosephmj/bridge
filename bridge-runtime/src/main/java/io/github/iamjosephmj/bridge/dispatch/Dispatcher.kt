@@ -63,8 +63,19 @@ class Dispatcher(
                     alarmGateway?.scheduleAt(
                         maxOf(clock.now(), state.deadlineMs - ALARM_MARGIN_MS), state.workId)
                 }
+                val exact = if (state.needsExactConstraints) ItemConstraints(
+                    network = when {
+                        state.requiresUnmetered -> 2
+                        state.requiresNetwork -> 1
+                        else -> 0
+                    },
+                    charging = state.requiresCharging,
+                    batteryNotLow = state.requiresBatteryNotLow,
+                    storageNotLow = state.requiresStorageNotLow,
+                    deviceIdle = state.requiresDeviceIdle,
+                ) else null
                 val ok = gateway.enqueue(decision.tier,
-                    WorkItemPayload(state.workId, state.generation))
+                    WorkItemPayload(state.workId, state.generation, exact))
                 if (ok) {
                     journal.append(WorkEvent.Dispatched(
                         state.workId, clock.now(), decision.tier.name, state.generation))
