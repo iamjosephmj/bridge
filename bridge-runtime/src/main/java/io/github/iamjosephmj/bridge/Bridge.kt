@@ -18,6 +18,11 @@ import io.github.iamjosephmj.bridge.signals.*
 import io.github.iamjosephmj.bridge.store.*
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 
 class BridgeConfigBuilder internal constructor() {
     internal val registry = WorkerRegistry()
@@ -54,14 +59,20 @@ object Bridge {
     @Volatile
     private var runtime: BridgeRuntime? = null
 
+    /** Completed at the end of a successful [initialize]; recreated by [reset]. */
+    @Volatile
+    private var ready = CompletableDeferred<Unit>()
+
+    internal val isInitialized: Boolean get() = runtime != null
+
     /**
      * Initializes Bridge: builds the journal/dispatcher/runner, then performs synchronous
      * reconciliation (death attribution, force-stop recovery, dispatch of any live work).
      * Idempotent — subsequent calls are no-ops once initialized.
      *
      * This reconciliation does synchronous DB work on the calling thread and its cost scales
-     * with the size of any live-work backlog. Prefer calling this off the main thread (e.g. a
-     * background thread from `Application.onCreate`) when large backlogs are possible.
+     * with the size of any live-work backlog. Prefer [initializeAsync] from `Application.onCreate`
+     * to keep it off the main thread, then gate early callers on [awaitReady].
      */
     @Synchronized
     fun initialize(context: Context, block: BridgeConfigBuilder.() -> Unit) {
@@ -108,7 +119,31 @@ object Bridge {
             DeathAttributor(j, b.deathSource ?: SystemProcessDeathSource(appContext), b.clock),
             ForceStopDetector(appContext), gw, b.clock).reconcile()
         pokeHub()   // reconciliation is a scheduling decision
+        ready.complete(Unit)
     }
+
+    /**
+     * Runs [initialize] on [Dispatchers.Default] so `Application.onCreate` returns without
+     * paying for journal open + reconciliation on the main thread.
+     *
+     * The async pattern: call this in `onCreate`, then have early callers suspend on
+     * [awaitReady] (UI first paint, first enqueue). [BridgeScope.launch] and
+     * [io.github.iamjosephmj.bridge.api.DurableHandle.join]/`await` already tolerate
+     * pre-init by awaiting readiness internally. The synchronous facade keeps its existing
+     * contracts regardless of how initialization ran: [enqueue]/[registerDurable] require
+     * initialization (throw before ready), while [state]/[whyPending]/[ledger]/[report]/
+     * [cancel] degrade gracefully (null / UNKNOWN / empty) until ready.
+     */
+    fun initializeAsync(
+        context: Context,
+        block: BridgeConfigBuilder.() -> Unit,
+    ): Deferred<Unit> {
+        val appContext = context.applicationContext
+        return CoroutineScope(Dispatchers.Default).async { initialize(appContext, block) }
+    }
+
+    /** Suspends until [initialize] has completed (returns immediately once it has). */
+    suspend fun awaitReady() = ready.await()
 
     /** Diagnostics must never break scheduling. */
     private fun pokeHub() {
@@ -226,5 +261,6 @@ object Bridge {
         runtime?.journal?.close()
         runtime = null
         BridgeServices.runner = null
+        ready = CompletableDeferred()   // re-arm the gate for the next initialize()
     }
 }

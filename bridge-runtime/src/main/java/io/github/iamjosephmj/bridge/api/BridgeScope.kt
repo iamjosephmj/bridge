@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
@@ -49,8 +50,19 @@ class BridgeScope internal constructor() : CoroutineScope {
         constraints: WorkRequestBuilder.() -> Unit = {},
         block: DurableBlock,
     ): DurableHandle {
-        Bridge.registerDurable(name, block)
-        Bridge.enqueue(workRequest(name, name, constraints))
+        if (Bridge.isInitialized) {
+            Bridge.registerDurable(name, block)
+            Bridge.enqueue(workRequest(name, name, constraints))
+        } else {
+            // Pre-init tolerance for Bridge.initializeAsync(): defer register + enqueue
+            // until the runtime is ready. The handle stays valid immediately — it is only
+            // a view onto journal state, and its queries degrade gracefully until then.
+            CoroutineScope(coroutineContext).launch {
+                Bridge.awaitReady()
+                Bridge.registerDurable(name, block)
+                Bridge.enqueue(workRequest(name, name, constraints))
+            }
+        }
         synchronized(launched) { launched += name }
         return DurableHandle(name)
     }
@@ -87,6 +99,7 @@ class DurableHandle internal constructor(val name: String) {
 
     /** Like [join], but returns the terminal [RunState] (SUCCEEDED / FAILED / CANCELLED). */
     suspend fun await(): RunState {
+        Bridge.awaitReady()   // tolerate initializeAsync(): don't touch the journal pre-init
         terminalOrNull()?.let { return it }
         return suspendCancellableCoroutine { cont ->
             val resumed = AtomicBoolean(false)
