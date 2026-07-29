@@ -10,19 +10,6 @@ import io.github.iamjosephmj.bridge.store.WorkEvent
 import io.github.iamjosephmj.bridge.store.WorkState
 
 /**
- * JobScheduler PENDING_JOB_REASON_* constants (API 34+), centralized so the mapping
- * lives in exactly one place. Values per the platform SDK.
- */
-object PlatformPendingReasons {
-    const val APP_STANDBY = 2
-    const val BACKGROUND_RESTRICTION = 3
-    const val CONSTRAINT_CHARGING = 5            // verified on Pixel 6 Pro / API 36
-    const val CONSTRAINT_CONNECTIVITY = 6
-    const val CONSTRAINT_DEVICE_IDLE = 8         // job *declared* setRequiresDeviceIdle
-    const val DEVICE_STATE = 12                  // device is dozing/off — verified on Pixel 6 Pro / API 36
-}
-
-/**
  * Pure diagnosis rules: no Android imports, fully JVM-testable. Ordered matchers,
  * most-authoritative first — the first hit is the primary diagnosis, later hits contribute.
  */
@@ -58,7 +45,7 @@ object Diagnoser {
         // 1. Platform-reported reasons trump everything.
         val reported = snapshot.values[SignalKind.PENDING_REASONS]
         if (reported is SignalValue.PendingReasons && reported.reasons.isNotEmpty()) {
-            for (r in reported.reasons) matches += mapPlatformReason(r, snapshot) to Basis.REPORTED
+            for (r in reported.reasons) matches += PlatformPendingReasons.map(r, snapshot) to Basis.REPORTED
         }
 
         // 2. Bridge's own held decisions from the journal.
@@ -127,19 +114,4 @@ object Diagnoser {
         )
     }
 
-    private fun mapPlatformReason(reason: Int, snapshot: SignalSnapshot): Diagnosis = when (reason) {
-        PlatformPendingReasons.APP_STANDBY -> {
-            val b = snapshot.values[SignalKind.STANDBY_BUCKET]
-            Diagnosis.DeferredByStandbyBucket(if (b is SignalValue.Bucket) b.bucket else -1)
-        }
-        PlatformPendingReasons.BACKGROUND_RESTRICTION -> Diagnosis.BackgroundRestricted
-        PlatformPendingReasons.CONSTRAINT_CHARGING -> Diagnosis.AwaitingConstraint("charging")
-        PlatformPendingReasons.CONSTRAINT_CONNECTIVITY -> Diagnosis.AwaitingConstraint("unmetered")
-        PlatformPendingReasons.CONSTRAINT_DEVICE_IDLE -> Diagnosis.AwaitingConstraint("device-idle")
-        PlatformPendingReasons.DEVICE_STATE -> {
-            val d = snapshot.values[SignalKind.DOZE]
-            Diagnosis.DeferredByDoze(d is SignalValue.Doze && d.mode == DozeMode.DEEP)
-        }
-        else -> Diagnosis.NotDispatched("platform reason $reason")
-    }
 }

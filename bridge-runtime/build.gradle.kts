@@ -14,6 +14,7 @@ android {
 }
 
 dependencies {
+    api(project(":bridge-glassbox"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)

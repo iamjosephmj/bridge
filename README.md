@@ -10,6 +10,12 @@ per-run cost via HealthStats.
 - M2 design: `docs/superpowers/specs/2026-07-29-bridge-m2-glass-box-design.md`
 - Benchmark vs WorkManager: `bench/README.md`
 - Simulator: `bridge-sim/README.md`
+- Standalone diagnostics (no Bridge scheduler needed): `bridge-glassbox` —
+  `GlassBox.install(app)` + `GlassBox.explain()` answers "why isn't my
+  background work running?" for ANY app, including WorkManager apps (their
+  jobs are the app's own JobScheduler jobs, so platform pending reasons are
+  readable). The signal hub, signal log, diagnosis types, and platform-reason
+  mapping live here; bridge-runtime builds on top.
 
 Status: v0.5 + parity tier (constraints, periodic work, initial delay).
 

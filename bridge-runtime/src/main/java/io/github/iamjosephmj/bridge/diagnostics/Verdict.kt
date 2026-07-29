@@ -5,33 +5,6 @@ import io.github.iamjosephmj.bridge.signals.SignalValue
 import io.github.iamjosephmj.bridge.signals.Trigger
 import io.github.iamjosephmj.bridge.store.RunState
 
-sealed interface Diagnosis {
-    data class DeferredByStandbyBucket(val bucket: Int) : Diagnosis
-    data class DeferredByDoze(val deep: Boolean) : Diagnosis
-    object BackgroundRestricted : Diagnosis { override fun toString() = "BackgroundRestricted" }
-    object DataSaverBlocked : Diagnosis { override fun toString() = "DataSaverBlocked" }
-    data class AwaitingConstraint(val constraint: String) : Diagnosis   // "charging" | "unmetered"
-    object AwaitingConformanceFallback : Diagnosis { override fun toString() = "AwaitingConformanceFallback" }
-    data class ThrottledAfterCrashes(val crashes: Int) : Diagnosis
-    /** Bridge's own L4 judgment held/shed this work; `why` is the journaled arithmetic. */
-    data class HeldByPolicy(val why: String) : Diagnosis
-    /** M5: a durable block is parked on a timer/await — waiting, not stuck. */
-    data class DurableParked(val why: String) : Diagnosis
-    data class NotDispatched(val reason: String) : Diagnosis
-    object Running : Diagnosis { override fun toString() = "Running" }
-    object Finished : Diagnosis { override fun toString() = "Finished" }
-    data class Unexplained(val note: String) : Diagnosis
-}
-
-enum class Basis { REPORTED, INFERRED }
-
-data class Evidence(
-    val kind: SignalKind,
-    val value: SignalValue,
-    val at: Long,
-    val trigger: Trigger,
-)
-
 data class Verdict(
     val workId: String,
     val state: RunState,

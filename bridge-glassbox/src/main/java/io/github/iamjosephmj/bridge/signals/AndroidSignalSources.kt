@@ -8,17 +8,19 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.PowerManager
-import io.github.iamjosephmj.bridge.dispatch.HostJobClass
 
 /**
  * The nine platform signal sources. Every source returns [SignalValue.Unknown] below its
  * API floor; exceptions are caught by [SignalHub], not here.
  */
 object AndroidSignalSources {
-    fun all(context: Context): List<SignalSource> {
+    /** @param jobNamespaces JobScheduler namespaces to scan for pending-job reasons;
+     *  null means the default namespace (where WorkManager's jobs live). */
+    fun all(context: Context,
+            jobNamespaces: List<String?> = listOf("bridge", "bridge-1to1")): List<SignalSource> {
         val app = context.applicationContext
         return listOf(
-            PendingReasonsSource(app), StandbyBucketSource(app), BgRestrictedSource(app),
+            PendingReasonsSource(app, jobNamespaces), StandbyBucketSource(app), BgRestrictedSource(app),
             DataSaverSource(app), DozeSource(app), MaintenanceWindowSource(),
             NetworkValidatedSource(app), BattOptExemptSource(app), ExitInfoSignalSource(app),
             ThermalSource(app), ChargeTimeSource(app),
@@ -26,16 +28,20 @@ object AndroidSignalSources {
     }
 }
 
-internal class PendingReasonsSource(private val context: Context) : SignalSource {
+class PendingReasonsSource(
+    private val context: Context,
+    private val jobNamespaces: List<String?> = listOf(null),
+) : SignalSource {
     override val kind = SignalKind.PENDING_REASONS
     override fun read(): SignalValue {
         if (Build.VERSION.SDK_INT < 34) return SignalValue.Unknown
         val js = context.getSystemService(JobScheduler::class.java) ?: return SignalValue.Unknown
-        val scoped = js.forNamespace("bridge")
-        val reasons = HostJobClass.entries.flatMap { host ->
-            if (scoped.getPendingJob(host.jobId) == null) emptyList()
-            else if (Build.VERSION.SDK_INT >= 36) scoped.getPendingJobReasons(host.jobId).toList()
-            else listOf(scoped.getPendingJobReason(host.jobId))
+        val reasons = jobNamespaces.flatMap { ns ->
+            val scoped = if (ns == null) js else js.forNamespace(ns)
+            scoped.allPendingJobs.flatMap { job ->
+                if (Build.VERSION.SDK_INT >= 36) scoped.getPendingJobReasons(job.id).toList()
+                else listOf(scoped.getPendingJobReason(job.id))
+            }
         }.distinct().filter { it != JobScheduler.PENDING_JOB_REASON_UNDEFINED }
         return SignalValue.PendingReasons(reasons)
     }
