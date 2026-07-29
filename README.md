@@ -315,7 +315,7 @@ One scorecard, no euphemisms — the rows WorkManager still wins are right there
 
 <div align="center">
 
-<img src="docs/assets/scorecard.svg" alt="Bridge vs WorkManager scorecard: bridge leads on resumption, explanation, durable coroutines, chains, forensics, cost, deadlines, quota and doze strategy; WorkManager still wins on OEM maturity, Data payloads/tags/observers, multi-branch chains and ecosystem" width="1000">
+<img src="docs/assets/scorecard.svg" alt="Bridge vs WorkManager scorecard: bridge leads on resumption, explanation, durable coroutines, chains, forensics, cost, deadlines, quota and doze strategy; WorkManager still wins on Data payloads/tags/observers, multi-branch chains and ecosystem" width="1000">
 
 <sub>Filled mint dot = has it; hollow dot = does not. The mint goes to whoever actually wins the row — including the four rows WorkManager still does. <a href="docs/RESULTS.md#bridge-vs-workmanager">raw table →</a></sub>
 
