@@ -39,8 +39,7 @@ Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same w
 
 </div>
 
-<details>
-<summary><b>Raw numbers</b> (for citing)</summary>
+### <b>Raw numbers</b> (for citing)
 <br>
 
 **1 vs 20 — force-stop replay.** `force-stop` scenario, `large_chunked` (200 MB / 40 chunks), process killed mid-run and relaunched:
@@ -64,7 +63,6 @@ Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same w
 
 <sub>WorkManager reports <b>RUNNING</b> for jobs the forced idle has stopped — a stale answer, not just an empty one. Bridge's verdicts carry <code>basis=REPORTED</code>: they come from <code>getPendingJobReasons</code>, the platform's own explanation, not inference.</sub>
 
-</details>
 
 <div align="center"><sub>And the crown result: a durable coroutine force-stopped mid-<code>delay(20s)</code>, relaunched after the timer elapsed while the process was dead — <b>SUCCEEDED</b>, each step executed exactly once. That's TIER 3, below.</sub></div>
 
@@ -84,8 +82,7 @@ Bridge is a ladder, not a leap. Each tier is independently useful and independen
 
 <br>
 
-<details open>
-<summary><b><kbd>TIER 0</kbd>&nbsp; Glassbox — diagnose ANY app (two lines, nothing to migrate)</b></summary>
+### <b><kbd>TIER 0</kbd>&nbsp; Glassbox — diagnose ANY app (two lines, nothing to migrate)</b>
 <br>
 
 <div align="center"><img src="docs/assets/tier0-glassbox.svg" alt="A scan sweeps across pending jobs and a verdict appears: 7 pending — DeferredByDoze(deep) [REPORTED]" width="920"></div>
@@ -104,10 +101,8 @@ Log.i(TAG, GlassBox.explain().render())
 
 `GlassBox.explain()` returns a typed `Explanation` — device-level causes, per-job platform-reason causes, basis (`REPORTED` vs `INFERRED`), and the raw signal evidence.
 
-</details>
 
-<details>
-<summary><b><kbd>TIER 1</kbd>&nbsp; Compat — swap the import; chains resume at the failed link</b></summary>
+### <b><kbd>TIER 1</kbd>&nbsp; Compat — swap the import; chains resume at the failed link</b>
 <br>
 
 <div align="center"><img src="docs/assets/tier1-compat.svg" alt="The androidx.work import gets struck through and swapped for bridge.compat while a broken chain re-links at exactly the broken link" width="920"></div>
@@ -143,10 +138,8 @@ BridgeWorkManager.beginUniqueWork("publish", ExistingWorkPolicy.KEEP, uploadRequ
 
 Also covered: `PeriodicWorkRequest` + `enqueueUniquePeriodicWork` (KEEP/UPDATE), `setInitialDelay`, the full `Constraints.Builder` surface (charging, network type, battery/storage-not-low, device-idle), `getWorkInfoState`, `cancelUniqueWork`. Full guide: [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
-</details>
 
-<details>
-<summary><b><kbd>TIER 2</kbd>&nbsp; Runtime — the full engine: constraints, chunks, deadlines, periodic, diagnostics</b></summary>
+### <b><kbd>TIER 2</kbd>&nbsp; Runtime — the full engine: constraints, chunks, deadlines, periodic, diagnostics</b>
 <br>
 
 <div align="center"><img src="docs/assets/tier2-runtime.svg" alt="Constraint chips light up one by one — charging, unmetered, batteryNotLow, deviceIdle — then the work dispatches as a multiplexed JobWorkItem" width="920"></div>
@@ -247,10 +240,8 @@ Inside `bridge-runtime`, layers stack strictly — each depends only on those be
 
 **Signal hub** — nine platform signals (standby bucket, Doze, background restriction, Data Saver, pending-job reasons, network validation, battery-opt exemption, maintenance windows, process deaths) read into snapshots and persisted transitions; the diagnoser folds them into verdicts. → [`bridge-glassbox/.../signals/`](bridge-glassbox/src/main/java/io/github/iamjosephmj/bridge/signals/)
 
-</details>
 
-<details>
-<summary><b><kbd>TIER 3</kbd>&nbsp; Durable coroutines — suspend blocks that survive process death (the crown)</b></summary>
+### <b><kbd>TIER 3</kbd>&nbsp; Durable coroutines — suspend blocks that survive process death (the crown)</b>
 <br>
 
 <div align="center"><img src="docs/assets/tier3-durable.svg" alt="A heartbeat trace flatlines at a force-stop tick, then resumes at exactly the same point and finishes SUCCEEDED — each step ran once" width="920"></div>
@@ -298,10 +289,8 @@ Contract: effects belong inside `step()`; code between steps must be determinist
 
 <sub>Step counters persist in on-device storage precisely because process memory does not — that is the scenario. The simulator's signature demo additionally survives death at +30 min and deep Doze 1–3 h mid-<code>delay(2h)</code>.</sub>
 
-</details>
 
-<details>
-<summary><b><kbd>TIER 4</kbd>&nbsp; Simulator — practice on dry land: JVM device regimes in milliseconds</b></summary>
+### <b><kbd>TIER 4</kbd>&nbsp; Simulator — practice on dry land: JVM device regimes in milliseconds</b>
 <br>
 
 <div align="center"><img src="docs/assets/tier4-sim.svg" alt="A tiny device with a fast-forwarding clock: multi-day Doze regimes asserted in milliseconds on the JVM" width="920"></div>
@@ -321,7 +310,6 @@ simulate {
 
 The simulator is deliberately honest about what it is: a logic assertion under a scripted regime, not a device guarantee — the [gating model](bridge-sim/README.md#the-gating-model-is-deliberately-simple) makes no attempt to reproduce OEM heuristics. Device truth comes from the instrumented suite and the benchmark harness ([`bench/`](bench/README.md), with its own [honesty rules](bench/README.md#honesty-rules)).
 
-</details>
 
 ---
 
