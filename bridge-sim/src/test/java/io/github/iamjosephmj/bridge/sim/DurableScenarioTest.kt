@@ -17,10 +17,10 @@ class DurableScenarioTest {
     @Test fun `signature - durable block survives death and doze mid-delay`() = simulate {
         var uploads = 0
         var creates = 0
-        durable("publish-post") { ctx ->
-            ctx.step("upload") { uploads++; "media-7" }
-            ctx.delay(2.h)
-            val media = ctx.step("create") { creates++; "post-with-media-7" }
+        durable("publish-post") {
+            step("upload") { uploads++; "media-7" }
+            delay(2.h)
+            val media = step("create") { creates++; "post-with-media-7" }
             check(media == "post-with-media-7")
         }
         doze(fromMs = 1.h, untilMs = 3.h, deep = true)
@@ -47,11 +47,11 @@ class DurableScenarioTest {
 
     @Test fun `await parks on a signal predicate and completes when it flips`() = simulate {
         var sent = 0
-        durable("sender") { ctx ->
-            ctx.await("validated-net") {
+        durable("sender") {
+            await("validated-net") {
                 it.values[SignalKind.NETWORK_VALIDATED] == SignalValue.Flag(true)
             }
-            ctx.step("send") { sent++ }
+            step("send") { sent++ }
         }
         signal(SignalKind.NETWORK_VALIDATED, SignalValue.Flag(false), 0L)
         signal(SignalKind.NETWORK_VALIDATED, SignalValue.Flag(true), 2.h)

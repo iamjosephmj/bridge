@@ -1,6 +1,7 @@
 package io.github.iamjosephmj.bridge
 
 import android.content.Context
+import io.github.iamjosephmj.bridge.api.BridgeScope
 import io.github.iamjosephmj.bridge.api.DurableBlock
 import io.github.iamjosephmj.bridge.api.DurableDeps
 import io.github.iamjosephmj.bridge.api.DurableWorker
@@ -40,6 +41,7 @@ object Bridge {
     private var dispatcher: Dispatcher? = null
     private var clock: BridgeClock = SystemBridgeClock()
     private var registry: WorkerRegistry? = null
+    private var durableDeps: DurableDeps? = null
     private var signalHub: SignalHub? = null
     private var signalLog: SignalLog? = null
     private var conformance: Conformance? = null
@@ -81,10 +83,11 @@ object Bridge {
                 log.slice(now - 3L * 24 * 60 * 60 * 1000, now)   // 3 days of rhythm history
             })
         try { SignalBroadcasts(hub, sources).start(appContext) } catch (_: Exception) { }
-        val durableDeps = DurableDeps(j, b.clock,
+        val deps = DurableDeps(j, b.clock,
             snapshotProvider = { hub.snapshot(Trigger.DIAGNOSIS) }, alarmGateway = alarmGw)
+        durableDeps = deps
         for ((name, block) in b.durables) {
-            b.registry.register(name) { DurableWorker(block, durableDeps) }
+            b.registry.register(name) { DurableWorker(block, deps) }
         }
         val runner = WorkRunner(j, b.registry, SystemBlackBox(appContext),
             b.costMeter ?: HealthStatsCostMeter(appContext), b.clock)
@@ -175,6 +178,15 @@ object Bridge {
     /** Starts an instance of a durable block registered via the config builder. */
     fun durable(name: String): String = enqueue(workRequest(name, name))
 
+    /** Coroutine-shaped durable entry point: `Bridge.scope().launch("name") { ... }`. */
+    fun scope(): BridgeScope = BridgeScope()
+
+    /** Registers (or re-registers) a durable block after initialize — used by BridgeScope. */
+    fun registerDurable(name: String, block: DurableBlock) {
+        val deps = requireNotNull(durableDeps) { "Bridge.initialize() not called" }
+        requireNotNull(registry).register(name) { DurableWorker(block, deps) }
+    }
+
     /** Late worker registration (used by bridge-compat, which learns classes at enqueue time). */
     fun registerWorker(name: String, factory: () -> BridgeWorker) {
         requireNotNull(registry) { "Bridge.initialize() not called" }.register(name, factory)
@@ -194,6 +206,7 @@ object Bridge {
     fun reset() {
         journal?.close(); journal = null; dispatcher = null
         signalHub = null; signalLog = null; conformance = null; registry = null
+        durableDeps = null
         BridgeServices.runner = null
     }
 }

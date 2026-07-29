@@ -78,6 +78,12 @@ class SimScope internal constructor(internal val device: SimulatedDevice) {
 
     fun startDurable(name: String): SimHandle = device.startDurable(name)
 
+    /** Coroutine-shaped: register + start in one call, mirroring BridgeScope.launch. */
+    fun launch(name: String, block: io.github.iamjosephmj.bridge.api.DurableBlock): SimHandle {
+        device.durable(name, block)
+        return device.startDurable(name)
+    }
+
     fun restartProcess() = device.restartProcess()
 
     fun advanceTo(ms: Long) = device.advanceTo(ms)

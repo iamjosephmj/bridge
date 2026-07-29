@@ -26,10 +26,10 @@ class BenchApp : Application() {
             // M5 device gap-closer: a durable block whose step counters persist in prefs
             // (memory dies with the process — that's the scenario). run-durable-fs.sh
             // force-stops mid-delay and asserts each step executed exactly once.
-            durable("durable-fs") { ctx ->
-                ctx.step("first") { bumpDurableCounter("first") }
-                ctx.delay(20_000L)
-                ctx.step("second") { bumpDurableCounter("second") }
+            durable("durable-fs") {
+                step("first") { bumpDurableCounter("first") }
+                delay(20_000L)
+                step("second") { bumpDurableCounter("second") }
             }
         }
     }
