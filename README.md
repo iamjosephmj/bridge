@@ -44,6 +44,24 @@ each step executing exactly once.
 
 Design: `docs/superpowers/specs/2026-07-29-bridge-m5-durable-design.md`.
 
+**M5 acceptance run (Pixel 6 Pro, API 36, 2026-07-29).**
+`bench/scripts/run-durable-fs.sh`: durable block force-stopped mid-`delay(20s)`,
+relaunched after the timer elapsed while the process was dead:
+
+| metric | value |
+|---|---|
+| state | SUCCEEDED |
+| firstStepExecutions | **1** (ran before the kill, replayed after) |
+| secondStepExecutions | **1** (ran only after relaunch) |
+| step events journaled | 2 |
+| parks | 1 |
+
+Step counters persist in SharedPreferences precisely because process memory
+does not — that is the scenario. Also on-device: the instrumented suite's
+durable E2E (park → JobScheduler re-delivery → replay, steps exactly once)
+and a re-run of M1's force-stop scenario on the v0.5 dispatcher
+(large_chunked: 2 attempts, **1** chunk replayed — no regression).
+
 ## M4 — compat + rhythm
 
 - **`bridge-compat`:** an `androidx.work`-shaped façade — `Worker`, `Constraints`,
