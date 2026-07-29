@@ -5,9 +5,6 @@ actually offers: JobWorkItem-multiplexed dispatch, an append-only event journal,
 chunk-exact resumption, death forensics via ApplicationExitInfo, and measured
 per-run cost via HealthStats.
 
-- Design: `docs/superpowers/specs/2026-07-27-bridge-design.md`
-- M1 plan: `docs/superpowers/plans/2026-07-27-bridge-m1-core-scheduler.md`
-- M2 design: `docs/superpowers/specs/2026-07-29-bridge-m2-glass-box-design.md`
 - Benchmark vs WorkManager: `bench/README.md`
 - Simulator: `bridge-sim/README.md`
 - Standalone diagnostics (no Bridge scheduler needed): `bridge-glassbox` —
@@ -60,8 +57,6 @@ and cancels on host stop. Signature demo green in the simulator: a 3-step
 block survives process death at +30min and deep Doze 1–3h mid-`delay(2h)`,
 each step executing exactly once.
 
-Design: `docs/superpowers/specs/2026-07-29-bridge-m5-durable-design.md`.
-
 **M5 acceptance run (Pixel 6 Pro, API 36, 2026-07-29).**
 `bench/scripts/run-durable-fs.sh`: durable block force-stopped mid-`delay(20s)`,
 relaunched after the timer elapsed while the process was dead:
@@ -94,8 +89,6 @@ and a re-run of M1's force-stop scenario on the v0.5 dispatcher
   exceeds 3× the pool median while declared LOW/MIN are flagged in `report()` —
   "expensive work declared unimportant". No auto-demotion (v1.1, opt-in).
 
-Design: `docs/superpowers/specs/2026-07-29-bridge-m4-compat-rhythm-design.md`.
-
 ## M3 — judgment
 
 An L4 policy engine sits in front of dispatch — pure functions from
@@ -112,8 +105,6 @@ An L4 policy engine sits in front of dispatch — pure functions from
   levels lacking a tier. Dispatched work re-tiers in place.
 - **Doze strategy:** maintenance-window burst-drain and doze-exit freshness
   dispatch via the signal-hub broadcasts.
-
-Design: `docs/superpowers/specs/2026-07-29-bridge-m3-judgment-design.md`.
 
 ## M2 — the glass box
 
