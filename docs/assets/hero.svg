@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-label="Bridge — Android background work that survives death, and explains itself">
+  <!-- self-contained dark card -->
+  <rect x="0" y="0" width="1200" height="360" rx="16" fill="#0B1113"/>
+  <rect x="0.5" y="0.5" width="1199" height="359" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
+
+  <!-- app icon mark: solid bridge silhouette (deck + two towers, floating cap) -->
+  <g transform="translate(52,42) scale(2.55)">
+    <!-- deck -->
+    <path d="M26,62 H82 A8,8 0 0 1 82,78 H26 A8,8 0 0 1 26,62 Z" fill="#4DD8C4"/>
+    <!-- left tower -->
+    <path d="M32,37 A7,7 0 0 1 46,37 V66 H32 Z" fill="#4DD8C4"/>
+    <!-- right tower (shorter) -->
+    <path d="M62,43 A7,7 0 0 1 76,43 V66 H62 Z" fill="#4DD8C4"/>
+    <!-- floating cap: the gap-and-resume echo — it bobs, because it can -->
+    <g>
+      <path d="M66,24 H72 A4,4 0 0 1 72,32 H66 A4,4 0 0 1 66,24 Z" fill="#7BEFD8"/>
+      <animateTransform attributeName="transform" type="translate"
+        values="0 0; 0 -1.8; 0 0" keyTimes="0;0.5;1" dur="3.2s"
+        calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+        repeatCount="indefinite"/>
+    </g>
+  </g>
+
+  <!-- wordmark + tagline -->
+  <text x="352" y="172" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="84" font-weight="700" fill="#E9F4F2">Bridge</text>
+  <text x="356" y="222" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="23" fill="#7BEFD8">Android background work that survives death —</text>
+  <text x="356" y="254" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="23" fill="#75898B">and explains itself.</text>
+
+  <!-- journal-line motif: an append-only event log, replaying on loop.
+       Each dot lights up in sequence; the × is the death; the log keeps going. -->
+  <g>
+    <line x1="52" y1="316" x2="1148" y2="316" stroke="#1D2B2E" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/>
+    <circle cx="120" cy="316" r="5" fill="#2E4A4B">
+      <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.02;0.07;0.17;1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="230" cy="316" r="5" fill="#2E4A4B">
+      <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.11;0.16;0.26;1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="340" cy="316" r="5" fill="#2E4A4B">
+      <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.20;0.25;0.35;1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="450" cy="316" r="5" fill="#3A6B66">
+      <animate attributeName="fill" values="#3A6B66;#3A6B66;#7BEFD8;#3A6B66;#3A6B66" keyTimes="0;0.29;0.34;0.44;1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="560" cy="316" r="5" fill="#3A6B66">
+      <animate attributeName="fill" values="#3A6B66;#3A6B66;#7BEFD8;#3A6B66;#3A6B66" keyTimes="0;0.38;0.43;0.53;1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="670" cy="316" r="5" fill="#3A6B66">
+      <animate attributeName="fill" values="#3A6B66;#3A6B66;#7BEFD8;#3A6B66;#3A6B66" keyTimes="0;0.47;0.52;0.62;1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <!-- the death gap: the log does not flinch -->
+    <text x="762" y="322" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#4A5D5F" text-anchor="middle">×</text>
+    <!-- resume, exactly where it stopped -->
+    <circle cx="856" cy="316" r="5" fill="#3A6B66">
+      <animate attributeName="fill" values="#3A6B66;#3A6B66;#7BEFD8;#3A6B66;#3A6B66" keyTimes="0;0.62;0.67;0.77;1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="966" cy="316" r="5" fill="#3A6B66">
+      <animate attributeName="fill" values="#3A6B66;#3A6B66;#7BEFD8;#3A6B66;#3A6B66" keyTimes="0;0.71;0.76;0.86;1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="1076" cy="316" r="7" fill="none" stroke="#2E4A4B" stroke-width="2">
+      <animate attributeName="stroke" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.80;0.85;0.97;1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>
