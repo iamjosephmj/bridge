@@ -91,7 +91,8 @@ object Bridge {
             requiresUnmetered = request.requiresUnmetered,
             chunkCount = request.chunkCount,
             estimatedUpBytes = request.estimatedUpBytes,
-            maxAttempts = request.maxAttempts))
+            maxAttempts = request.maxAttempts,
+            deadlineMs = request.deadlineMs))
         dispatcher!!.dispatch(request.name)
         pokeHub()
         return request.name

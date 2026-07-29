@@ -6,6 +6,7 @@ class WorkRequest internal constructor(
     val name: String, val workerName: String, val importance: Importance,
     val requiresCharging: Boolean, val requiresUnmetered: Boolean,
     val chunkCount: Int, val estimatedUpBytes: Long, val maxAttempts: Int,
+    val deadlineMs: Long = 0L,
 )
 
 class WorkRequestBuilder internal constructor(
@@ -16,6 +17,7 @@ class WorkRequestBuilder internal constructor(
     private var chunkCount = 0
     private var estimatedUpBytes = 0L
     private var maxAttempts = 3
+    private var deadlineMs = 0L
 
     fun importance(value: Importance) { importance = value }
     fun charging() { charging = true }
@@ -25,9 +27,11 @@ class WorkRequestBuilder internal constructor(
         chunkCount = count; this.estimatedUpBytes = estimatedUpBytes
     }
     fun maxAttempts(value: Int) { require(value > 0); maxAttempts = value }
+    /** Deadline for L4 escalation: the policy engine walks urgency tiers as this nears. */
+    fun mustCompleteBy(atMs: Long) { require(atMs > 0); deadlineMs = atMs }
 
     internal fun build() = WorkRequest(name, workerName, importance,
-        charging, unmetered, chunkCount, estimatedUpBytes, maxAttempts)
+        charging, unmetered, chunkCount, estimatedUpBytes, maxAttempts, deadlineMs)
 }
 
 fun workRequest(name: String, workerName: String,

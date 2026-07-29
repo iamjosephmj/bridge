@@ -63,7 +63,8 @@ class SimulatedDevice internal constructor() {
             requiresUnmetered = request.requiresUnmetered,
             chunkCount = request.chunkCount,
             estimatedUpBytes = request.estimatedUpBytes,
-            maxAttempts = request.maxAttempts))
+            maxAttempts = request.maxAttempts,
+            deadlineMs = request.deadlineMs))
         dispatcher.dispatch(request.name)
         hub.snapshot(Trigger.SCHEDULING_DECISION)
         return SimHandle(request.name, this)

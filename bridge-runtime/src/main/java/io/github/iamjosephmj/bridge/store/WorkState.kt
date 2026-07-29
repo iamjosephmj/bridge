@@ -9,6 +9,7 @@ data class WorkState(
     val importance: Int, val requiresCharging: Boolean, val requiresUnmetered: Boolean,
     val estimatedUpBytes: Long,
     val lastStopReason: Int?, val lastDeath: WorkEvent.Died?,
+    val deadlineMs: Long = 0L,
 )
 
 fun foldWorkState(events: List<WorkEvent>): WorkState? {
@@ -22,6 +23,7 @@ fun foldWorkState(events: List<WorkEvent>): WorkState? {
                 importance = e.importance, requiresCharging = e.requiresCharging,
                 requiresUnmetered = e.requiresUnmetered, estimatedUpBytes = e.estimatedUpBytes,
                 lastStopReason = null, lastDeath = null,
+                deadlineMs = e.deadlineMs,
             )
             is WorkEvent.Dispatched -> s?.copy(runState = RunState.DISPATCHED)
             is WorkEvent.Started -> s?.copy(runState = RunState.RUNNING, attempt = e.attempt)
@@ -31,6 +33,7 @@ fun foldWorkState(events: List<WorkEvent>): WorkState? {
             is WorkEvent.Finished -> s?.copy(
                 runState = if (e.success) RunState.SUCCEEDED else RunState.FAILED)
             is WorkEvent.Cancelled -> s?.copy(runState = RunState.CANCELLED)
+            is WorkEvent.PolicyDecision -> s   // judgment records don't change run state
         }
     }
     return s
