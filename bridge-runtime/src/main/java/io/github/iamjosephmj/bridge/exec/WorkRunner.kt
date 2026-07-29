@@ -58,7 +58,23 @@ class WorkRunner(
         val before = costMeter.snapshot()
         val ctx = RunContext(workId, deliveryCount, isStopped)
         val worker = try { registry.create(state.workerName) } catch (e: IllegalArgumentException) {
-            journal.append(WorkEvent.Finished(workId, clock.now(), success = false))
+            journal.append(WorkEvent.Finished(workId, clock.now(), success = false,
+                failureMessage = "${e.javaClass.simpleName}: ${e.message}"))
+            return RunOutcome.FAILED
+        }
+        // Structure mismatch (chunks() with a plain worker, or a ChunkedWorker without
+        // chunks()) would otherwise hit ChunkedWorker.run()'s UnsupportedOperationException
+        // — or silently run chunked work un-chunked — and be swallowed into retry→FAILED
+        // with no evidence. Hard-fail with a journaled reason, like the unknown-worker branch.
+        val declaredChunked = state.chunkCount > 0
+        if (declaredChunked != (worker is ChunkedWorker)) {
+            journal.append(WorkEvent.Finished(workId, clock.now(), success = false,
+                failureMessage = if (declaredChunked)
+                    "structure mismatch: chunks(${state.chunkCount}) declared but worker " +
+                        "'${state.workerName}' is not a ChunkedWorker"
+                else
+                    "structure mismatch: worker '${state.workerName}' is a ChunkedWorker " +
+                        "but the request declared no chunks()"))
             return RunOutcome.FAILED
         }
 
@@ -90,7 +106,8 @@ class WorkRunner(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            return retryOrFail(workId, deliveryCount, state.maxAttempts, before)
+            return retryOrFail(workId, deliveryCount, state.maxAttempts, before,
+                failureMessage = "${e.javaClass.simpleName}: ${e.message}")
         } finally {
             blackBox.clear()
         }
@@ -112,17 +129,20 @@ class WorkRunner(
         return ChunkRunResult.AllCompleted
     }
 
-    private fun finish(workId: String, before: CostSnapshot, success: Boolean) {
+    private fun finish(workId: String, before: CostSnapshot, success: Boolean,
+                       failureMessage: String? = null) {
         val cost = costMeter.snapshot() - before
         journal.append(WorkEvent.Finished(workId, clock.now(), success,
             cpuUserMs = cost.cpuUserMs, cpuSystemMs = cost.cpuSystemMs,
-            txBytes = cost.txBytes, rxBytes = cost.rxBytes))
+            txBytes = cost.txBytes, rxBytes = cost.rxBytes,
+            failureMessage = failureMessage))
     }
 
     private fun retryOrFail(workId: String, deliveryCount: Int, maxAttempts: Int,
-                            before: CostSnapshot): RunOutcome =
+                            before: CostSnapshot, failureMessage: String? = null): RunOutcome =
         if (deliveryCount >= maxAttempts) {
-            finish(workId, before, success = false); RunOutcome.FAILED
+            finish(workId, before, success = false, failureMessage = failureMessage)
+            RunOutcome.FAILED
         } else {
             journal.append(WorkEvent.Stopped(workId, clock.now(), StopReason.RETRY.code))
             RunOutcome.RETRY

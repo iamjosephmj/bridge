@@ -14,6 +14,7 @@ class PolicyScenarioTest {
 
     @Test fun `(a) unchunked long estimate holds, chunked twin admits, recovery releases`() = simulate {
         worker("upload") { OkWorker() }
+        worker("uploadChunked") { OkChunkedWorker() }
         bucket(Buckets.WORKING_SET)
         bucket(Buckets.ACTIVE, atMs = 6.h)
         // 900MB at ~1MB/s ≈ 15m estimate > ~10m bucket window → held
@@ -23,7 +24,7 @@ class PolicyScenarioTest {
         assertThat(verdict.diagnosis).isInstanceOf(Diagnosis.HeldByPolicy::class.java)
         assertThat((verdict.diagnosis as Diagnosis.HeldByPolicy).why).contains("exceeds")
         // chunked twin admits immediately despite the same size
-        val chunked = enqueue(workRequest("chunky", "upload") { chunks(40, 900_000_000L) })
+        val chunked = enqueue(workRequest("chunky", "uploadChunked") { chunks(40, 900_000_000L) })
         assertThat(chunked.completedWithin(3.h)).isTrue()   // WORKING_SET floor 2h + slack
         // bucket recovers at 6h → the held estimate admits and completes
         advanceTo(6.h + 5.min)

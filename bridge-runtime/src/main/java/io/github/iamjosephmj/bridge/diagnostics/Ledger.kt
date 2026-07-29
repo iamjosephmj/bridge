@@ -6,7 +6,8 @@ import io.github.iamjosephmj.bridge.store.WorkEvent
 data class CostDelta(val cpuUserMs: Long, val cpuSystemMs: Long, val txBytes: Long, val rxBytes: Long)
 
 sealed interface LedgerOutcome {
-    data class Completed(val success: Boolean) : LedgerOutcome
+    /** [message] carries the journaled failure reason (exception class + message); null on success or when unknown. */
+    data class Completed(val success: Boolean, val message: String? = null) : LedgerOutcome
     data class Stopped(val stopReason: Int) : LedgerOutcome
     data class Died(val exitReason: Int) : LedgerOutcome
     object Cancelled : LedgerOutcome { override fun toString() = "Cancelled" }
@@ -70,7 +71,7 @@ object LedgerFold {
                 }
                 is WorkEvent.Stopped -> close(e.at, LedgerOutcome.Stopped(e.stopReason), null)
                 is WorkEvent.Died -> close(e.at, LedgerOutcome.Died(e.exitReason), null)
-                is WorkEvent.Finished -> close(e.at, LedgerOutcome.Completed(e.success),
+                is WorkEvent.Finished -> close(e.at, LedgerOutcome.Completed(e.success, e.failureMessage),
                     if (e.cpuUserMs + e.cpuSystemMs + e.txBytes + e.rxBytes > 0)
                         CostDelta(e.cpuUserMs, e.cpuSystemMs, e.txBytes, e.rxBytes) else null)
                 is WorkEvent.Cancelled -> close(e.at, LedgerOutcome.Cancelled, null)

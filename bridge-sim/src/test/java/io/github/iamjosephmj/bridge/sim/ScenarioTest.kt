@@ -13,6 +13,10 @@ internal class OkWorker : BridgeWorker {
     override suspend fun run(ctx: RunContext) = RunResult.Success
 }
 
+internal class OkChunkedWorker : io.github.iamjosephmj.bridge.api.ChunkedWorker {
+    override suspend fun runChunk(ctx: RunContext, chunkIndex: Int) = RunResult.Success
+}
+
 class ScenarioTest {
 
     @Test fun `doze with maintenance windows - deferred then completes`() = simulate {

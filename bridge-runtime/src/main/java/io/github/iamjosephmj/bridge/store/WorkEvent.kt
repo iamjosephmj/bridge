@@ -60,6 +60,8 @@ sealed interface WorkEvent {
         override val workId: String, override val at: Long, val success: Boolean,
         val cpuUserMs: Long = 0, val cpuSystemMs: Long = 0,
         val txBytes: Long = 0, val rxBytes: Long = 0,
+        /** Why the work failed (exception class + message, or a structural reason); null on success or when unknown. */
+        val failureMessage: String? = null,
     ) : WorkEvent
 
     @Serializable @SerialName("cancelled")
