@@ -61,6 +61,26 @@ class SimulatedDevice internal constructor() {
 
     fun worker(name: String, factory: () -> BridgeWorker) = registry.register(name, factory)
 
+    /** M5: register a durable block; start instances with [startDurable]. */
+    fun durable(name: String, block: io.github.iamjosephmj.bridge.api.DurableBlock) {
+        val deps = io.github.iamjosephmj.bridge.api.DurableDeps(
+            journal, clock, { hub.snapshot(Trigger.DIAGNOSIS) }, alarms)
+        registry.register(name) { io.github.iamjosephmj.bridge.api.DurableWorker(block, deps) }
+    }
+
+    fun startDurable(name: String): SimHandle =
+        enqueue(io.github.iamjosephmj.bridge.api.workRequest(name, name))
+
+    /**
+     * Simulated process death + relaunch: scheduler-side state is dropped (M1's
+     * setPersisted(false) world) and the reconcile path re-dispatches from the journal.
+     * The journal, signal log, and armed alarms survive — that is the point.
+     */
+    fun restartProcess() {
+        gateway.cancelAll()
+        dispatcher.dispatchAll()
+    }
+
     fun enqueue(request: WorkRequest): SimHandle {
         val existing = journal.state(request.name)
         val generation = (existing?.generation ?: 0) + 1

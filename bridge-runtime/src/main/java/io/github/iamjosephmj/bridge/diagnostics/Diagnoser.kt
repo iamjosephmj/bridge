@@ -68,6 +68,12 @@ object Diagnoser {
             (lastPolicy.decision == "hold" || lastPolicy.decision == "shed")) {
             matches += Diagnosis.HeldByPolicy(lastPolicy.why) to Basis.INFERRED
         }
+        // M5: a park newer than the newest start means the durable block is waiting.
+        if (lastPolicy != null && lastPolicy.decision == "park" &&
+            events.indexOf(lastPolicy as WorkEvent) >
+                events.indexOfLast { it is WorkEvent.Started }) {
+            matches += Diagnosis.DurableParked(lastPolicy.why) to Basis.INFERRED
+        }
         val genEvents = events.filter {
             it !is WorkEvent.Enqueued || it.generation == state.generation }
         val crashes = genEvents.count { it is WorkEvent.Died } +
