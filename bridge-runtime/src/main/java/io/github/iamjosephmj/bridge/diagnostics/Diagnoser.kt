@@ -16,9 +16,10 @@ import io.github.iamjosephmj.bridge.store.WorkState
 object PlatformPendingReasons {
     const val APP_STANDBY = 2
     const val BACKGROUND_RESTRICTION = 3
-    const val CONSTRAINT_CHARGING = 5
+    const val CONSTRAINT_CHARGING = 5            // verified on Pixel 6 Pro / API 36
     const val CONSTRAINT_CONNECTIVITY = 6
-    const val DEVICE_STATE = 8
+    const val CONSTRAINT_DEVICE_IDLE = 8         // job *declared* setRequiresDeviceIdle
+    const val DEVICE_STATE = 12                  // device is dozing/off — verified on Pixel 6 Pro / API 36
 }
 
 /**
@@ -124,6 +125,7 @@ object Diagnoser {
         PlatformPendingReasons.BACKGROUND_RESTRICTION -> Diagnosis.BackgroundRestricted
         PlatformPendingReasons.CONSTRAINT_CHARGING -> Diagnosis.AwaitingConstraint("charging")
         PlatformPendingReasons.CONSTRAINT_CONNECTIVITY -> Diagnosis.AwaitingConstraint("unmetered")
+        PlatformPendingReasons.CONSTRAINT_DEVICE_IDLE -> Diagnosis.AwaitingConstraint("device-idle")
         PlatformPendingReasons.DEVICE_STATE -> {
             val d = snapshot.values[SignalKind.DOZE]
             Diagnosis.DeferredByDoze(d is SignalValue.Doze && d.mode == DozeMode.DEEP)
