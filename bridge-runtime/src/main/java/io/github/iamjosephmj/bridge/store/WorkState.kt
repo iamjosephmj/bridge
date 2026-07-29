@@ -1,6 +1,7 @@
 package io.github.iamjosephmj.bridge.store
 
-enum class RunState { ENQUEUED, DISPATCHED, RUNNING, SUCCEEDED, FAILED, CANCELLED }
+/** UNKNOWN is a query-result-only state (never journaled): "no such work". */
+enum class RunState { ENQUEUED, DISPATCHED, RUNNING, SUCCEEDED, FAILED, CANCELLED, UNKNOWN }
 
 data class WorkState(
     val workId: String, val workerName: String, val generation: Int,

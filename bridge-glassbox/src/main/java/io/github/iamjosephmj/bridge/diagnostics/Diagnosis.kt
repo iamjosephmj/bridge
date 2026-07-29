@@ -20,6 +20,8 @@ sealed interface Diagnosis {
     object Running : Diagnosis { override fun toString() = "Running" }
     object Finished : Diagnosis { override fun toString() = "Finished" }
     data class Unexplained(val note: String) : Diagnosis
+    /** No work item with the asked-for name exists (or Bridge isn't initialized). */
+    object UnknownWork : Diagnosis { override fun toString() = "UnknownWork" }
 }
 
 enum class Basis { REPORTED, INFERRED }

@@ -137,11 +137,16 @@ object Bridge {
         return request.name
     }
 
-    /** Why hasn't this work run? Typed diagnosis + evidence; null for unknown names. */
-    fun whyPending(name: String): Verdict? {
-        val j = journal ?: return null
-        val hub = signalHub ?: return null
-        val state = j.state(name) ?: return null
+    private fun unknownVerdict(name: String, note: String) = Verdict(
+        workId = name, state = RunState.UNKNOWN, diagnosis = Diagnosis.UnknownWork,
+        contributing = emptyList(), evidence = emptyList(), basis = Basis.INFERRED,
+        pendingSinceMs = null, notes = listOf(note))
+
+    /** Why hasn't this work run? Total: unknown names get an UnknownWork verdict. */
+    fun whyPending(name: String): Verdict {
+        val j = journal ?: return unknownVerdict(name, "Bridge not initialized")
+        val hub = signalHub ?: return unknownVerdict(name, "Bridge not initialized")
+        val state = j.state(name) ?: return unknownVerdict(name, "no work named '$name'")
         val events = j.events(name)
         val snapshot = try { hub.snapshot(Trigger.DIAGNOSIS) } catch (e: Exception) {
             SignalSnapshot(clock.now(), emptyMap())
@@ -150,13 +155,14 @@ object Bridge {
             .lastOrNull { it.generation == state.generation }?.at ?: 0L
         val slice = try { signalLog?.slice(enqueuedAt, clock.now()) } catch (e: Exception) { null }
         return Diagnoser.diagnose(state, events, snapshot, slice)
+            ?: unknownVerdict(name, "no work named '$name'")
     }
 
-    /** Full per-attempt run history with device context. Null for unknown names. */
-    fun ledger(name: String): Ledger? {
-        val j = journal ?: return null
+    /** Full per-attempt run history with device context. Total: unknown names → empty runs. */
+    fun ledger(name: String): Ledger {
+        val j = journal ?: return Ledger(name, emptyList())
         val events = j.events(name)
-        if (events.isEmpty()) return null
+        if (events.isEmpty()) return Ledger(name, emptyList())
         return LedgerFold.fold(name, events) { from, to ->
             try { signalLog?.slice(from, to) } catch (e: Exception) { null }
         }
@@ -168,12 +174,12 @@ object Bridge {
         val lines = j.allWork().map { st ->
             ReportLine(st.workId, st.runState,
                 diagnosis = if (st.runState in setOf(RunState.ENQUEUED, RunState.DISPATCHED))
-                    whyPending(st.workId)?.diagnosis else null)
+                    whyPending(st.workId).diagnosis else null)
         }
         val flags = try {
             // Aggregate per worker: several work items can share a worker implementation.
             CostFlags.compute(j.allWork().groupBy { it.workerName }.mapValues { (name, states) ->
-                val runs = states.flatMap { ledger(it.workId)?.runs ?: emptyList() }
+                val runs = states.flatMap { ledger(it.workId).runs }
                 states.maxOf { it.importance } to Ledger(name, runs)
             })
         } catch (e: Exception) { emptyList() }
