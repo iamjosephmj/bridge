@@ -39,6 +39,12 @@ class EndToEndTest {
                     override suspend fun runChunk(ctx: RunContext, chunkIndex: Int): RunResult {
                         chunkyLatch.countDown(); return RunResult.Success
                     } } }
+                durable("durable-e2e") { ctx ->
+                    ctx.step("first") { stepExecutions.incrementAndGet() }
+                    ctx.delay(3_000L)   // parks; JobScheduler backoff re-delivers, replay resumes
+                    ctx.step("second") { stepExecutions.incrementAndGet() }
+                    durableLatch.countDown()
+                }
             }
         }
 
@@ -46,6 +52,8 @@ class EndToEndTest {
         // (registered once) can always reach the "current" latch.
         @JvmStatic var smokeLatch = CountDownLatch(1)
         @JvmStatic var chunkyLatch = CountDownLatch(5)
+        @JvmStatic var durableLatch = CountDownLatch(1)
+        @JvmStatic val stepExecutions = java.util.concurrent.atomic.AtomicInteger(0)
     }
 
     @Test fun unconstrained_work_executes_via_real_jobscheduler() {
@@ -53,6 +61,26 @@ class EndToEndTest {
         Bridge.enqueue(workRequest("smoke-${System.currentTimeMillis()}", "smoke"))
         // Unconstrained DEFAULT host job should run promptly on an unthrottled test device.
         assertThat(smokeLatch.await(60, TimeUnit.SECONDS)).isTrue()
+    }
+
+    @Test fun durable_block_parks_on_delay_and_resumes_via_real_jobscheduler() {
+        durableLatch = CountDownLatch(1)
+        stepExecutions.set(0)
+        val name = "durable-e2e"   // durable instances are named by their block
+        Bridge.durable(name)
+        // Park + JobScheduler backoff re-delivery + replay: allow a generous window.
+        assertThat(durableLatch.await(120, TimeUnit.SECONDS)).isTrue()
+        val deadline = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < deadline &&
+               Bridge.state(name)?.runState != RunState.SUCCEEDED) Thread.sleep(200)
+        assertThat(Bridge.state(name)!!.runState).isEqualTo(RunState.SUCCEEDED)
+        // Replay contract on real hardware: each step executed exactly once even though
+        // the run was delivered at least twice (pre-park and post-park).
+        assertThat(stepExecutions.get()).isEqualTo(2)
+        assertThat(Bridge.events(name).count {
+            it is io.github.iamjosephmj.bridge.store.WorkEvent.Stopped &&
+                it.stopReason == io.github.iamjosephmj.bridge.exec.STOP_REASON_PARKED
+        }).isAtLeast(1)
     }
 
     @Test fun chunked_work_records_progress() {
