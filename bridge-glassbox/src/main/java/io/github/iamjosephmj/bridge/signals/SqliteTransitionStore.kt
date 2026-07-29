@@ -56,4 +56,20 @@ class SqliteTransitionStore(
             "DELETE FROM transitions WHERE seq IN (SELECT seq FROM transitions ORDER BY seq LIMIT ?)",
             arrayOf<Any>(n))
     }
+
+    override fun replaceAll(rows: List<Pair<Long, String>>) {
+        val w = db.writableDatabase
+        w.beginTransaction()
+        try {
+            w.execSQL("DELETE FROM transitions")
+            for ((at, payload) in rows) {
+                w.insert("transitions", null, ContentValues().apply {
+                    put("at", at); put("payload", payload)
+                })
+            }
+            w.setTransactionSuccessful()
+        } finally {
+            w.endTransaction()
+        }
+    }
 }

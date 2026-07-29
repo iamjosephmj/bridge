@@ -7,6 +7,8 @@ interface TransitionStore {
     fun count(): Int
     fun oldestAt(): Long?
     fun deleteOldest(n: Int)
+    /** Atomically replace the whole log with [rows] — all-or-nothing on process death. */
+    fun replaceAll(rows: List<Pair<Long, String>>)
 }
 
 class InMemoryTransitionStore : TransitionStore {
@@ -16,6 +18,9 @@ class InMemoryTransitionStore : TransitionStore {
     @Synchronized override fun count(): Int = rows.size
     @Synchronized override fun oldestAt(): Long? = rows.firstOrNull()?.first
     @Synchronized override fun deleteOldest(n: Int) = repeat(minOf(n, rows.size)) { rows.removeAt(0) }
+    @Synchronized override fun replaceAll(rows: List<Pair<Long, String>>) {
+        this.rows.clear(); this.rows += rows
+    }
 }
 
 /**
@@ -28,12 +33,27 @@ class SignalLog(
     private val maxEntries: Int = 4000,
     private val maxAgeMs: Long = 14L * 24 * 60 * 60 * 1000,
 ) {
+    // Cached count/oldest so append() doesn't issue count()+oldestAt() queries every time;
+    // maintained on every mutation, primed lazily from the store.
+    private var cachedCount: Int = -1
+    private var cachedOldestAt: Long? = null
+
+    private fun primeCache() {
+        if (cachedCount < 0) {
+            cachedCount = store.count()
+            cachedOldestAt = store.oldestAt()
+        }
+    }
+
     @Synchronized
     fun append(t: SignalTransition) {
+        primeCache()
         store.append(t.at, SignalCodec.encode(t))
-        val oldest = store.oldestAt()
-        if (store.count() > maxEntries) {
-            foldEntries(store.all().size / 2)
+        cachedCount++
+        if (cachedOldestAt == null) cachedOldestAt = t.at
+        val oldest = cachedOldestAt
+        if (cachedCount > maxEntries) {
+            foldEntries(cachedCount / 2)
         } else if (oldest != null && oldest < t.at - maxAgeMs) {
             val cutoff = t.at - maxAgeMs
             foldEntries(store.all().count { (at, _) -> at < cutoff })
@@ -50,7 +70,10 @@ class SignalLog(
 
     /** (entry count, oldest at) for report(). */
     @Synchronized
-    fun health(): Pair<Int, Long?> = store.count() to store.oldestAt()
+    fun health(): Pair<Int, Long?> {
+        primeCache()
+        return cachedCount to cachedOldestAt
+    }
 
     private fun decodeAll(): List<SignalTransition> =
         store.all().mapNotNull { (_, payload) ->
@@ -66,12 +89,14 @@ class SignalLog(
         val finalValues = mutableMapOf<SignalKind, SignalValue>()
         var lastAt = 0L
         for (t in folded) { finalValues[t.kind] = t.to; lastAt = maxOf(lastAt, t.at) }
-        val remainder = all.drop(n)
-        store.deleteOldest(all.size)
-        for ((kind, v) in finalValues) {
-            store.append(lastAt, SignalCodec.encode(
-                SignalTransition(kind, SignalValue.Unknown, v, lastAt, Trigger.BASELINE)))
+        val baselines = finalValues.map { (kind, v) ->
+            lastAt to SignalCodec.encode(
+                SignalTransition(kind, SignalValue.Unknown, v, lastAt, Trigger.BASELINE))
         }
-        for ((at, payload) in remainder) store.append(at, payload)
+        val newRows = baselines + all.drop(n)
+        // Single atomic swap: process death mid-fold keeps either the old or the new log.
+        store.replaceAll(newRows)
+        cachedCount = newRows.size
+        cachedOldestAt = newRows.firstOrNull()?.first
     }
 }
