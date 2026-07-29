@@ -23,7 +23,8 @@ import tech.ssemaj.bridge.ui.rememberDemoConsole
  */
 @Composable
 fun PeriodicSection() {
-    val console = rememberDemoConsole()
+    // Rehydrated from the journal: an active periodic series is picked up on relaunch.
+    val console = rememberDemoConsole(Names.PERIODIC)
     DemoSection(
         title = "5 · Periodic",
         description = "periodic(15 min): each cycle is a new generation of the same " +

@@ -20,7 +20,8 @@ import tech.ssemaj.bridge.ui.rememberDemoConsole
  */
 @Composable
 fun CompatSection() {
-    val console = rememberDemoConsole()
+    // Rehydrated from the journal: an in-flight chain resumes its watch on relaunch.
+    val console = rememberDemoConsole(Names.COMPAT_CHAIN)
     DemoSection(
         title = "7 · Compat chain",
         description = "BridgeWorkManager.beginUniqueWork(compress).then(upload).enqueue()" +

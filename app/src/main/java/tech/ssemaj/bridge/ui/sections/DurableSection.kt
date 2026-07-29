@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import io.github.iamjosephmj.bridge.Bridge
 import io.github.iamjosephmj.bridge.store.RunState
 import kotlinx.coroutines.delay
+import tech.ssemaj.bridge.demos.Names
 import tech.ssemaj.bridge.demos.launchDurableDemo
 import tech.ssemaj.bridge.ui.DemoSection
 import tech.ssemaj.bridge.ui.ResultText
@@ -22,7 +23,8 @@ import tech.ssemaj.bridge.ui.rememberDemoConsole
  */
 @Composable
 fun DurableSection() {
-    val console = rememberDemoConsole()
+    // Rehydrated from the journal: a durable block parked across a restart is watched again.
+    val console = rememberDemoConsole(Names.DURABLE)
     DemoSection(
         title = "3 · Durable coroutine",
         description = "Bridge.scope().launch { step(..); delay(15s); step(..) } — a " +

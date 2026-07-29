@@ -23,6 +23,7 @@ import tech.ssemaj.bridge.ui.sections.DiagnosticsSection
 import tech.ssemaj.bridge.ui.sections.DurableSection
 import tech.ssemaj.bridge.ui.sections.EnqueueSection
 import tech.ssemaj.bridge.ui.sections.PeriodicSection
+import tech.ssemaj.bridge.ui.sections.StatusSection
 import tech.ssemaj.bridge.ui.theme.BridgeTheme
 
 /**
@@ -58,6 +59,7 @@ fun ShowcaseScreen(modifier: Modifier = Modifier) {
             "Background work with a causal ledger. Press a button, watch the journal.",
             style = MaterialTheme.typography.bodyMedium,
         )
+        StatusSection()         // 0: journal-backed report — persists across restarts
         EnqueueSection()        // 1: plain + constrained enqueue
         ChunkedSection()        // 2: chunks(10), resumable progress
         DurableSection()        // 3: Bridge.scope().launch durable coroutine

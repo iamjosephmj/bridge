@@ -23,7 +23,8 @@ import tech.ssemaj.bridge.ui.rememberDemoConsole
  */
 @Composable
 fun EnqueueSection() {
-    val console = rememberDemoConsole()
+    // Rehydrated from the journal on launch so a restart doesn't blank the console.
+    val console = rememberDemoConsole(Names.SIMPLE, Names.CONSTRAINED)
     DemoSection(
         title = "1 · Enqueue",
         description = "Left: no constraints — runs as soon as the OS grants a slot. " +
