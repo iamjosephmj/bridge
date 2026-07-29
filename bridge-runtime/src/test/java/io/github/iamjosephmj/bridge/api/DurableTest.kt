@@ -28,8 +28,8 @@ class DurableTest {
     @Test fun `steps execute once and replay from journal`() = runTest {
         enqueue()
         var executions = 0
-        val block: DurableBlock = { ctx ->
-            val v = ctx.step("compute") { executions++; 41 + 1 }
+        val block: DurableBlock = {
+            val v = step("compute") { executions++; 41 + 1 }
             assertEquals(42, v)
         }
         assertEquals(RunResult.Success, DurableWorker(block, deps).run(runCtx()))
@@ -40,8 +40,8 @@ class DurableTest {
 
     @Test fun `positional structure mismatch fails explicitly`() = runTest {
         enqueue()
-        DurableWorker({ ctx -> ctx.step("a") { 1 } }, deps).run(runCtx())
-        val renamed: DurableBlock = { ctx -> ctx.step("b") { 2 } }
+        DurableWorker({ step("a") { 1 } }, deps).run(runCtx())
+        val renamed: DurableBlock = { step("b") { 2 } }
         assertEquals(RunResult.Failure, DurableWorker(renamed, deps).run(runCtx()))
         val pd = journal.events("w").filterIsInstance<WorkEvent.PolicyDecision>().last()
         assertEquals("structure-mismatch", pd.decision)
@@ -51,9 +51,9 @@ class DurableTest {
     @Test fun `delay parks with alarm, elapsed delay replays through`() = runTest {
         enqueue()
         var afterDelay = false
-        val block: DurableBlock = { ctx ->
-            ctx.step("before") { "x" }
-            ctx.delay(2 * 60 * 60 * 1000L)     // 2h
+        val block: DurableBlock = {
+            step("before") { "x" }
+            delay(2 * 60 * 60 * 1000L)     // 2h
             afterDelay = true
         }
         val parked = DurableWorker(block, deps).run(runCtx())
@@ -74,11 +74,11 @@ class DurableTest {
 
     @Test fun `await parks then passes when the snapshot satisfies`() = runTest {
         enqueue()
-        val block: DurableBlock = { ctx ->
-            ctx.await("validated-net") {
+        val block: DurableBlock = {
+            await("validated-net") {
                 it.values[SignalKind.NETWORK_VALIDATED] == SignalValue.Flag(true)
             }
-            ctx.step("send") { "ok" }
+            step("send") { "ok" }
         }
         assertTrue(DurableWorker(block, deps).run(runCtx()) is RunResult.Parked)
         snapshot = SignalSnapshot(2000L,
@@ -92,7 +92,7 @@ class DurableTest {
     @Test fun `now and random are stable across replay`() = runTest {
         enqueue()
         val seen = mutableListOf<Pair<Long, Long>>()
-        val block: DurableBlock = { ctx -> seen += ctx.now() to ctx.random() }
+        val block: DurableBlock = { seen += now() to random() }
         DurableWorker(block, deps).run(runCtx())
         clock.advance(999_999L)
         DurableWorker(block, deps).run(runCtx())
@@ -105,7 +105,7 @@ class DurableTest {
             importance = 2, maxAttempts = 1))
         val registry = WorkerRegistry()
         registry.register("p") {
-            DurableWorker({ ctx -> ctx.delay(10_000L) }, deps)
+            DurableWorker({ delay(10_000L) }, deps)
         }
         val runner = io.github.iamjosephmj.bridge.exec.WorkRunner(
             journal, registry,

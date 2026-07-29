@@ -10,13 +10,26 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import java.util.concurrent.CancellationException
+import kotlin.time.Duration
 
 /**
  * M5 durable coroutines: suspend blocks that survive process death via deterministic
- * replay (design §4.7, M5 spec). Effects belong inside step(); code between steps must
- * be deterministic; time/randomness via ctx.now()/ctx.random().
+ * replay (design §4.7, M5 spec). The block runs with [DurableScope] as receiver, so it
+ * reads like an ordinary coroutine:
+ *
+ * ```kotlin
+ * Bridge.scope().launch("publish-post") {
+ *     val media = step("upload") { uploader.upload(attachments) }
+ *     delay(2.hours)
+ *     await("validated-net") { it.values[NETWORK_VALIDATED] == Flag(true) }
+ *     step("commit") { db.markPublished(media) }
+ * }
+ * ```
+ *
+ * Contract: effects belong inside step(); code between steps must be deterministic;
+ * time/randomness via now()/random().
  */
-typealias DurableBlock = suspend (DurableContext) -> Unit
+typealias DurableBlock = suspend DurableScope.() -> Unit
 
 class DurableDeps(
     val journal: EventJournal,
@@ -32,7 +45,7 @@ class DurableStructureMismatch(message: String) : IllegalStateException(message)
 
 private val json = Json { ignoreUnknownKeys = true }
 
-class DurableContext internal constructor(
+class DurableScope internal constructor(
     private val workId: String,
     private val generation: Int,
     private val deps: DurableDeps,
@@ -68,6 +81,8 @@ class DurableContext internal constructor(
         step(name, serializer(), block)
 
     /** Journaled timer: survives death — replay skips past an elapsed timer instantly. */
+    suspend fun delay(duration: Duration) = delay(duration.inWholeMilliseconds)
+
     suspend fun delay(ms: Long) {
         val wakeAt = step("\$sys:delay:${sysCounter++}", Long.serializer()) {
             deps.clock.now() + ms
@@ -104,9 +119,9 @@ class DurableWorker(
 ) : BridgeWorker {
     override suspend fun run(ctx: RunContext): RunResult {
         val generation = deps.journal.state(ctx.workId)?.generation ?: 1
-        val dctx = DurableContext(ctx.workId, generation, deps)
+        val scope = DurableScope(ctx.workId, generation, deps)
         return try {
-            block(dctx)
+            scope.block()
             RunResult.Success
         } catch (p: ParkSignal) {
             deps.journal.append(WorkEvent.PolicyDecision(

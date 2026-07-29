@@ -39,10 +39,10 @@ class EndToEndTest {
                     override suspend fun runChunk(ctx: RunContext, chunkIndex: Int): RunResult {
                         chunkyLatch.countDown(); return RunResult.Success
                     } } }
-                durable("durable-e2e") { ctx ->
-                    ctx.step("first") { stepExecutions.incrementAndGet() }
-                    ctx.delay(3_000L)   // parks; JobScheduler backoff re-delivers, replay resumes
-                    ctx.step("second") { stepExecutions.incrementAndGet() }
+                durable("durable-e2e") {
+                    step("first") { stepExecutions.incrementAndGet() }
+                    delay(3_000L)   // parks; JobScheduler backoff re-delivers, replay resumes
+                    step("second") { stepExecutions.incrementAndGet() }
                     durableLatch.countDown()
                 }
             }
