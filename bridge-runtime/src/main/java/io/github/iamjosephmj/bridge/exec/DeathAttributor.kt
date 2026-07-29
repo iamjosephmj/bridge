@@ -4,7 +4,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import io.github.iamjosephmj.bridge.BridgeClock
-import io.github.iamjosephmj.bridge.store.Journal
+import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.WorkEvent
 
 const val STOP_REASON_UNKNOWN = -1
@@ -29,7 +29,7 @@ class SystemProcessDeathSource(private val context: Context) : ProcessDeathSourc
 }
 
 class DeathAttributor(
-    private val journal: Journal,
+    private val journal: EventJournal,
     private val source: ProcessDeathSource,
     private val clock: BridgeClock,
 ) {

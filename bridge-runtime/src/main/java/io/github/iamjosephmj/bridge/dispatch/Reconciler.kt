@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import io.github.iamjosephmj.bridge.BridgeClock
 import io.github.iamjosephmj.bridge.exec.DeathAttributor
-import io.github.iamjosephmj.bridge.store.Journal
+import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.RunState
 import io.github.iamjosephmj.bridge.store.WorkEvent
 
@@ -28,7 +28,7 @@ open class ForceStopDetector(private val context: Context) {
 }
 
 class Reconciler(
-    private val journal: Journal,
+    private val journal: EventJournal,
     private val dispatcher: Dispatcher,
     private val deathAttributor: DeathAttributor,
     private val forceStopDetector: ForceStopDetector,
