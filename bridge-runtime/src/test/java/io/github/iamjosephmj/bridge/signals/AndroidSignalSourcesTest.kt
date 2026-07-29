@@ -20,7 +20,7 @@ class AndroidSignalSourcesTest {
     fun `28-plus and 30-plus sources degrade to Unknown on 26`() {
         assertEquals(SignalValue.Unknown, StandbyBucketSource(app).read())
         assertEquals(SignalValue.Unknown, BgRestrictedSource(app).read())
-        assertEquals(SignalValue.Unknown, ProcessDeathSource(app).read())
+        assertEquals(SignalValue.Unknown, ExitInfoSignalSource(app).read())
         assertEquals(SignalValue.Unknown, PendingReasonsSource(app).read())
     }
 

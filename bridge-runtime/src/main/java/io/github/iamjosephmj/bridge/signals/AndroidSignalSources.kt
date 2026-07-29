@@ -20,7 +20,7 @@ object AndroidSignalSources {
         return listOf(
             PendingReasonsSource(app), StandbyBucketSource(app), BgRestrictedSource(app),
             DataSaverSource(app), DozeSource(app), MaintenanceWindowSource(),
-            NetworkValidatedSource(app), BattOptExemptSource(app), ProcessDeathSource(app),
+            NetworkValidatedSource(app), BattOptExemptSource(app), ExitInfoSignalSource(app),
         )
     }
 }
@@ -108,7 +108,7 @@ internal class BattOptExemptSource(private val context: Context) : SignalSource 
     }
 }
 
-internal class ProcessDeathSource(private val context: Context) : SignalSource {
+internal class ExitInfoSignalSource(private val context: Context) : SignalSource {
     override val kind = SignalKind.PROCESS_DEATH
     override fun read(): SignalValue {
         if (Build.VERSION.SDK_INT < 30) return SignalValue.Unknown
