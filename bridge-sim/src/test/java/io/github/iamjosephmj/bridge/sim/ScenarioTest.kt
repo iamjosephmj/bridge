@@ -13,7 +13,29 @@ internal class OkWorker : BridgeWorker {
     override suspend fun run(ctx: RunContext) = RunResult.Success
 }
 
+internal class OkChunkedWorker : io.github.iamjosephmj.bridge.api.ChunkedWorker {
+    override suspend fun runChunk(ctx: RunContext, chunkIndex: Int) = RunResult.Success
+}
+
 class ScenarioTest {
+
+    @Test fun `re-enqueue of live work keeps the existing item - matching the facade`() = simulate {
+        worker("upload") { OkWorker() }
+        charging(false)
+        val first = enqueue(workRequest("sync", "upload") { charging() })
+        advanceTo(5.min)
+        // KEEP: live work → same handle, no new generation, no second Enqueued event.
+        val again = enqueue(workRequest("sync", "upload") { charging() })
+        assertThat(again.name).isEqualTo(first.name)
+        assertThat(device.journal.state("sync")!!.generation).isEqualTo(1)
+        assertThat(device.journal.events("sync")
+            .filterIsInstance<io.github.iamjosephmj.bridge.store.WorkEvent.Enqueued>()).hasSize(1)
+        // Once terminal, a fresh enqueue does start a new generation.
+        charging(true, fromMs = 10.min)
+        assertThat(first.completedWithin(30.min)).isTrue()
+        enqueue(workRequest("sync", "upload"))
+        assertThat(device.journal.state("sync")!!.generation).isEqualTo(2)
+    }
 
     @Test fun `doze with maintenance windows - deferred then completes`() = simulate {
         worker("upload") { OkWorker() }

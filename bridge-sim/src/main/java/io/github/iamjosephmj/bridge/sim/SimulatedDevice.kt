@@ -4,6 +4,7 @@ import io.github.iamjosephmj.bridge.FakeClock
 import io.github.iamjosephmj.bridge.api.BridgeWorker
 import io.github.iamjosephmj.bridge.api.WorkRequest
 import io.github.iamjosephmj.bridge.api.WorkerRegistry
+import io.github.iamjosephmj.bridge.api.of
 import io.github.iamjosephmj.bridge.diagnostics.Diagnoser
 import io.github.iamjosephmj.bridge.diagnostics.Verdict
 import io.github.iamjosephmj.bridge.dispatch.Dispatcher
@@ -83,21 +84,14 @@ class SimulatedDevice internal constructor() {
 
     fun enqueue(request: WorkRequest): SimHandle {
         val existing = journal.state(request.name)
+        // KEEP semantics, matching Bridge.enqueue: live work keeps its generation and
+        // the caller gets a handle to the existing item.
+        if (existing != null && existing.runState in
+            setOf(RunState.ENQUEUED, RunState.DISPATCHED, RunState.RUNNING)) {
+            return SimHandle(request.name, this)
+        }
         val generation = (existing?.generation ?: 0) + 1
-        journal.append(WorkEvent.Enqueued(request.name, clock.now(), request.workerName, generation,
-            importance = request.importance.ordinal,
-            requiresCharging = request.requiresCharging,
-            requiresUnmetered = request.requiresUnmetered,
-            chunkCount = request.chunkCount,
-            estimatedUpBytes = request.estimatedUpBytes,
-            maxAttempts = request.maxAttempts,
-            deadlineMs = request.deadlineMs,
-            requiresNetwork = request.requiresNetwork,
-            requiresBatteryNotLow = request.requiresBatteryNotLow,
-            requiresStorageNotLow = request.requiresStorageNotLow,
-            requiresDeviceIdle = request.requiresDeviceIdle,
-            initialDelayMs = request.initialDelayMs,
-            periodicMs = request.periodicMs))
+        journal.append(WorkEvent.Enqueued.of(request, generation, clock.now()))
         // Sync sources before the dispatch decision — policy must see the scripted present.
         for (src in sources) src.value = timeline.valueAt(src.kind, clock.now())
         dispatcher.dispatch(request.name)

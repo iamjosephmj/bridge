@@ -17,6 +17,8 @@ class EventCodecTest {
             WorkEvent.Died("w1", 105L, exitReason = 3, rssKb = 380_000, step = "chunk:6", attempt = 1),
             WorkEvent.Finished("w1", 106L, success = true,
                 cpuUserMs = 1200, cpuSystemMs = 300, txBytes = 5_000_000, rxBytes = 1000),
+            WorkEvent.Finished("w1", 106L, success = false,
+                failureMessage = "IllegalStateException: socket closed"),
             WorkEvent.PolicyDecision("w1", 107L, decision = "hold",
                 why = "estimated 12m exceeds ~10m window"),
             WorkEvent.StepCompleted("w1", 108L, name = "upload",

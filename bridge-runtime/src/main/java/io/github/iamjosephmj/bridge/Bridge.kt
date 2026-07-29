@@ -8,6 +8,7 @@ import io.github.iamjosephmj.bridge.api.DurableWorker
 import io.github.iamjosephmj.bridge.api.WorkRequest
 import io.github.iamjosephmj.bridge.api.BridgeWorker
 import io.github.iamjosephmj.bridge.api.WorkerRegistry
+import io.github.iamjosephmj.bridge.api.of
 import io.github.iamjosephmj.bridge.api.workRequest
 import io.github.iamjosephmj.bridge.diagnostics.*
 import io.github.iamjosephmj.bridge.dispatch.*
@@ -122,20 +123,7 @@ object Bridge {
             return request.name   // KEEP
         }
         val generation = (existing?.generation ?: 0) + 1
-        j.append(WorkEvent.Enqueued(request.name, rt.clock.now(), request.workerName, generation,
-            importance = request.importance.ordinal,
-            requiresCharging = request.requiresCharging,
-            requiresUnmetered = request.requiresUnmetered,
-            chunkCount = request.chunkCount,
-            estimatedUpBytes = request.estimatedUpBytes,
-            maxAttempts = request.maxAttempts,
-            deadlineMs = request.deadlineMs,
-            requiresNetwork = request.requiresNetwork,
-            requiresBatteryNotLow = request.requiresBatteryNotLow,
-            requiresStorageNotLow = request.requiresStorageNotLow,
-            requiresDeviceIdle = request.requiresDeviceIdle,
-            initialDelayMs = request.initialDelayMs,
-            periodicMs = request.periodicMs))
+        j.append(WorkEvent.Enqueued.of(request, generation, rt.clock.now()))
         rt.dispatcher.dispatch(request.name)
         pokeHub()
         return request.name
