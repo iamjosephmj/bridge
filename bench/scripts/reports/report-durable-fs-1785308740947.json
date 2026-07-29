@@ -1,0 +1,8 @@
+{"scenario": "durable-force-stop",
+ "device": {"model": "Pixel 6 Pro", "sdk": 36},
+ "state": "SUCCEEDED",
+ "firstStepExecutions": 1,
+ "secondStepExecutions": 1,
+ "stepEventsJournaled": 2,
+ "parks": 1,
+ "deaths": 0}

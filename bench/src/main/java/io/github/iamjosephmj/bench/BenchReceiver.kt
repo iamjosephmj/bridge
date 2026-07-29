@@ -28,6 +28,27 @@ class BenchReceiver : BroadcastReceiver() {
                 WmRecorder.reset(context)
                 WorkManagerBackend(context).enqueueAll(CORPUS)
             }
+            "bench.ENQUEUE_DURABLE" -> {
+                context.getSharedPreferences("durable-fs-counters", Context.MODE_PRIVATE)
+                    .edit().clear().commit()
+                io.github.iamjosephmj.bridge.Bridge.durable("durable-fs")
+            }
+            "bench.DURABLE_REPORT" -> {
+                val prefs = context.getSharedPreferences("durable-fs-counters", Context.MODE_PRIVATE)
+                val events = io.github.iamjosephmj.bridge.Bridge.events("durable-fs")
+                val json = """{"scenario": "durable-force-stop",
+ "device": {"model": "${Build.MODEL}", "sdk": ${Build.VERSION.SDK_INT}},
+ "state": "${io.github.iamjosephmj.bridge.Bridge.state("durable-fs")?.runState}",
+ "firstStepExecutions": ${prefs.getInt("first", 0)},
+ "secondStepExecutions": ${prefs.getInt("second", 0)},
+ "stepEventsJournaled": ${events.count { it is io.github.iamjosephmj.bridge.store.WorkEvent.StepCompleted && !it.name.startsWith("${'$'}sys") }},
+ "parks": ${events.count { it is io.github.iamjosephmj.bridge.store.WorkEvent.Stopped && it.stopReason == 2 }},
+ "deaths": ${events.count { it is io.github.iamjosephmj.bridge.store.WorkEvent.Died }}}"""
+                val out = File(context.getExternalFilesDir(null),
+                    "report-durable-fs-${System.currentTimeMillis()}.json")
+                out.writeText(json)
+                Log.i("Bench", "durable report written: ${out.absolutePath}")
+            }
             // M2 stall scenario: for every corpus item, print WorkManager's entire answer
             // (WorkInfo.state) next to Bridge's verdict. Written as JSON for run-stall.sh.
             "bench.STALL_REPORT" -> {
