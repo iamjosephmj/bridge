@@ -2,9 +2,21 @@ package io.github.iamjosephmj.bridge.store
 
 class InMemoryJournal : EventJournal {
     private val events = mutableListOf<WorkEvent>()
+    private val listeners = java.util.concurrent.CopyOnWriteArrayList<(WorkEvent) -> Unit>()
 
-    @Synchronized override fun append(event: WorkEvent) { events += event }
-    @Synchronized override fun appendAll(events: List<WorkEvent>) { this.events += events }
+    override fun append(event: WorkEvent) = appendAll(listOf(event))
+    override fun appendAll(events: List<WorkEvent>) {
+        synchronized(this) { this.events += events }
+        // Fire outside the lock; listener failures never break the write path.
+        for (l in listeners) for (e in events) { try { l(e) } catch (_: Exception) { } }
+    }
+
+    override fun addListener(listener: (WorkEvent) -> Unit): AutoCloseable {
+        listeners += listener
+        return AutoCloseable { listeners.remove(listener) }
+    }
+
+    internal fun listenerCount(): Int = listeners.size
 
     @Synchronized override fun events(workId: String): List<WorkEvent> =
         events.filter { it.workId == workId }

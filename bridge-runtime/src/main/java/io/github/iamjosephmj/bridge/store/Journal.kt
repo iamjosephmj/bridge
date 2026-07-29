@@ -34,11 +34,27 @@ class Journal(
     private val ioExecutor: Executor = Executors.newSingleThreadExecutor(),
 ) : EventJournal {
     private val db = JournalDb(context.applicationContext, dbName)
+    private val listeners = java.util.concurrent.CopyOnWriteArrayList<(WorkEvent) -> Unit>()
 
     override fun append(event: WorkEvent) = appendAll(listOf(event))
 
-    @Synchronized
+    override fun addListener(listener: (WorkEvent) -> Unit): AutoCloseable {
+        listeners += listener
+        return AutoCloseable { listeners.remove(listener) }
+    }
+
+    internal fun listenerCount(): Int = listeners.size
+
     override fun appendAll(events: List<WorkEvent>) {
+        writeAll(events)
+        // Fire outside the DB lock, and only after a successful commit.
+        for (l in listeners) for (e in events) {
+            try { l(e) } catch (ex: Exception) { Log.e("BridgeJournal", "listener failed", ex) }
+        }
+    }
+
+    @Synchronized
+    private fun writeAll(events: List<WorkEvent>) {
         try {
             val w = db.writableDatabase
             w.beginTransaction()
