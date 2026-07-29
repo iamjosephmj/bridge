@@ -84,7 +84,11 @@ object Bridge {
                 val now = b.clock.now()
                 log.slice(now - 3L * 24 * 60 * 60 * 1000, now)   // 3 days of rhythm history
             })
-        try { SignalBroadcasts(hub, sources).start(appContext) } catch (_: Exception) { }
+        try {
+            SignalBroadcasts(hub, sources)
+                .apply { onBurstDrain = { reconcileIfInitialized() } }
+                .start(appContext)
+        } catch (_: Exception) { }
         val deps = DurableDeps(j, b.clock,
             snapshotProvider = { hub.snapshot(Trigger.DIAGNOSIS) }, alarmGateway = alarmGw)
         durableDeps = deps

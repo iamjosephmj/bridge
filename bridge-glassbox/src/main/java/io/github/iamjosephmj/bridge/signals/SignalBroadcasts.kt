@@ -24,6 +24,9 @@ class SignalBroadcasts internal constructor(
 
     private var lastDeepIdle = false
 
+    /** Invoked when a maintenance window opens (M3 burst-drain); set by the runtime. */
+    var onBurstDrain: (() -> Unit)? = null
+
     fun start(context: Context) {
         val app = context.applicationContext
         val filter = IntentFilter().apply {
@@ -46,8 +49,7 @@ class SignalBroadcasts internal constructor(
                 try { hub.snapshot(Trigger.BROADCAST) } catch (_: Exception) { /* never crash host app */ }
                 // M3 Doze strategy: drain every eligible item the moment a window opens.
                 if (burstDrain) {
-                    try { io.github.iamjosephmj.bridge.Bridge.reconcileIfInitialized() }
-                    catch (_: Exception) { }
+                    try { onBurstDrain?.invoke() } catch (_: Exception) { }
                 }
             }
         }
