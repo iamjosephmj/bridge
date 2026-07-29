@@ -83,6 +83,7 @@ data class Verdict(
             is SignalValue.Doze -> "Doze(${v.mode.name})"
             is SignalValue.PendingReasons -> "Reasons${v.reasons}"
             is SignalValue.Death -> "Death(reason=${v.exitReason})"
+            is SignalValue.Count -> v.value.toString()
             SignalValue.Unknown -> "Unknown"
         }
 

@@ -32,6 +32,12 @@ object JobPlanCompiler {
                 b.setRequiresCharging(true)
                 if (Build.VERSION.SDK_INT >= 33) b.setPriority(JobInfo.PRIORITY_LOW)
             }
+            HostJobClass.EXPEDITED -> {
+                b.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                // Below 31 there is no expedited tier; the policy engine never picks
+                // EXPEDITED there (it journals the skip), so this branch stays honest.
+                if (Build.VERSION.SDK_INT >= 31) b.setExpedited(true)
+            }
         }
         if (Build.VERSION.SDK_INT >= 35) b.setTraceTag("bridge:${hostClass.name.lowercase()}")
         return b.build()
