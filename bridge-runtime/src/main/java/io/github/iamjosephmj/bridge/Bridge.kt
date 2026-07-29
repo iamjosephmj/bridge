@@ -64,7 +64,11 @@ object Bridge {
         val d = Dispatcher(j, gw, b.clock,
             policy = PolicyEngine(android.os.Build.VERSION.SDK_INT),
             alarmGateway = SystemAlarmGateway(appContext),
-            snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) })
+            snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) },
+            historyProvider = {
+                val now = b.clock.now()
+                log.slice(now - 3L * 24 * 60 * 60 * 1000, now)   // 3 days of rhythm history
+            })
         try { SignalBroadcasts(hub, sources).start(appContext) } catch (_: Exception) { }
         val runner = WorkRunner(j, b.registry, SystemBlackBox(appContext),
             b.costMeter ?: HealthStatsCostMeter(appContext), b.clock)
@@ -135,9 +139,17 @@ object Bridge {
                 diagnosis = if (st.runState in setOf(RunState.ENQUEUED, RunState.DISPATCHED))
                     whyPending(st.workId)?.diagnosis else null)
         }
+        val flags = try {
+            // Aggregate per worker: several work items can share a worker implementation.
+            CostFlags.compute(j.allWork().groupBy { it.workerName }.mapValues { (name, states) ->
+                val runs = states.flatMap { ledger(it.workId)?.runs ?: emptyList() }
+                states.maxOf { it.importance } to Ledger(name, runs)
+            })
+        } catch (e: Exception) { emptyList() }
         return BridgeReport(lines,
             conformanceMode = conformance?.mode?.name ?: "UNKNOWN",
-            signalLogHealth = try { signalLog?.health() ?: (0 to null) } catch (e: Exception) { 0 to null })
+            signalLogHealth = try { signalLog?.health() ?: (0 to null) } catch (e: Exception) { 0 to null },
+            costFlags = flags)
     }
 
     fun state(name: String): WorkState? = journal?.state(name)

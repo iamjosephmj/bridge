@@ -12,6 +12,7 @@ data class BridgeReport(
     val lines: List<ReportLine>,
     val conformanceMode: String,        // "MULTIPLEXED" | "ONE_TO_ONE" | "UNKNOWN"
     val signalLogHealth: Pair<Int, Long?>,
+    val costFlags: List<CostFlag> = emptyList(),
 ) {
     fun render(now: Long): String = buildString {
         for (l in lines) {
@@ -19,6 +20,7 @@ data class BridgeReport(
             l.diagnosis?.let { append(Verdict.renderDiagnosis(it)) }
             append('\n')
         }
+        for (f in costFlags) append(f.render()).append('\n')
         append("conformance: ").append(conformanceMode)
         append(" · signal log: ").append(signalLogHealth.first).append(" transitions")
         signalLogHealth.second?.let { oldest ->
