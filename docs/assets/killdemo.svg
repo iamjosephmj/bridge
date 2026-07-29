@@ -26,81 +26,100 @@
   <rect x="968" y="250" width="88" height="36" rx="6" fill="none" stroke="#1D2B2E" stroke-width="1.5"/>
   <rect x="1064" y="250" width="88" height="36" rx="6" fill="none" stroke="#1D2B2E" stroke-width="1.5"/>
   <rect x="200" y="120" width="88" height="36" rx="6" fill="#4DD8C4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.05" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.0421" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="296" y="120" width="88" height="36" rx="6" fill="#4DD8C4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.1" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.0842" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="392" y="120" width="88" height="36" rx="6" fill="#4DD8C4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.15" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.1263" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="488" y="120" width="88" height="36" rx="6" fill="#4DD8C4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.2" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.1684" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="584" y="120" width="88" height="36" rx="6" fill="#4DD8C4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.25" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.2105" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="680" y="120" width="88" height="36" rx="6" fill="none" stroke="#7BEFD8" stroke-width="2" stroke-dasharray="5 4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.25;0.3125" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.2105;0.2632" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="680" y="120" width="88" height="36" rx="6" fill="#7BEFD8" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.6125" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.5158" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="776" y="120" width="88" height="36" rx="6" fill="#4DD8C4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.6625" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.5579" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="872" y="120" width="88" height="36" rx="6" fill="#4DD8C4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.7125" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.6" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="968" y="120" width="88" height="36" rx="6" fill="#4DD8C4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.7625" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.6421" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="1064" y="120" width="88" height="36" rx="6" fill="#4DD8C4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.8125" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.6842" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <text x="680" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#7BEFD8" opacity="0">↑ resumes at chunk 6 — the journal remembers
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.5875" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.4947" dur="9.5s" repeatCount="indefinite"/>
   </text>
   <rect x="200" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.05;0.3125;0.6125" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.0421;0.2632;0.5158" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="296" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.1;0.3125;0.6625" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.0842;0.2632;0.5579" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="392" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.15;0.3125;0.7125" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.1263;0.2632;0.6" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="488" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.2;0.3125;0.7625" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.1684;0.2632;0.6421" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="584" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.25;0.3125;0.8125" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.2105;0.2632;0.6842" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <rect x="680" y="250" width="88" height="36" rx="6" fill="none" stroke="#4A5D5F" stroke-width="2" stroke-dasharray="5 4" opacity="0">
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1" keyTimes="0;0.25;0.3125;0.8625" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.2105;0.2632" dur="9.5s" repeatCount="indefinite"/>
   </rect>
+  <rect x="680" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.7263" dur="9.5s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="776" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.7684" dur="9.5s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="872" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.8105" dur="9.5s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="968" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.8526" dur="9.5s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="1064" y="250" width="88" height="36" rx="6" fill="#4A5D5F" opacity="0">
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.8947" dur="9.5s" repeatCount="indefinite"/>
+  </rect>
+  <text x="1152" y="314" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#4A5D5F" text-anchor="end" opacity="0">✓ finished, eventually — all 20 chunks re-run
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.9158" dur="9.5s" repeatCount="indefinite"/>
+  </text>
   <text x="200" y="314" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#4A5D5F" opacity="0">↑ back to chunk 0. again. (no resume primitive)
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.5875" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.4947" dur="9.5s" repeatCount="indefinite"/>
   </text>
   <g opacity="0" transform="rotate(-3 600 212)">
     <text x="600" y="212" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="34" font-weight="700" fill="#4DD8C4" text-anchor="middle" letter-spacing="6">SUCCEEDED</text>
     <text x="600" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#75898B" text-anchor="middle">chunks replayed: 1  ·  workmanager: 20</text>
-    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.8375" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.7053" dur="9.5s" repeatCount="indefinite"/>
   </g>
   <rect x="0" y="0" width="1200" height="400" rx="16" fill="#0B1113" opacity="0">
-    <animate attributeName="opacity" values="0;0;0.92;0.92;0" keyTimes="0;0.3187;0.3438;0.5437;0.575" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;0.92;0.92;0" keyTimes="0;0.2684;0.2895;0.4579;0.4842" dur="9.5s" repeatCount="indefinite"/>
   </rect>
   <text x="603" y="187" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="36" font-weight="700" fill="#7BEFD8" text-anchor="middle" letter-spacing="8" opacity="0">PROCESS KILLED
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.3125;0.3275" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.2632;0.2758" dur="9.5s" repeatCount="indefinite"/>
   </text>
   <text x="600" y="190" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="36" font-weight="700" fill="#FF5C5C" text-anchor="middle" letter-spacing="8" opacity="0">PROCESS KILLED
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1;0" keyTimes="0;0.3125;0.3525;0.3725;0.4188" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1;0" keyTimes="0;0.2632;0.2968;0.3137;0.3526" dur="9.5s" repeatCount="indefinite"/>
   </text>
   <text x="600" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="27" fill="#7BEFD8" text-anchor="middle" letter-spacing="4" opacity="0">CONTINUE? ▶
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1;0" keyTimes="0;0.4313;0.4813;0.5062;0.5563" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0;1;0" keyTimes="0;0.3632;0.4053;0.4263;0.4684" dur="9.5s" repeatCount="indefinite"/>
   </text>
   <text x="600" y="226" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#75898B" text-anchor="middle" opacity="0">(bridge already said yes)
-    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.4313;0.5563" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.3632;0.4684" dur="9.5s" repeatCount="indefinite"/>
   </text>
+  <text x="48" y="376" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F">stylized: the real run is 40 chunks, killed ~chunk 20 — the numbers are the real ones</text>
   <text x="1152" y="376" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F" text-anchor="end">measured: Pixel 6 Pro · API 36 · large_chunked 200 MB / 40 chunks</text>
 </svg>
