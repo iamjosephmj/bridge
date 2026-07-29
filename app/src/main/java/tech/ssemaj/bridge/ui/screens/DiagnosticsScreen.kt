@@ -1,39 +1,44 @@
-package tech.ssemaj.bridge.ui.sections
+package tech.ssemaj.bridge.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.iamjosephmj.bridge.Bridge
 import io.github.iamjosephmj.bridge.diagnostics.Ledger
 import io.github.iamjosephmj.bridge.glassbox.GlassBox
 import tech.ssemaj.bridge.demos.Names
-import tech.ssemaj.bridge.ui.DemoSection
-import tech.ssemaj.bridge.ui.ResultText
+import tech.ssemaj.bridge.ui.ConsolePanel
+import tech.ssemaj.bridge.ui.FeatureScreen
 import tech.ssemaj.bridge.ui.rememberDemoConsole
 
-/**
- * Demo 6 — the diagnostics surface. All four calls are total (never null, never throw
- * for unknown names) and are safe to call from production code paths:
- *
- * - whyPending(name): one causal verdict for a pending item, with evidence lines;
- * - ledger(name):     per-attempt run history (outcome, chunks, cost, device context);
- * - report():         one line per known work item + conformance + cost flags;
- * - GlassBox.explain(): device-level causes — works even without the Bridge scheduler.
- */
+private val SNIPPET = """
+    Bridge.whyPending(name)   // one causal verdict + evidence
+    Bridge.ledger(name)       // per-attempt run history
+    Bridge.report()           // one line per known work item
+    GlassBox.explain()        // device-level causes, no scheduler needed
+""".trimIndent()
+
+/** Diagnostics surface — same four calls as the original section. */
 @Composable
-fun DiagnosticsSection() {
+fun DiagnosticsScreen(onBack: () -> Unit) {
     val console = rememberDemoConsole()
-    DemoSection(
-        title = "6 · Diagnostics",
-        description = "whyPending / ledger / report from bridge-runtime, plus " +
-            "GlassBox.explain() from bridge-glassbox. Run demos 1–5 first so " +
-            "there is history to look at.",
+    FeatureScreen(
+        title = "Diagnostics",
+        explainer = "Every question you would normally answer with a debugger has a total, " +
+            "production-safe API: whyPending(name) returns one causal verdict with evidence " +
+            "lines; ledger(name) lists every attempt with outcome, chunks, and CPU cost; " +
+            "report() summarizes all known work; GlassBox.explain() names device-level " +
+            "causes (Doze, App Standby, battery saver) even without the Bridge scheduler. " +
+            "None of them return null or throw for unknown names. WorkManager's WorkInfo " +
+            "tells you THAT work is ENQUEUED — verdicts tell you WHY, and the verdict " +
+            "surface was proven on hardware. Run the other demos first so there is history.",
+        snippet = SNIPPET,
+        onBack = onBack,
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
                 console.run {
                     log("whyPending('${Names.CONSTRAINED}'):")
@@ -63,7 +68,7 @@ fun DiagnosticsSection() {
                 }
             }) { Text("GlassBox") }
         }
-        ResultText(console.text)
+        ConsolePanel(console.text)
     }
 }
 

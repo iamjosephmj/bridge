@@ -2,34 +2,36 @@ package tech.ssemaj.bridge
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import tech.ssemaj.bridge.ui.sections.ChunkedSection
-import tech.ssemaj.bridge.ui.sections.CompatSection
-import tech.ssemaj.bridge.ui.sections.DeadlineSection
-import tech.ssemaj.bridge.ui.sections.DiagnosticsSection
-import tech.ssemaj.bridge.ui.sections.DurableSection
-import tech.ssemaj.bridge.ui.sections.EnqueueSection
-import tech.ssemaj.bridge.ui.sections.PeriodicSection
-import tech.ssemaj.bridge.ui.sections.StatusSection
+import tech.ssemaj.bridge.ui.Feature
+import tech.ssemaj.bridge.ui.HomeScreen
+import tech.ssemaj.bridge.ui.screens.ChunkedScreen
+import tech.ssemaj.bridge.ui.screens.CompatScreen
+import tech.ssemaj.bridge.ui.screens.DeadlineScreen
+import tech.ssemaj.bridge.ui.screens.DiagnosticsScreen
+import tech.ssemaj.bridge.ui.screens.DurableScreen
+import tech.ssemaj.bridge.ui.screens.EnqueueScreen
+import tech.ssemaj.bridge.ui.screens.PeriodicScreen
 import tech.ssemaj.bridge.ui.theme.BridgeTheme
 
 /**
- * Bridge showcase: one scrolling screen, seven self-contained demos. Each section lives
- * in ui/sections/ and pairs a button with a live console showing what the library did.
- * Bridge itself is initialized in [BridgeShowcaseApp].
+ * Bridge showcase: a home screen (journal-backed status + feature grid) and one screen
+ * per feature. Navigation is a plain saveable state holder — home plus one level deep —
+ * so system back (and predictive back) simply pops to home. Each feature screen
+ * rehydrates its own work names from the journal on entry. Bridge itself is initialized
+ * in [BridgeShowcaseApp].
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,8 +39,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BridgeTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ShowcaseScreen(Modifier.padding(innerPadding))
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    ShowcaseNavHost()
                 }
             }
         }
@@ -46,26 +51,21 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ShowcaseScreen(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text("Bridge showcase", style = MaterialTheme.typography.headlineSmall)
-        Text(
-            "Background work with a causal ledger. Press a button, watch the journal.",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        StatusSection()         // 0: journal-backed report — persists across restarts
-        EnqueueSection()        // 1: plain + constrained enqueue
-        ChunkedSection()        // 2: chunks(10), resumable progress
-        DurableSection()        // 3: Bridge.scope().launch durable coroutine
-        DeadlineSection()       // 4: mustCompleteBy(now + 2 min)
-        PeriodicSection()       // 5: periodic(15 min) + cancel
-        DiagnosticsSection()    // 6: whyPending / ledger / report / GlassBox
-        CompatSection()         // 7: WorkManager-shaped chain via bridge-compat
+private fun ShowcaseNavHost() {
+    // null = home. The stack is exactly one level deep, so a nullable Feature is the
+    // whole back stack; rememberSaveable keeps the screen across rotation/death.
+    var current by rememberSaveable { mutableStateOf<Feature?>(null) }
+    BackHandler(enabled = current != null) { current = null }
+    Crossfade(targetState = current, label = "screen") { feature ->
+        when (feature) {
+            null -> HomeScreen(onOpen = { current = it })
+            Feature.ENQUEUE -> EnqueueScreen(onBack = { current = null })
+            Feature.CHUNKED -> ChunkedScreen(onBack = { current = null })
+            Feature.DURABLE -> DurableScreen(onBack = { current = null })
+            Feature.DEADLINE -> DeadlineScreen(onBack = { current = null })
+            Feature.PERIODIC -> PeriodicScreen(onBack = { current = null })
+            Feature.DIAGNOSTICS -> DiagnosticsScreen(onBack = { current = null })
+            Feature.COMPAT -> CompatScreen(onBack = { current = null })
+        }
     }
 }
