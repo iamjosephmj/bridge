@@ -11,7 +11,16 @@ per-run cost via HealthStats.
 - Benchmark vs WorkManager: `bench/README.md`
 - Simulator: `bridge-sim/README.md`
 
-Status: M5 (durable coroutines v0.5).
+Status: v0.5 + parity tier (constraints, periodic work, initial delay).
+
+**Post-M5 parity tier (2026-07-29):** full WorkManager constraint surface
+(battery/storage-not-low, device-idle, network types — three silent M1
+constraint-loss bugs fixed en route), `initialDelay()` (exact-path
+`setMinimumLatency`), and `periodic()` (platform `setPeriodic`, each cycle a
+journaled generation, cancel ends the series). Compat façade covers
+`Constraints.Builder`, `setInitialDelay`, and `PeriodicWorkRequest`.
+Remaining vs WorkManager: content-URI triggers, `Data` payloads, tags,
+observers.
 
 ## M5 — durable coroutines
 
