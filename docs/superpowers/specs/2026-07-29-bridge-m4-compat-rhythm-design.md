@@ -78,8 +78,10 @@ docs/MIGRATION.md      WorkManager → bridge-compat → native API, with the ou
 - **Rhythm unit:** median-gap prediction incl. walk-forward and <3-window null.
 - **Cost unit:** flag matrix (expensive+LOW flags; expensive+HIGH doesn't; thin history
   doesn't); report render includes flag line.
-- **Sim:** hold-until-predicted-window scenario: doze cadence 3h; after 3 windows a
-  quota-held item's `Hold.untilMs` lands on the predicted next window (±tick).
+- ~~Sim: hold-until-predicted-window scenario~~ — replaced at implementation time by
+  direct unit coverage of `RhythmModel` (prediction + walk-forward + null cases):
+  `Hold.untilMs` is not journaled, so a sim scenario could only assert what the unit
+  tests already pin down; the wiring itself is a one-line fallback expression.
 
 ## 5. Out of scope
 
