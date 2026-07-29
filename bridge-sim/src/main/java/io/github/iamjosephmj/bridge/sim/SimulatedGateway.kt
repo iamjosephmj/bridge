@@ -76,7 +76,10 @@ class SimulatedGateway(
         // Crash backoff: a crash newer than the newest start parks the item for 30 simulated
         // minutes — re-dispatch/policy records appended after the crash don't clear it.
         val evs = journal.events(p.workId)
-        val lastCrash = evs.indexOfLast { it is WorkEvent.Stopped || it is WorkEvent.Died }
+        val lastCrash = evs.indexOfLast {
+            (it is WorkEvent.Stopped &&
+                it.stopReason != io.github.iamjosephmj.bridge.exec.STOP_REASON_PARKED) ||
+                it is WorkEvent.Died }
         val lastStart = evs.indexOfLast { it is WorkEvent.Started }
         if (lastCrash > lastStart && atMs < evs[lastCrash].at + crashBackoffMs)
             return@filter false

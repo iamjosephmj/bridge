@@ -58,10 +58,21 @@ class SimScope internal constructor(internal val device: SimulatedDevice) {
     fun thermal(status: Int, fromMs: Long = 0L) =
         timeline.set(SignalKind.THERMAL, SignalValue.Count(status), fromMs)
 
+    /** Escape hatch: script any signal directly. */
+    fun signal(kind: SignalKind, value: SignalValue, fromMs: Long = 0L) =
+        timeline.set(kind, value, fromMs)
+
     fun unmetered(on: Boolean, fromMs: Long = 0L) =
         timeline.set("unmetered", SignalValue.Flag(on), fromMs)
 
     fun enqueue(request: WorkRequest): SimHandle = device.enqueue(request)
+
+    fun durable(name: String, block: io.github.iamjosephmj.bridge.api.DurableBlock) =
+        device.durable(name, block)
+
+    fun startDurable(name: String): SimHandle = device.startDurable(name)
+
+    fun restartProcess() = device.restartProcess()
 
     fun advanceTo(ms: Long) = device.advanceTo(ms)
 }

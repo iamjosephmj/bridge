@@ -19,6 +19,8 @@ class EventCodecTest {
                 cpuUserMs = 1200, cpuSystemMs = 300, txBytes = 5_000_000, rxBytes = 1000),
             WorkEvent.PolicyDecision("w1", 107L, decision = "hold",
                 why = "estimated 12m exceeds ~10m window"),
+            WorkEvent.StepCompleted("w1", 108L, name = "upload",
+                resultJson = "{\"url\":\"x\"}", generation = 1),
         )
         for (e in events) {
             assertThat(EventCodec.decode(EventCodec.encode(e))).isEqualTo(e)

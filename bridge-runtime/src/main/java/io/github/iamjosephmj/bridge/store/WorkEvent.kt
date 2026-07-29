@@ -59,6 +59,16 @@ sealed interface WorkEvent {
     @Serializable @SerialName("cancelled")
     data class Cancelled(override val workId: String, override val at: Long) : WorkEvent
 
+    /**
+     * M5 durable replay record: the generalization of [ChunkCompleted] (which stays for
+     * chunked work). Completed steps return [resultJson] instantly on replay.
+     */
+    @Serializable @SerialName("stepCompleted")
+    data class StepCompleted(
+        override val workId: String, override val at: Long,
+        val name: String, val resultJson: String, val generation: Int,
+    ) : WorkEvent
+
     /** L4 judgment record: "hold" / "shed" / "admit:EXPEDITED" / "escalate:ALARM" / "skip:EXPEDITED". */
     @Serializable @SerialName("policyDecision")
     data class PolicyDecision(

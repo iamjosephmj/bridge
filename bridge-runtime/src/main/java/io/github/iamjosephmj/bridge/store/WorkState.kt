@@ -34,6 +34,7 @@ fun foldWorkState(events: List<WorkEvent>): WorkState? {
                 runState = if (e.success) RunState.SUCCEEDED else RunState.FAILED)
             is WorkEvent.Cancelled -> s?.copy(runState = RunState.CANCELLED)
             is WorkEvent.PolicyDecision -> s   // judgment records don't change run state
+            is WorkEvent.StepCompleted -> s    // durable replay records don't either
         }
     }
     return s

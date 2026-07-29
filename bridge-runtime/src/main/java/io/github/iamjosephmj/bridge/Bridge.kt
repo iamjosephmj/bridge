@@ -1,9 +1,13 @@
 package io.github.iamjosephmj.bridge
 
 import android.content.Context
+import io.github.iamjosephmj.bridge.api.DurableBlock
+import io.github.iamjosephmj.bridge.api.DurableDeps
+import io.github.iamjosephmj.bridge.api.DurableWorker
 import io.github.iamjosephmj.bridge.api.WorkRequest
 import io.github.iamjosephmj.bridge.api.BridgeWorker
 import io.github.iamjosephmj.bridge.api.WorkerRegistry
+import io.github.iamjosephmj.bridge.api.workRequest
 import io.github.iamjosephmj.bridge.diagnostics.*
 import io.github.iamjosephmj.bridge.dispatch.*
 import io.github.iamjosephmj.bridge.exec.*
@@ -25,6 +29,10 @@ class BridgeConfigBuilder internal constructor() {
     var transitionStore: TransitionStore? = null
 
     fun worker(name: String, factory: () -> BridgeWorker) = registry.register(name, factory)
+
+    internal val durables = mutableMapOf<String, DurableBlock>()
+    /** Registers a durable block (M5). Start instances with [Bridge.durable]. */
+    fun durable(name: String, block: DurableBlock) { durables[name] = block }
 }
 
 object Bridge {
@@ -63,15 +71,21 @@ object Bridge {
         val hub = SignalHub(sources, log, b.clock)
         signalLog = log; signalHub = hub
         registry = b.registry
+        val alarmGw = SystemAlarmGateway(appContext)
         val d = Dispatcher(j, gw, b.clock,
             policy = PolicyEngine(android.os.Build.VERSION.SDK_INT),
-            alarmGateway = SystemAlarmGateway(appContext),
+            alarmGateway = alarmGw,
             snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) },
             historyProvider = {
                 val now = b.clock.now()
                 log.slice(now - 3L * 24 * 60 * 60 * 1000, now)   // 3 days of rhythm history
             })
         try { SignalBroadcasts(hub, sources).start(appContext) } catch (_: Exception) { }
+        val durableDeps = DurableDeps(j, b.clock,
+            snapshotProvider = { hub.snapshot(Trigger.DIAGNOSIS) }, alarmGateway = alarmGw)
+        for ((name, block) in b.durables) {
+            b.registry.register(name) { DurableWorker(block, durableDeps) }
+        }
         val runner = WorkRunner(j, b.registry, SystemBlackBox(appContext),
             b.costMeter ?: HealthStatsCostMeter(appContext), b.clock)
         BridgeServices.runner = runner
@@ -153,6 +167,9 @@ object Bridge {
             signalLogHealth = try { signalLog?.health() ?: (0 to null) } catch (e: Exception) { 0 to null },
             costFlags = flags)
     }
+
+    /** Starts an instance of a durable block registered via the config builder. */
+    fun durable(name: String): String = enqueue(workRequest(name, name))
 
     /** Late worker registration (used by bridge-compat, which learns classes at enqueue time). */
     fun registerWorker(name: String, factory: () -> BridgeWorker) {

@@ -15,6 +15,8 @@ enum class RunOutcome { COMPLETED, FAILED, RETRY }
 
 private const val STOP_REASON_RETRY = 0
 private const val STOP_REASON_SYSTEM_STOP = 1
+/** Durable timer/await park — excluded from crash counting and attempt limits. */
+const val STOP_REASON_PARKED = 2
 
 /** Internal signal from chunked worker: distinguishes system stop from worker results. */
 private sealed class ChunkRunResult {
@@ -66,6 +68,10 @@ class WorkRunner(
                 is RunResult.Failure -> finish(workId, before, success = false)
                     .let { RunOutcome.FAILED }
                 is RunResult.Retry -> retryOrFail(workId, deliveryCount, state.maxAttempts, before)
+                is RunResult.Parked -> {
+                    journal.append(WorkEvent.Stopped(workId, clock.now(), STOP_REASON_PARKED))
+                    RunOutcome.RETRY
+                }
             }
         } catch (e: CancellationException) {
             throw e
