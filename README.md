@@ -20,16 +20,19 @@ deterministic replay (Temporal's model, on-device), not continuation
 serialization:
 
 ```kotlin
-Bridge.initialize(context) {
-    durable("publish-post") { ctx ->
-        val media = ctx.step("upload") { uploader.upload(draft.attachments) }
-        ctx.delay(2 * 60 * 60 * 1000L)   // journaled timer → alarm; survives death
-        ctx.await("validated-net") { it.values[NETWORK_VALIDATED] == Flag(true) }
-        ctx.step("commit") { db.markPublished(media) }
-    }
+Bridge.scope().launch("publish-post") {
+    val media = step("upload") { uploader.upload(draft.attachments) }
+    delay(2.hours)                       // journaled timer → alarm; survives death
+    await("validated-net") { it.values[NETWORK_VALIDATED] == Flag(true) }
+    step("commit") { db.markPublished(media) }
 }
-Bridge.durable("publish-post")           // start an instance
 ```
+
+`launch` registers + starts with KEEP semantics: relaunching on process start
+is the recovery path (the same reachability rule WorkManager puts on worker
+classes). Blocks run with `DurableScope` as receiver, so `step`/`delay`/`await`
+read like ordinary coroutine code; init-time `durable(name) { }` registration
+also remains for headless recovery paths.
 
 After death the block re-executes from the top; completed `step()`s return
 their journaled results instantly (`StepCompleted` — the generalization of
