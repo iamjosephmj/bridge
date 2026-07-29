@@ -51,7 +51,10 @@ class SimulatedDevice internal constructor() {
     private val dispatcher = Dispatcher(journal, gateway, clock,
         policy = io.github.iamjosephmj.bridge.policy.PolicyEngine(apiLevel = 34),
         alarmGateway = alarms,
-        snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) })
+        snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) },
+        historyProvider = {
+            signalLog.slice(clock.now() - 3L * 24 * 60 * 60 * 1000, clock.now())
+        })
     private val runner = WorkRunner(journal, registry, NoopBlackBox, ZeroCostMeter, clock)
 
     private val tickMs = 60_000L

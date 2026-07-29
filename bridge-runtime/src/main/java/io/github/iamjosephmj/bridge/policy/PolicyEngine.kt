@@ -2,6 +2,7 @@ package io.github.iamjosephmj.bridge.policy
 
 import io.github.iamjosephmj.bridge.dispatch.HostJobClass
 import io.github.iamjosephmj.bridge.signals.SignalKind
+import io.github.iamjosephmj.bridge.signals.SignalSlice
 import io.github.iamjosephmj.bridge.signals.SignalSnapshot
 import io.github.iamjosephmj.bridge.signals.SignalValue
 import io.github.iamjosephmj.bridge.store.WorkEvent
@@ -22,17 +23,22 @@ sealed interface Decision {
 class PolicyEngine(private val apiLevel: Int) {
 
     fun decide(state: WorkState, events: List<WorkEvent>,
-               snapshot: SignalSnapshot, now: Long): Decision =
-        try { decideOrThrow(state, events, snapshot, now) }
+               snapshot: SignalSnapshot, now: Long,
+               history: SignalSlice? = null): Decision =
+        try { decideOrThrow(state, events, snapshot, now, history) }
         catch (_: Exception) { Decision.Admit(HostJobClass.forWork(state)) }
 
     private fun decideOrThrow(state: WorkState, events: List<WorkEvent>,
-                              snapshot: SignalSnapshot, now: Long): Decision {
+                              snapshot: SignalSnapshot, now: Long,
+                              history: SignalSlice?): Decision {
+        // M4 rhythm: with enough window history, holds land on the predicted next
+        // maintenance window instead of a fixed recheck.
+        val predictedWindow = history?.let { RhythmModel.predictNextMaintenance(it, now) }
         // 1. Thermal admission: SEVERE(3)+ holds everything non-deadline.
         val thermal = snapshot.values[SignalKind.THERMAL]
         if (thermal is SignalValue.Count && thermal.value >= THERMAL_SEVERE &&
             state.deadlineMs == 0L) {
-            return Decision.Hold(now + THERMAL_RECHECK_MS,
+            return Decision.Hold(predictedWindow ?: (now + THERMAL_RECHECK_MS),
                 "thermal status ${thermal.value} >= SEVERE($THERMAL_SEVERE)")
         }
 
@@ -42,7 +48,7 @@ class PolicyEngine(private val apiLevel: Int) {
         if (bucket >= BUCKET_WORKING_SET && state.chunkCount == 0) {
             val estimate = estimateDurationMs(state, events)
             if (estimate != null && estimate > QUOTA_WINDOW_MS) {
-                return Decision.Hold(now + QUOTA_RECHECK_MS,
+                return Decision.Hold(predictedWindow ?: (now + QUOTA_RECHECK_MS),
                     "estimated ${estimate / 60_000}m exceeds ~${QUOTA_WINDOW_MS / 60_000}m " +
                         "bucket window (bucket $bucket)")
             }

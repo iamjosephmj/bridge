@@ -15,14 +15,14 @@ import java.util.concurrent.Executors
 
 class BridgeConfigBuilder internal constructor() {
     internal val registry = WorkerRegistry()
-    internal var clock: BridgeClock = SystemBridgeClock()
-    internal var gateway: JobGateway? = null
-    internal var costMeter: CostMeter? = null
-    internal var deathSource: ProcessDeathSource? = null
-    internal var ioExecutor: Executor? = null
-    internal var dbName: String = "bridge.db"
-    internal var signalSources: List<SignalSource>? = null
-    internal var transitionStore: TransitionStore? = null
+    var clock: BridgeClock = SystemBridgeClock()
+    var gateway: JobGateway? = null
+    var costMeter: CostMeter? = null
+    var deathSource: ProcessDeathSource? = null
+    var ioExecutor: Executor? = null
+    var dbName: String = "bridge.db"
+    var signalSources: List<SignalSource>? = null
+    var transitionStore: TransitionStore? = null
 
     fun worker(name: String, factory: () -> BridgeWorker) = registry.register(name, factory)
 }
@@ -31,6 +31,7 @@ object Bridge {
     private var journal: EventJournal? = null
     private var dispatcher: Dispatcher? = null
     private var clock: BridgeClock = SystemBridgeClock()
+    private var registry: WorkerRegistry? = null
     private var signalHub: SignalHub? = null
     private var signalLog: SignalLog? = null
     private var conformance: Conformance? = null
@@ -61,10 +62,15 @@ object Bridge {
         val sources = b.signalSources ?: AndroidSignalSources.all(appContext)
         val hub = SignalHub(sources, log, b.clock)
         signalLog = log; signalHub = hub
+        registry = b.registry
         val d = Dispatcher(j, gw, b.clock,
             policy = PolicyEngine(android.os.Build.VERSION.SDK_INT),
             alarmGateway = SystemAlarmGateway(appContext),
-            snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) })
+            snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) },
+            historyProvider = {
+                val now = b.clock.now()
+                log.slice(now - 3L * 24 * 60 * 60 * 1000, now)   // 3 days of rhythm history
+            })
         try { SignalBroadcasts(hub, sources).start(appContext) } catch (_: Exception) { }
         val runner = WorkRunner(j, b.registry, SystemBlackBox(appContext),
             b.costMeter ?: HealthStatsCostMeter(appContext), b.clock)
@@ -135,9 +141,22 @@ object Bridge {
                 diagnosis = if (st.runState in setOf(RunState.ENQUEUED, RunState.DISPATCHED))
                     whyPending(st.workId)?.diagnosis else null)
         }
+        val flags = try {
+            // Aggregate per worker: several work items can share a worker implementation.
+            CostFlags.compute(j.allWork().groupBy { it.workerName }.mapValues { (name, states) ->
+                val runs = states.flatMap { ledger(it.workId)?.runs ?: emptyList() }
+                states.maxOf { it.importance } to Ledger(name, runs)
+            })
+        } catch (e: Exception) { emptyList() }
         return BridgeReport(lines,
             conformanceMode = conformance?.mode?.name ?: "UNKNOWN",
-            signalLogHealth = try { signalLog?.health() ?: (0 to null) } catch (e: Exception) { 0 to null })
+            signalLogHealth = try { signalLog?.health() ?: (0 to null) } catch (e: Exception) { 0 to null },
+            costFlags = flags)
+    }
+
+    /** Late worker registration (used by bridge-compat, which learns classes at enqueue time). */
+    fun registerWorker(name: String, factory: () -> BridgeWorker) {
+        requireNotNull(registry) { "Bridge.initialize() not called" }.register(name, factory)
     }
 
     fun state(name: String): WorkState? = journal?.state(name)
@@ -149,10 +168,11 @@ object Bridge {
 
     fun reconcileIfInitialized() { dispatcher?.dispatchAll() }
 
+    /** Test hook: tears the singleton down so a fresh initialize() can run. */
     @Synchronized
-    internal fun reset() {
+    fun reset() {
         journal?.close(); journal = null; dispatcher = null
-        signalHub = null; signalLog = null; conformance = null
+        signalHub = null; signalLog = null; conformance = null; registry = null
         BridgeServices.runner = null
     }
 }

@@ -16,6 +16,7 @@ class Dispatcher(
     private val policy: PolicyEngine? = null,               // null → M1 behavior (no judgment)
     private val alarmGateway: AlarmGateway? = null,
     private val snapshotProvider: (() -> SignalSnapshot)? = null,
+    private val historyProvider: (() -> io.github.iamjosephmj.bridge.signals.SignalSlice?)? = null,
 ) {
     @Synchronized
     fun dispatchAll() {
@@ -77,7 +78,8 @@ class Dispatcher(
         val engine = policy ?: return Decision.Admit(HostJobClass.forWork(state))
         val snapshot = try { snapshotProvider?.invoke() } catch (_: Exception) { null }
             ?: return Decision.Admit(HostJobClass.forWork(state))
-        return engine.decide(state, journal.events(state.workId), snapshot, clock.now())
+        val history = try { historyProvider?.invoke() } catch (_: Exception) { null }
+        return engine.decide(state, journal.events(state.workId), snapshot, clock.now(), history)
     }
 
     /** Journal a judgment once — identical consecutive decisions aren't re-appended. */

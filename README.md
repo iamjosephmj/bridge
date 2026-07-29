@@ -11,7 +11,23 @@ per-run cost via HealthStats.
 - Benchmark vs WorkManager: `bench/README.md`
 - Simulator: `bridge-sim/README.md`
 
-Status: M3 (judgment v0.3).
+Status: M4 (compat + rhythm v0.4).
+
+## M4 — compat + rhythm
+
+- **`bridge-compat`:** an `androidx.work`-shaped façade — `Worker`, `Constraints`,
+  `OneTimeWorkRequest`, `enqueueUniqueWork` (KEEP/REPLACE), state queries, cancel,
+  and sequential chains. A chain compiles to one Bridge item whose links are
+  chunks, so an interrupted chain resumes at the failed link. Migration guide:
+  `docs/MIGRATION.md`. (Not covered yet: periodic work, Data, tags, observers.)
+- **Rhythm model v1:** descriptive statistics over the signal log — median-gap
+  prediction of the next maintenance window; policy holds land on the predicted
+  window instead of fixed rechecks once ≥3 windows are observed.
+- **Cost flagging:** workers whose measured cost (HealthStats deltas over ≥3 runs)
+  exceeds 3× the pool median while declared LOW/MIN are flagged in `report()` —
+  "expensive work declared unimportant". No auto-demotion (v1.1, opt-in).
+
+Design: `docs/superpowers/specs/2026-07-29-bridge-m4-compat-rhythm-design.md`.
 
 ## M3 — judgment
 
