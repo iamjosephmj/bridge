@@ -7,7 +7,6 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
-import java.util.concurrent.FutureTask
 
 private const val SCHEMA_VERSION = 1
 
@@ -35,39 +34,34 @@ class Journal(
     private val ioExecutor: Executor = Executors.newSingleThreadExecutor(),
 ) : EventJournal {
     private val db = JournalDb(context.applicationContext, dbName)
-    private var lastWriteTask: FutureTask<Unit>? = null
 
     override fun append(event: WorkEvent) = appendAll(listOf(event))
 
+    @Synchronized
     override fun appendAll(events: List<WorkEvent>) {
-        val task = FutureTask {
+        try {
+            val w = db.writableDatabase
+            w.beginTransaction()
             try {
-                val w = db.writableDatabase
-                w.beginTransaction()
-                try {
-                    for (e in events) {
-                        w.insert("events", null, ContentValues().apply {
-                            put("work_id", e.workId); put("at", e.at)
-                            put("payload", EventCodec.encode(e))
-                        })
-                    }
-                    for (id in events.map { it.workId }.distinct()) {
-                        val st = foldLocked(w, id) ?: continue
-                        w.insertWithOnConflict("work_state", null, ContentValues().apply {
-                            put("work_id", id); put("run_state", st.runState.name)
-                            put("snapshot", "")
-                        }, SQLiteDatabase.CONFLICT_REPLACE)
-                    }
-                    w.setTransactionSuccessful()
-                } finally { w.endTransaction() }
-            } catch (ex: Exception) {
-                Log.e("BridgeJournal", "appendAll failed", ex)
-                throw ex
-            }
+                for (e in events) {
+                    w.insert("events", null, ContentValues().apply {
+                        put("work_id", e.workId); put("at", e.at)
+                        put("payload", EventCodec.encode(e))
+                    })
+                }
+                for (id in events.map { it.workId }.distinct()) {
+                    val st = foldLocked(w, id) ?: continue
+                    w.insertWithOnConflict("work_state", null, ContentValues().apply {
+                        put("work_id", id); put("run_state", st.runState.name)
+                        put("snapshot", "")
+                    }, SQLiteDatabase.CONFLICT_REPLACE)
+                }
+                w.setTransactionSuccessful()
+            } finally { w.endTransaction() }
+        } catch (ex: Exception) {
+            Log.e("BridgeJournal", "appendAll failed", ex)
+            throw ex
         }
-        lastWriteTask = task
-        ioExecutor.execute(task)
-        task.get()  // Block until write completes; propagate exceptions
     }
 
     override fun events(workId: String): List<WorkEvent> {
@@ -120,8 +114,8 @@ class Journal(
                     w.setTransactionSuccessful()
                 } finally { w.endTransaction() }
             } catch (ex: Exception) {
+                // Log only: rethrowing here would kill the executor thread silently.
                 Log.e("BridgeJournal", "prune failed", ex)
-                throw ex
             }
         }
     }
@@ -135,8 +129,9 @@ class Journal(
         return foldWorkState(events)
     }
 
+    @Synchronized
     override fun close() {
-        lastWriteTask?.get()  // Wait for any pending write to complete
+        // Appends are synchronous under this lock; only prune work may still be queued.
         ioExecutor.execute { db.close() }
     }
 }
