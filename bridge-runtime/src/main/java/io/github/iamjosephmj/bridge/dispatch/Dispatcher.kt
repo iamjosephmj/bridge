@@ -46,7 +46,8 @@ class Dispatcher(
             if (decision !is Decision.Admit) return
             val events = journal.events(state.workId)
             val lastTier = events.filterIsInstance<WorkEvent.Dispatched>().lastOrNull()?.hostClass
-            if (decision.tier.name == lastTier) {
+                ?.let { name -> HostJobClass.entries.firstOrNull { it.name == name } }
+            if (decision.tier == lastTier) {
                 val alarmArmed = events.any {
                     it is WorkEvent.PolicyDecision && it.why == PolicyEngine.ESCALATE_ALARM_WHY }
                 if (decision.why != PolicyEngine.ESCALATE_ALARM_WHY || alarmArmed) return
@@ -79,6 +80,15 @@ class Dispatcher(
                     else 0L,
                     periodicMs = state.periodicMs,
                 ) else null
+                if (state.runState == RunState.DISPATCHED) {
+                    // Escalation of an already-dispatched item: withdraw it from the old
+                    // tier before enqueueing into the new one, or it sits pending in two
+                    // queues. Per-item cancel is a no-op on the multiplexed path — there
+                    // the JobWorkItem left in the old host job is defused only by
+                    // WorkRunner's state/generation guard, which is the best available
+                    // without per-item dequeue.
+                    gateway.cancel(state.workId)
+                }
                 val ok = gateway.enqueue(decision.tier,
                     WorkItemPayload(state.workId, state.generation, exact))
                 if (ok) {
