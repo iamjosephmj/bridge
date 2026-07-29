@@ -47,6 +47,18 @@ class SimulatedGateway(
             !terminalPeriodicDue) return@filter false
         if (atMs < state.enqueuedAt + state.initialDelayMs) return@filter false
 
+        // Content-trigger gate: runnable only after a scripted contentChanged on one of the
+        // work's uris at or after enqueue — a change that predates the enqueue doesn't count,
+        // exactly like the platform's per-schedule observer registration.
+        if (state.contentUris.isNotEmpty()) {
+            val triggered = state.contentUris.any { uri ->
+                val key = "content:$uri"
+                (timeline.valueAt(key, atMs) as? SignalValue.Flag)?.on == true &&
+                    (timeline.lastSetAt(key, atMs) ?: Long.MIN_VALUE) >= state.enqueuedAt
+            }
+            if (!triggered) return@filter false
+        }
+
         if ((timeline.valueAt(SignalKind.BG_RESTRICTED, atMs) as? SignalValue.Flag)?.on == true)
             return@filter false
 
