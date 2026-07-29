@@ -18,6 +18,10 @@ data class WorkState(
     val initialDelayMs: Long = 0L,
     val periodicMs: Long = 0L,
     val enqueuedAt: Long = 0L,
+    val contentUris: List<String> = emptyList(),
+    val contentDescendants: Boolean = false,
+    val contentUpdateDelayMs: Long = 0L,
+    val contentMaxDelayMs: Long = 0L,
 )
 
 fun foldWorkState(events: List<WorkEvent>): WorkState? {
@@ -39,6 +43,10 @@ fun foldWorkState(events: List<WorkEvent>): WorkState? {
                 initialDelayMs = e.initialDelayMs,
                 periodicMs = e.periodicMs,
                 enqueuedAt = e.at,
+                contentUris = e.contentUris,
+                contentDescendants = e.contentDescendants,
+                contentUpdateDelayMs = e.contentUpdateDelayMs,
+                contentMaxDelayMs = e.contentMaxDelayMs,
             )
             is WorkEvent.Dispatched -> s?.copy(runState = RunState.DISPATCHED)
             is WorkEvent.Started -> s?.copy(runState = RunState.RUNNING, attempt = e.attempt)

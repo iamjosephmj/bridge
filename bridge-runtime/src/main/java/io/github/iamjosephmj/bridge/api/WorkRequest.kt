@@ -13,6 +13,10 @@ class WorkRequest internal constructor(
     val requiresDeviceIdle: Boolean = false,
     val initialDelayMs: Long = 0L,
     val periodicMs: Long = 0L,
+    val contentUris: List<String> = emptyList(),
+    val contentDescendants: Boolean = false,
+    val contentUpdateDelayMs: Long = 0L,
+    val contentMaxDelayMs: Long = 0L,
 )
 
 class WorkRequestBuilder internal constructor(
@@ -26,6 +30,10 @@ class WorkRequestBuilder internal constructor(
     private var deviceIdle = false
     private var initialDelayMs = 0L
     private var periodicMs = 0L
+    private var contentUris = mutableListOf<String>()
+    private var contentDescendants = false
+    private var contentUpdateDelayMs = 0L
+    private var contentMaxDelayMs = 0L
     private var chunkCount = 0
     private var estimatedUpBytes = 0L
     private var maxAttempts = 3
@@ -43,7 +51,29 @@ class WorkRequestBuilder internal constructor(
     /** Don't start before enqueue + delay (JobInfo.setMinimumLatency on an exact JobInfo). */
     fun initialDelay(ms: Long) { require(ms > 0); initialDelayMs = ms }
     /** Repeats every [ms] (>= 15 min, the platform floor). Each cycle is a new generation. */
-    fun periodic(ms: Long) { require(ms >= 15 * 60_000L) { "period must be >= 15min" }; periodicMs = ms }
+    fun periodic(ms: Long) {
+        require(ms >= 15 * 60_000L) { "period must be >= 15min" }
+        require(contentUris.isEmpty()) {
+            "periodic work cannot use contentTrigger: JobInfo forbids setPeriodic with setTriggerContentUri" }
+        periodicMs = ms
+    }
+    /**
+     * Runs when content under any of [uris] changes (JobInfo.TriggerContentUri; rides the
+     * exact 1:1 path). [descendants] adds FLAG_NOTIFY_FOR_DESCENDANTS to every uri;
+     * [updateDelayMs]/[maxDelayMs] map to setTriggerContentUpdateDelay/MaxDelay when > 0.
+     * Cannot combine with [periodic] — the platform forbids periodic trigger jobs.
+     */
+    fun contentTrigger(vararg uris: String, descendants: Boolean = false,
+                       updateDelayMs: Long = 0L, maxDelayMs: Long = 0L) {
+        require(uris.isNotEmpty()) { "contentTrigger needs at least one uri" }
+        require(periodicMs == 0L) {
+            "periodic work cannot use contentTrigger: JobInfo forbids setPeriodic with setTriggerContentUri" }
+        require(updateDelayMs >= 0 && maxDelayMs >= 0)
+        contentUris += uris
+        if (descendants) contentDescendants = true
+        if (updateDelayMs > 0) contentUpdateDelayMs = updateDelayMs
+        if (maxDelayMs > 0) contentMaxDelayMs = maxDelayMs
+    }
     fun chunks(count: Int, estimatedUpBytes: Long = 0L) {
         require(count > 0) { "chunk count must be positive" }
         chunkCount = count; this.estimatedUpBytes = estimatedUpBytes
@@ -58,7 +88,9 @@ class WorkRequestBuilder internal constructor(
         charging, unmetered, chunkCount, estimatedUpBytes, maxAttempts, deadlineMs,
         requiresNetwork = network, requiresBatteryNotLow = batteryNotLow,
         requiresStorageNotLow = storageNotLow, requiresDeviceIdle = deviceIdle,
-        initialDelayMs = initialDelayMs, periodicMs = periodicMs)
+        initialDelayMs = initialDelayMs, periodicMs = periodicMs,
+        contentUris = contentUris.toList(), contentDescendants = contentDescendants,
+        contentUpdateDelayMs = contentUpdateDelayMs, contentMaxDelayMs = contentMaxDelayMs)
 }
 
 fun workRequest(name: String, workerName: String,
