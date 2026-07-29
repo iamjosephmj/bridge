@@ -28,6 +28,35 @@ class BenchReceiver : BroadcastReceiver() {
                 WmRecorder.reset(context)
                 WorkManagerBackend(context).enqueueAll(CORPUS)
             }
+            // M2 stall scenario: for every corpus item, print WorkManager's entire answer
+            // (WorkInfo.state) next to Bridge's verdict. Written as JSON for run-stall.sh.
+            "bench.STALL_REPORT" -> {
+                val wm = androidx.work.WorkManager.getInstance(context)
+                val entries = CORPUS.joinToString(",\n") { item ->
+                    val wmState = try {
+                        wm.getWorkInfosForUniqueWork(item.id).get()
+                            .firstOrNull()?.state?.name ?: "UNKNOWN"
+                    } catch (e: Exception) { "ERROR" }
+                    val verdict = io.github.iamjosephmj.bridge.Bridge.whyPending(item.id)
+                    val render = verdict?.render(System.currentTimeMillis())
+                        ?.replace("\\", "\\\\")?.replace("\"", "\\\"")?.replace("\n", "\\n")
+                    """  {"item": "${item.id}",
+   "workmanager": {"state": "$wmState"},
+   "bridge": {"diagnosis": "${verdict?.diagnosis}",
+              "basis": "${verdict?.basis?.name}",
+              "render": "$render"}}"""
+                }
+                val json = """{"scenario": "stall",
+ "device": {"model": "${Build.MODEL}", "manufacturer": "${Build.MANUFACTURER}",
+            "sdk": ${Build.VERSION.SDK_INT}},
+ "items": [
+$entries
+ ]}"""
+                val out = File(context.getExternalFilesDir(null),
+                    "report-stall-${System.currentTimeMillis()}.json")
+                out.writeText(json)
+                Log.i("Bench", "stall report written: ${out.absolutePath}")
+            }
             "bench.DUMP_REPORT" -> {
                 val backend: Backend = if (intent.getStringExtra("backend") == "workmanager")
                     WorkManagerBackend(context) else BridgeBackend(context)
