@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="140" viewBox="0 0 1200 140" role="img" aria-label="Runtime: constraint chips light up one by one — charging, unmetered, batteryNotLow, deviceIdle — then the work dispatches as a JobWorkItem">
+  <rect x="0" y="0" width="1200" height="140" rx="16" fill="#0B1113"/>
+  <rect x="0.5" y="0.5" width="1199" height="139" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
+  <text x="48" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">constraints satisfied, one platform signal at a time:</text>
+
+  <!-- constraint chips -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" text-anchor="middle">
+    <rect x="48" y="46" width="102" height="30" rx="15" fill="none" stroke="#2E4A4B" stroke-width="1.5">
+      <animate attributeName="stroke" calcMode="discrete" values="#2E4A4B;#4DD8C4" keyTimes="0;0.08" dur="6s" repeatCount="indefinite"/>
+    </rect>
+    <text x="99" y="66" fill="#75898B">charging<animate attributeName="fill" calcMode="discrete" values="#75898B;#7BEFD8" keyTimes="0;0.08" dur="6s" repeatCount="indefinite"/></text>
+    <rect x="162" y="46" width="112" height="30" rx="15" fill="none" stroke="#2E4A4B" stroke-width="1.5">
+      <animate attributeName="stroke" calcMode="discrete" values="#2E4A4B;#4DD8C4" keyTimes="0;0.18" dur="6s" repeatCount="indefinite"/>
+    </rect>
+    <text x="218" y="66" fill="#75898B">unmetered<animate attributeName="fill" calcMode="discrete" values="#75898B;#7BEFD8" keyTimes="0;0.18" dur="6s" repeatCount="indefinite"/></text>
+    <rect x="286" y="46" width="146" height="30" rx="15" fill="none" stroke="#2E4A4B" stroke-width="1.5">
+      <animate attributeName="stroke" calcMode="discrete" values="#2E4A4B;#4DD8C4" keyTimes="0;0.28" dur="6s" repeatCount="indefinite"/>
+    </rect>
+    <text x="359" y="66" fill="#75898B">batteryNotLow<animate attributeName="fill" calcMode="discrete" values="#75898B;#7BEFD8" keyTimes="0;0.28" dur="6s" repeatCount="indefinite"/></text>
+    <rect x="444" y="46" width="122" height="30" rx="15" fill="none" stroke="#2E4A4B" stroke-width="1.5">
+      <animate attributeName="stroke" calcMode="discrete" values="#2E4A4B;#4DD8C4" keyTimes="0;0.38" dur="6s" repeatCount="indefinite"/>
+    </rect>
+    <text x="505" y="66" fill="#75898B">deviceIdle<animate attributeName="fill" calcMode="discrete" values="#75898B;#7BEFD8" keyTimes="0;0.38" dur="6s" repeatCount="indefinite"/></text>
+  </g>
+
+  <!-- policy verdict, then dispatch -->
+  <text x="48" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#75898B" opacity="0">policy: admit (journaled)
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.46" dur="6s" repeatCount="indefinite"/>
+  </text>
+  <rect x="300" y="104" width="500" height="8" rx="4" fill="#1D2B2E"/>
+  <rect x="300" y="104" width="0" height="8" rx="4" fill="#4DD8C4">
+    <animate attributeName="width" values="0;0;500;500" keyTimes="0;0.5;0.82;1" dur="6s" calcMode="linear" repeatCount="indefinite"/>
+  </rect>
+  <text x="824" y="114" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#7BEFD8" opacity="0">→ dispatched (JobWorkItem, multiplexed)
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.84" dur="6s" repeatCount="indefinite"/>
+  </text>
+
+  <text x="1152" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F" text-anchor="end">nothing deferred silently</text>
+</svg>

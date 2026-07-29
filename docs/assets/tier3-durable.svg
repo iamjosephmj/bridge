@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="140" viewBox="0 0 1200 140" role="img" aria-label="Durable coroutines: a heartbeat trace flatlines at a force-stop tick, then resumes at exactly the same point and finishes SUCCEEDED">
+  <rect x="0" y="0" width="1200" height="140" rx="16" fill="#0B1113"/>
+  <rect x="0.5" y="0.5" width="1199" height="139" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
+  <text x="40" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">step("upload") · delay(2.hours) · step("commit")</text>
+
+  <!-- the heartbeat: draws itself, flatlines at the kill, resumes at the SAME point -->
+  <path d="M48,84 L200,84 l8,-28 l8,46 l8,-18 L340,84 l8,-28 l8,46 l8,-18 L560,84 L720,84 l8,-28 l8,46 l8,-18 L880,84 l8,-28 l8,46 l8,-18 L1152,84"
+        fill="none" stroke="#4DD8C4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+        pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="100">
+    <animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="0;0.04;0.8;1" dur="5.5s" calcMode="linear" repeatCount="indefinite"/>
+  </path>
+
+  <!-- the kill tick, mid-flatline -->
+  <g opacity="0">
+    <circle cx="640" cy="84" r="9" fill="#0B1113" stroke="#4A5D5F" stroke-width="1.5"/>
+    <text x="640" y="89" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#75898B" text-anchor="middle">×</text>
+    <text x="640" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F" text-anchor="middle">force-stop (the trace does not restart)</text>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.43" dur="5.5s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- the outcome -->
+  <text x="1152" y="52" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700" fill="#4DD8C4" text-anchor="end" opacity="0">SUCCEEDED — each step ran once
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.82" dur="5.5s" repeatCount="indefinite"/>
+  </text>
+</svg>

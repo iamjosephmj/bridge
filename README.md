@@ -66,17 +66,29 @@ Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same w
 
 </details>
 
-<div align="center"><sub>And the crown result: a durable coroutine force-stopped mid-<code>delay(20s)</code>, relaunched after the timer elapsed while the process was dead — <b>SUCCEEDED</b>, each step executed exactly once. Details below.</sub></div>
+<div align="center"><sub>And the crown result: a durable coroutine force-stopped mid-<code>delay(20s)</code>, relaunched after the timer elapsed while the process was dead — <b>SUCCEEDED</b>, each step executed exactly once. That's TIER 3, below.</sub></div>
 
 ---
 
-## Quick start
+## The tiers
 
-Bridge is a ladder, not a leap. Each tier is independently useful and independently reversible.
+Bridge is a ladder, not a leap. Each tier is independently useful and independently reversible — climb exactly as far as your app needs, and no further.
+
+<div align="center">
+
+<img src="docs/assets/ladder.svg" alt="The adoption route drawn as a small bridge: glassbox (diagnose from the shore) → compat (swap an import) → runtime (cross over), with sim (practice on dry land) on the far bank. A dot crosses it on loop." width="920">
+
+<sub><code>bridge-glassbox</code> → <code>bridge-compat</code> → <code>bridge-runtime</code>, rehearsed against <code>bridge-sim</code>. Every step reversible.</sub>
+
+</div>
+
+<br>
 
 <details open>
-<summary><b>Tier 0 — GlassBox: diagnostics for ANY app (two lines, no scheduler)</b></summary>
+<summary><b><kbd>TIER 0</kbd>&nbsp; Glassbox — diagnose ANY app (two lines, nothing to migrate)</b></summary>
 <br>
+
+<div align="center"><img src="docs/assets/tier0-glassbox.svg" alt="A scan sweeps across pending jobs and a verdict appears: 7 pending — DeferredByDoze(deep) [REPORTED]" width="920"></div>
 
 Works even in pure-WorkManager apps: WorkManager's jobs are your app's own JobScheduler jobs, so their platform pending reasons (API 34+) are readable here.
 
@@ -95,8 +107,51 @@ Log.i(TAG, GlassBox.explain().render())
 </details>
 
 <details>
-<summary><b>Tier 1 — native enqueue with the full constraint DSL</b></summary>
+<summary><b><kbd>TIER 1</kbd>&nbsp; Compat — swap the import; chains resume at the failed link</b></summary>
 <br>
+
+<div align="center"><img src="docs/assets/tier1-compat.svg" alt="The androidx.work import gets struck through and swapped for bridge.compat while a broken chain re-links at exactly the broken link" width="920"></div>
+
+An `androidx.work`-shaped façade. For the covered surface, migration is an import change:
+
+```kotlin
+// before: import androidx.work.*
+import io.github.iamjosephmj.bridge.compat.*
+
+class SyncWorker : Worker() {
+    override fun doWork(): Result = try {
+        api.sync(); Result.success()
+    } catch (e: IOException) { Result.retry() }
+}
+
+BridgeWorkManager.enqueueUniqueWork("sync", ExistingWorkPolicy.KEEP,
+    OneTimeWorkRequest.Builder(SyncWorker::class.java)
+        .setConstraints(Constraints.Builder()
+            .setRequiresCharging(true)
+            .setRequiredNetworkType(NetworkType.UNMETERED).build())
+        .build())
+```
+
+Chains compile to <i>one</i> Bridge item whose links are chunks — so an interrupted chain resumes at the failed link, which WorkManager cannot do:
+
+```kotlin
+BridgeWorkManager.beginUniqueWork("publish", ExistingWorkPolicy.KEEP, uploadRequest)
+    .then(createPostRequest)
+    .then(commitRequest)
+    .enqueue()
+```
+
+Also covered: `PeriodicWorkRequest` + `enqueueUniquePeriodicWork` (KEEP/UPDATE), `setInitialDelay`, the full `Constraints.Builder` surface (charging, network type, battery/storage-not-low, device-idle), `getWorkInfoState`, `cancelUniqueWork`. Full guide: [`docs/MIGRATION.md`](docs/MIGRATION.md).
+
+</details>
+
+<details>
+<summary><b><kbd>TIER 2</kbd>&nbsp; Runtime — the full engine: constraints, chunks, deadlines, periodic, diagnostics</b></summary>
+<br>
+
+<div align="center"><img src="docs/assets/tier2-runtime.svg" alt="Constraint chips light up one by one — charging, unmetered, batteryNotLow, deviceIdle — then the work dispatches as a multiplexed JobWorkItem" width="920"></div>
+
+**Enqueue with the full constraint DSL**
 
 ```kotlin
 // Application.onCreate — register worker factories at every process start
@@ -124,11 +179,7 @@ Bridge.enqueue(workRequest("heartbeat", "sync") {
 
 Enqueue has KEEP semantics per unique name. `Bridge.initializeAsync` keeps journal-open + reconciliation off the main thread; early callers can suspend on `Bridge.awaitReady()`.
 
-</details>
-
-<details>
-<summary><b>Tier 2 — chunked resumption (the 1-vs-20 primitive)</b></summary>
-<br>
+**Chunked resumption — the 1-vs-20 primitive**
 
 ```kotlin
 class PhotoBackupWorker : ChunkedWorker {
@@ -151,11 +202,58 @@ Bridge.enqueue(workRequest("backup", "photo-backup") {
 
 Every completed chunk is journaled. Stop, crash, or force-stop mid-run, and the next attempt starts at `WorkState.nextChunk` — not chunk 0. This is the exact configuration behind the device-verified 1-vs-20 result.
 
+**Diagnostics — whyPending, ledger, report**
+
+All three are total functions — no nulls to defend against; unknown names get an `UnknownWork` verdict:
+
+```kotlin
+Bridge.whyPending("photo-backup").render(now)
+// ENQUEUED 4h 12m — DeferredByStandbyBucket(RARE) [INFERRED]
+//   contributing: DeferredByDoze(deep)
+//   evidence:
+//     STANDBY_BUCKET    Bucket(RARE)  t=...  BROADCAST
+//     DOZE              Doze(DEEP)    t=...  BROADCAST
+
+Bridge.ledger("photo-backup")
+// per-attempt history: dispatch/start/end times, outcome (Completed / Stopped /
+// Died(exitReason) / Cancelled / InFlight), chunk range executed, HealthStats
+// cost delta, and the signal-log slice — "died mid-run" becomes
+// "died mid-run during deep Doze"
+
+Bridge.report().render(now)
+// backup              ENQUEUED   DeferredByDoze(deep)
+// nightly-sync        SUCCEEDED
+// publish-post        ENQUEUED   DurableParked(delay until 14:02)
+// conformance: MULTIPLEXED · signal log: 412 transitions / oldest 3d
+```
+
+Also from adb, no code changes:
+
+```
+adb shell am broadcast -a io.github.iamjosephmj.bridge.REPORT \
+    -n <pkg>/io.github.iamjosephmj.bridge.diagnostics.ReportReceiver
+```
+
+**Under the hood**
+
+Inside `bridge-runtime`, layers stack strictly — each depends only on those below it:
+**durable** (DurableScope: step / delay / await, deterministic replay) → **diagnostics** (Diagnoser · Verdict · Ledger · BridgeReport) → **policy** (PolicyEngine: admission, quota, deadline escalation, doze strategy, rhythm) → **signals** (SignalHub: 9 platform signals, budgeted transition log) → **dispatch** (Dispatcher · JobGateway, multiplexed / 1:1 · AlarmGateway · Reconciler) → **journal** (append-only WorkEvent log · SQLite · KvStore).
+
+**Event-sourced journal** — every state change is an appended `WorkEvent` (`Enqueued`, `ChunkCompleted`, `StepCompleted`, `PolicyDecision`, …); current state is a fold over events. Nothing is ever updated in place, so "what happened" is always answerable. → [`bridge-runtime/.../store/`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/store/)
+
+**Deterministic replay** — after death, a chunked worker resumes at `nextChunk`; a durable block re-executes from the top with completed `step()`s returning journaled results instantly, reattaching at the first live step, timer, or await. → [`api/Durable.kt`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/api/Durable.kt)
+
+**Policy engine** — pure functions from (journal, signals, request) to decisions: thermal holds, bucket-quota admission, deadline escalation, doze burst-drain. Every decision is journaled and surfaced by `whyPending()` as `HeldByPolicy(why)` — nothing is ever silently deferred. → [`policy/`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/policy/)
+
+**Signal hub** — nine platform signals (standby bucket, Doze, background restriction, Data Saver, pending-job reasons, network validation, battery-opt exemption, maintenance windows, process deaths) read into snapshots and persisted transitions; the diagnoser folds them into verdicts. → [`bridge-glassbox/.../signals/`](bridge-glassbox/src/main/java/io/github/iamjosephmj/bridge/signals/)
+
 </details>
 
 <details>
-<summary><b>Tier 3 — durable coroutines: suspend blocks that survive process death (the crown demo)</b></summary>
+<summary><b><kbd>TIER 3</kbd>&nbsp; Durable coroutines — suspend blocks that survive process death (the crown)</b></summary>
 <br>
+
+<div align="center"><img src="docs/assets/tier3-durable.svg" alt="A heartbeat trace flatlines at a force-stop tick, then resumes at exactly the same point and finishes SUCCEEDED — each step ran once" width="920"></div>
 
 Background logic as ordinary suspend functions, made durable via deterministic replay (Temporal's model, on-device) — not continuation serialization:
 
@@ -203,75 +301,25 @@ Contract: effects belong inside `step()`; code between steps must be determinist
 </details>
 
 <details>
-<summary><b>Tier 4 — compat: swap the import, keep your workers</b></summary>
+<summary><b><kbd>TIER 4</kbd>&nbsp; Simulator — practice on dry land: JVM device regimes in milliseconds</b></summary>
 <br>
 
-An `androidx.work`-shaped façade. For the covered surface, migration is an import change:
+<div align="center"><img src="docs/assets/tier4-sim.svg" alt="A tiny device with a fast-forwarding clock: multi-day Doze regimes asserted in milliseconds on the JVM" width="920"></div>
+
+[`bridge-sim`](bridge-sim/README.md) scripts signal timelines and a fake clock over the <i>real</i> journal / dispatcher / runner / diagnoser: multi-day device regimes assert in milliseconds on the JVM (7 canonical scenarios ship as tests, including the stall mirror of the device result and the durable signature demo).
 
 ```kotlin
-// before: import androidx.work.*
-import io.github.iamjosephmj.bridge.compat.*
-
-class SyncWorker : Worker() {
-    override fun doWork(): Result = try {
-        api.sync(); Result.success()
-    } catch (e: IOException) { Result.retry() }
+simulate {
+    worker("upload") { UploadWorker() }
+    bucket(Buckets.RARE)
+    doze(fromMs = 1.h, untilMs = 5.h, maintenanceEveryMs = 2.h)
+    val work = enqueue(workRequest("sync", "upload"))
+    assertThat(work.verdictAt(3.h).diagnosis).isInstanceOf(Diagnosis.DeferredByDoze::class.java)
+    assertThat(work.completedWithin(26.h)).isTrue()
 }
-
-BridgeWorkManager.enqueueUniqueWork("sync", ExistingWorkPolicy.KEEP,
-    OneTimeWorkRequest.Builder(SyncWorker::class.java)
-        .setConstraints(Constraints.Builder()
-            .setRequiresCharging(true)
-            .setRequiredNetworkType(NetworkType.UNMETERED).build())
-        .build())
 ```
 
-Chains compile to <i>one</i> Bridge item whose links are chunks — so an interrupted chain resumes at the failed link, which WorkManager cannot do:
-
-```kotlin
-BridgeWorkManager.beginUniqueWork("publish", ExistingWorkPolicy.KEEP, uploadRequest)
-    .then(createPostRequest)
-    .then(commitRequest)
-    .enqueue()
-```
-
-Also covered: `PeriodicWorkRequest` + `enqueueUniquePeriodicWork` (KEEP/UPDATE), `setInitialDelay`, the full `Constraints.Builder` surface (charging, network type, battery/storage-not-low, device-idle), `getWorkInfoState`, `cancelUniqueWork`. Full guide: [`docs/MIGRATION.md`](docs/MIGRATION.md).
-
-</details>
-
-<details>
-<summary><b>Tier 5 — diagnostics: whyPending, ledger, report</b></summary>
-<br>
-
-All three are total functions — no nulls to defend against; unknown names get an `UnknownWork` verdict:
-
-```kotlin
-Bridge.whyPending("photo-backup").render(now)
-// ENQUEUED 4h 12m — DeferredByStandbyBucket(RARE) [INFERRED]
-//   contributing: DeferredByDoze(deep)
-//   evidence:
-//     STANDBY_BUCKET    Bucket(RARE)  t=...  BROADCAST
-//     DOZE              Doze(DEEP)    t=...  BROADCAST
-
-Bridge.ledger("photo-backup")
-// per-attempt history: dispatch/start/end times, outcome (Completed / Stopped /
-// Died(exitReason) / Cancelled / InFlight), chunk range executed, HealthStats
-// cost delta, and the signal-log slice — "died mid-run" becomes
-// "died mid-run during deep Doze"
-
-Bridge.report().render(now)
-// backup              ENQUEUED   DeferredByDoze(deep)
-// nightly-sync        SUCCEEDED
-// publish-post        ENQUEUED   DurableParked(delay until 14:02)
-// conformance: MULTIPLEXED · signal log: 412 transitions / oldest 3d
-```
-
-Also from adb, no code changes:
-
-```
-adb shell am broadcast -a io.github.iamjosephmj.bridge.REPORT \
-    -n <pkg>/io.github.iamjosephmj.bridge.diagnostics.ReportReceiver
-```
+The simulator is deliberately honest about what it is: a logic assertion under a scripted regime, not a device guarantee — the [gating model](bridge-sim/README.md#the-gating-model-is-deliberately-simple) makes no attempt to reproduce OEM heuristics. Device truth comes from the instrumented suite and the benchmark harness ([`bench/`](bench/README.md), with its own [honesty rules](bench/README.md#honesty-rules)).
 
 </details>
 
@@ -300,41 +348,6 @@ adb shell am broadcast -a io.github.iamjosephmj.bridge.REPORT \
 
 ---
 
-## Architecture
-
-Four modules, a ladder of commitment — adopt diagnostics without the scheduler, or the façade without a rewrite. Here is the route, drawn as the only diagram this project was ever going to use:
-
-<div align="center">
-
-<img src="docs/assets/ladder.svg" alt="The adoption route drawn as a small bridge: glassbox (diagnose from the shore) → compat (swap an import) → runtime (cross over), with sim (practice on dry land) on the far bank. A dot crosses it on loop." width="920">
-
-<sub><code>bridge-glassbox</code> → <code>bridge-compat</code> → <code>bridge-runtime</code>, rehearsed against <code>bridge-sim</code>. Every step reversible.</sub>
-
-</div>
-
-Inside `bridge-runtime`, layers stack strictly — each depends only on those below:
-
-```mermaid
-graph TD
-    L6["durable — DurableScope: step / delay / await, deterministic replay"]
-    L5["diagnostics — Diagnoser · Verdict · Ledger · BridgeReport"]
-    L4["policy — PolicyEngine: admission, quota, deadline escalation, doze strategy, rhythm"]
-    L3["signals — SignalHub: 9 platform signals, budgeted transition log"]
-    L2["dispatch — Dispatcher · JobGateway (multiplexed / 1:1) · AlarmGateway · Reconciler"]
-    L1["journal — append-only WorkEvent log · SQLite · KvStore"]
-    L6 --> L5 --> L4 --> L3 --> L2 --> L1
-```
-
-## How it works
-
-**Event-sourced journal** — every state change is an appended `WorkEvent` (`Enqueued`, `ChunkCompleted`, `StepCompleted`, `PolicyDecision`, …); current state is a fold over events. Nothing is ever updated in place, so "what happened" is always answerable. → [`bridge-runtime/.../store/`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/store/)
-
-**Deterministic replay** — after death, a chunked worker resumes at `nextChunk`; a durable block re-executes from the top with completed `step()`s returning journaled results instantly, reattaching at the first live step, timer, or await. → [`api/Durable.kt`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/api/Durable.kt)
-
-**Policy engine** — pure functions from (journal, signals, request) to decisions: thermal holds, bucket-quota admission, deadline escalation, doze burst-drain. Every decision is journaled and surfaced by `whyPending()` as `HeldByPolicy(why)` — nothing is ever silently deferred. → [`policy/`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/policy/)
-
-**Signal hub** — nine platform signals (standby bucket, Doze, background restriction, Data Saver, pending-job reasons, network validation, battery-opt exemption, maintenance windows, process deaths) read into snapshots and persisted transitions; the diagnoser folds them into verdicts. → [`bridge-glassbox/.../signals/`](bridge-glassbox/src/main/java/io/github/iamjosephmj/bridge/signals/)
-
 ## Performance
 
 - **Cold start: 318–334 ms measured including Bridge init** (Pixel 6 Pro). `initializeAsync` runs journal-open + reconciliation on a background dispatcher, so `Application.onCreate` returns without paying for it; `scope().launch` and `handle.await()` tolerate pre-init by gating on readiness internally.
@@ -347,23 +360,6 @@ graph TD
 - **Remaining WorkManager gaps**: `Data` payloads, tags, LiveData/Flow observers, content-URI triggers, multi-branch chains. Keep work that needs these on WorkManager (the compat façade keeps both runnable side by side).
 - **Cost auto-demotion** is flag-only in v0.5 (`report()` flags LOW/MIN work measuring 3× the pool median); acting on it is planned opt-in.
 - **Current tier**: v0.5 + parity tier — full constraint surface (three silent constraint-loss bugs fixed en route), `initialDelay`, `periodic`, durable coroutines, compat façade, policy engine, glass box.
-
-## Testing & the simulator
-
-[`bridge-sim`](bridge-sim/README.md) scripts signal timelines and a fake clock over the <i>real</i> journal / dispatcher / runner / diagnoser: multi-day device regimes assert in milliseconds on the JVM (7 canonical scenarios ship as tests, including the stall mirror of the device result and the durable signature demo).
-
-```kotlin
-simulate {
-    worker("upload") { UploadWorker() }
-    bucket(Buckets.RARE)
-    doze(fromMs = 1.h, untilMs = 5.h, maintenanceEveryMs = 2.h)
-    val work = enqueue(workRequest("sync", "upload"))
-    assertThat(work.verdictAt(3.h).diagnosis).isInstanceOf(Diagnosis.DeferredByDoze::class.java)
-    assertThat(work.completedWithin(26.h)).isTrue()
-}
-```
-
-The simulator is deliberately honest about what it is: a logic assertion under a scripted regime, not a device guarantee — the [gating model](bridge-sim/README.md#the-gating-model-is-deliberately-simple) makes no attempt to reproduce OEM heuristics. Device truth comes from the instrumented suite and the benchmark harness ([`bench/`](bench/README.md), with its own [honesty rules](bench/README.md#honesty-rules)).
 
 ## Migration
 
