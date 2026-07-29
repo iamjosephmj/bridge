@@ -11,7 +11,38 @@ per-run cost via HealthStats.
 - Benchmark vs WorkManager: `bench/README.md`
 - Simulator: `bridge-sim/README.md`
 
-Status: M4 (compat + rhythm v0.4).
+Status: M5 (durable coroutines v0.5).
+
+## M5 — durable coroutines
+
+Background logic as ordinary suspend functions that survive process death —
+deterministic replay (Temporal's model, on-device), not continuation
+serialization:
+
+```kotlin
+Bridge.initialize(context) {
+    durable("publish-post") { ctx ->
+        val media = ctx.step("upload") { uploader.upload(draft.attachments) }
+        ctx.delay(2 * 60 * 60 * 1000L)   // journaled timer → alarm; survives death
+        ctx.await("validated-net") { it.values[NETWORK_VALIDATED] == Flag(true) }
+        ctx.step("commit") { db.markPublished(media) }
+    }
+}
+Bridge.durable("publish-post")           // start an instance
+```
+
+After death the block re-executes from the top; completed `step()`s return
+their journaled results instantly (`StepCompleted` — the generalization of
+M1's `ChunkCompleted`); the run reattaches at the first live step, timer, or
+await. Parks are first-class (`RunResult.Parked`): they never burn attempts
+and never read as crashes; `whyPending()` answers `DurableParked(delay until
+14:02)`. Shape changes mid-flight fail explicitly via a positional structure
+guard. `BridgeDispatcher` (minimal tier) black-box-stamps every resumption
+and cancels on host stop. Signature demo green in the simulator: a 3-step
+block survives process death at +30min and deep Doze 1–3h mid-`delay(2h)`,
+each step executing exactly once.
+
+Design: `docs/superpowers/specs/2026-07-29-bridge-m5-durable-design.md`.
 
 ## M4 — compat + rhythm
 
