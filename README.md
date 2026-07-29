@@ -70,11 +70,27 @@ Bridge.report()                 // app-wide one-liner per work item (also via ad
 journal/dispatcher/runner/diagnoser: multi-day device regimes assert in
 milliseconds on the JVM (7 canonical scenarios ship as tests).
 
-**M2 acceptance:** the simulator stall mirror (RARE bucket →
-`DeferredByStandbyBucket(RARE) [INFERRED]` while WorkManager reports
-`ENQUEUED`) is green in CI. The on-device `bench/scripts/run-stall.sh` run is
-**pending** — the harness device blocked USB install during the automated run;
-re-run when a device with install confirmation is available.
+**M2 acceptance run (Pixel 6 Pro, API 36, 2026-07-29).** `stall` scenario:
+battery simulated unplugged, app demoted to RARE, deep Doze forced, same corpus
+on both backends, both APIs asked "why":
+
+| item | workmanager says | bridge says |
+|---|---|---|
+| ping-unmetered_charging | **RUNNING** | `DeferredByDoze(deep) [REPORTED]` |
+| medium_sync-unmetered_charging | SUCCEEDED | `DeferredByDoze(deep) [REPORTED]` |
+| large_chunked-none | **RUNNING** | `DeferredByDoze(deep) [REPORTED]` |
+| large_chunked-unmetered_charging | **RUNNING** | `DeferredByDoze(deep) [REPORTED]` |
+
+The headline turned out stronger than "ENQUEUED with no reason": WorkManager
+reports **RUNNING** for jobs the forced idle has stopped — a stale answer, not
+just an empty one. Bridge's verdicts carry `basis=REPORTED`: they come from
+`getPendingJobReasons`, the platform's own explanation, not inference. An
+earlier pass of the same script (before Doze forcing) also produced
+`AwaitingConstraint(charging) [REPORTED]` for charging-constrained work on the
+unplugged device. Raw reports: `bench/scripts/reports/`. The simulator stall
+mirror asserts the same diagnosis types in CI. Platform pending-reason
+constants were verified on-device during this run (`DEVICE_STATE = 12`, not 8
+as first coded — mapping centralized in `PlatformPendingReasons`).
 
 ## M1 acceptance run (Pixel 6 Pro, API 36, 2026-07-28)
 
