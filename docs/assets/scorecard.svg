@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="962" viewBox="0 0 1200 962" role="img" aria-label="Bridge vs WorkManager scorecard: bridge leads on resumption, explanation, durable coroutines, chains, forensics, cost, deadlines, quota and doze strategy; WorkManager still wins on OEM maturity, Data payloads/tags/observers, multi-branch chains and ecosystem">
-  <rect x="0" y="0" width="1200" height="962" rx="16" fill="#0B1113"/>
-  <rect x="0.5" y="0.5" width="1199" height="961" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="910" viewBox="0 0 1200 910" role="img" aria-label="Bridge vs WorkManager scorecard: bridge leads on resumption, explanation, durable coroutines, chains, forensics, cost, deadlines, quota and doze strategy; WorkManager still wins on Data payloads/tags/observers, multi-branch chains and ecosystem">
+  <rect x="0" y="0" width="1200" height="910" rx="16" fill="#0B1113"/>
+  <rect x="0.5" y="0.5" width="1199" height="909" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
   <text x="40" y="54" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="600" fill="#E9F4F2">Bridge vs WorkManager</text>
   <text x="436" y="88" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700" fill="#4DD8C4">bridge</text>
   <text x="800" y="88" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#75898B">workmanager</text>
@@ -118,43 +118,33 @@
   <text x="40" y="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#75898B" letter-spacing="2">WHERE WORKMANAGER STILL WINS</text>
   <line x1="310" y1="696" x2="1160" y2="696" stroke="#1D2B2E" stroke-width="1"/>
   <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.99s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="0.99s" dur="0.45s" fill="freeze"/>
-    <text x="40" y="738" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">OEM maturity</text>
+    <text x="40" y="738" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">Data payloads, tags, observers</text>
+    <text x="40" y="754" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">(LiveData/Flow), content-URI triggers</text>
     <circle cx="436" cy="733" r="6" fill="none" stroke="#4A5D5F" stroke-width="1.5"/>
-    <text x="454" y="738" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">one device of hardware evidence</text>
+    <text x="454" y="738" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">not yet</text>
     <circle cx="800" cy="733" r="6" fill="#4DD8C4"/>
-    <text x="818" y="738" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4DD8C4">a decade across every OEM's</text>
-    <text x="818" y="754" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4DD8C4">process killer</text>
-    <text x="1126" y="738" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" fill="#4A5D5F" text-anchor="middle">honest gap</text>
+    <text x="818" y="738" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4DD8C4">yes</text>
+    <text x="1126" y="738" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" fill="#4A5D5F" text-anchor="middle">roadmap</text>
   </g>
   <line x1="40" y1="762" x2="1160" y2="762" stroke="#16211F" stroke-width="1"/>
   <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="1.08s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="1.08s" dur="0.45s" fill="freeze"/>
-    <text x="40" y="790" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">Data payloads, tags, observers</text>
-    <text x="40" y="806" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">(LiveData/Flow), content-URI triggers</text>
+    <text x="40" y="790" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">Multi-branch chains</text>
     <circle cx="436" cy="785" r="6" fill="none" stroke="#4A5D5F" stroke-width="1.5"/>
-    <text x="454" y="790" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">not yet</text>
+    <text x="454" y="790" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">sequential only</text>
     <circle cx="800" cy="785" r="6" fill="#4DD8C4"/>
     <text x="818" y="790" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4DD8C4">yes</text>
     <text x="1126" y="790" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" fill="#4A5D5F" text-anchor="middle">roadmap</text>
   </g>
-  <line x1="40" y1="814" x2="1160" y2="814" stroke="#16211F" stroke-width="1"/>
+  <line x1="40" y1="806" x2="1160" y2="806" stroke="#16211F" stroke-width="1"/>
   <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="1.17s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="1.17s" dur="0.45s" fill="freeze"/>
-    <text x="40" y="842" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">Multi-branch chains</text>
-    <circle cx="436" cy="837" r="6" fill="none" stroke="#4A5D5F" stroke-width="1.5"/>
-    <text x="454" y="842" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">sequential only</text>
-    <circle cx="800" cy="837" r="6" fill="#4DD8C4"/>
-    <text x="818" y="842" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4DD8C4">yes</text>
-    <text x="1126" y="842" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" fill="#4A5D5F" text-anchor="middle">roadmap</text>
+    <text x="40" y="834" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">Ecosystem (Hilt integration, docs, Stack</text>
+    <text x="40" y="850" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">Overflow mass)</text>
+    <circle cx="436" cy="829" r="6" fill="none" stroke="#4A5D5F" stroke-width="1.5"/>
+    <text x="454" y="834" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">new</text>
+    <circle cx="800" cy="829" r="6" fill="#4DD8C4"/>
+    <text x="818" y="834" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4DD8C4">vast</text>
   </g>
   <line x1="40" y1="858" x2="1160" y2="858" stroke="#16211F" stroke-width="1"/>
-  <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="1.26s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="1.26s" dur="0.45s" fill="freeze"/>
-    <text x="40" y="886" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">Ecosystem (Hilt integration, docs, Stack</text>
-    <text x="40" y="902" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#E9F4F2">Overflow mass)</text>
-    <circle cx="436" cy="881" r="6" fill="none" stroke="#4A5D5F" stroke-width="1.5"/>
-    <text x="454" y="886" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">new</text>
-    <circle cx="800" cy="881" r="6" fill="#4DD8C4"/>
-    <text x="818" y="886" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4DD8C4">vast</text>
-  </g>
-  <line x1="40" y1="910" x2="1160" y2="910" stroke="#16211F" stroke-width="1"/>
-  <text x="40" y="942" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F">filled dot = has it · hollow dot = does not · mint goes to whoever actually wins the row</text>
-  <text x="1160" y="942" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F" text-anchor="end">device rows: Pixel 6 Pro · API 36</text>
+  <text x="40" y="890" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F">filled dot = has it · hollow dot = does not · mint goes to whoever actually wins the row</text>
+  <text x="1160" y="890" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F" text-anchor="end">device rows: Pixel 6 Pro · API 36</text>
 </svg>
