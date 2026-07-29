@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="140" viewBox="0 0 1200 140" role="img" aria-label="Compat: the androidx.work import gets struck through and swapped for bridge.compat, while a broken chain re-links at the broken link">
+  <rect x="0" y="0" width="1200" height="140" rx="16" fill="#0B1113"/>
+  <rect x="0.5" y="0.5" width="1199" height="139" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
+
+  <!-- left: the entire migration -->
+  <text x="48" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">the entire migration:</text>
+  <text x="48" y="64" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#75898B">import androidx.work.*</text>
+  <!-- strike-through grows across it -->
+  <rect x="48" y="57" width="0" height="2" fill="#4A5D5F">
+    <animate attributeName="width" values="0;0;212;212" keyTimes="0;0.14;0.3;1" dur="6s" calcMode="linear" repeatCount="indefinite"/>
+  </rect>
+  <text x="48" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#4DD8C4" opacity="0">import io.github.iamjosephmj.bridge.compat.*
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.36" dur="6s" repeatCount="indefinite"/>
+  </text>
+  <text x="48" y="126" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F" opacity="0">// your workers: unchanged
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.5" dur="6s" repeatCount="indefinite"/>
+  </text>
+
+  <!-- right: the chain that resumes at the failed link -->
+  <g stroke-linecap="round">
+    <circle cx="760" cy="66" r="10" fill="none" stroke="#4DD8C4" stroke-width="2.5"/>
+    <line x1="772" y1="66" x2="848" y2="66" stroke="#4DD8C4" stroke-width="2.5"/>
+    <circle cx="860" cy="66" r="10" fill="none" stroke="#4DD8C4" stroke-width="2.5"/>
+    <!-- the broken link: dashed, flickering -->
+    <line x1="872" y1="66" x2="948" y2="66" stroke="#4A5D5F" stroke-width="2.5" stroke-dasharray="6 7">
+      <animate attributeName="opacity" calcMode="discrete" values="1;0.35;1;0.35;1;0" keyTimes="0;0.12;0.24;0.36;0.48;0.62" dur="6s" repeatCount="indefinite"/>
+    </line>
+    <!-- the re-link: snaps in exactly there -->
+    <line x1="872" y1="66" x2="948" y2="66" stroke="#7BEFD8" stroke-width="2.5" opacity="0">
+      <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.62" dur="6s" repeatCount="indefinite"/>
+    </line>
+    <circle cx="960" cy="66" r="10" fill="none" stroke="#2E4A4B" stroke-width="2.5">
+      <animate attributeName="stroke" calcMode="discrete" values="#2E4A4B;#7BEFD8" keyTimes="0;0.7" dur="6s" repeatCount="indefinite"/>
+    </circle>
+    <line x1="972" y1="66" x2="1048" y2="66" stroke="#2E4A4B" stroke-width="2.5">
+      <animate attributeName="stroke" calcMode="discrete" values="#2E4A4B;#7BEFD8" keyTimes="0;0.78" dur="6s" repeatCount="indefinite"/>
+    </line>
+    <circle cx="1060" cy="66" r="10" fill="none" stroke="#2E4A4B" stroke-width="2.5">
+      <animate attributeName="stroke" calcMode="discrete" values="#2E4A4B;#7BEFD8" keyTimes="0;0.86" dur="6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <text x="910" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#75898B" text-anchor="middle" opacity="0">resumes at the failed link — not from the top
+    <animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;0.66" dur="6s" repeatCount="indefinite"/>
+  </text>
+</svg>

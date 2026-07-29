@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="140" viewBox="0 0 1200 140" role="img" aria-label="Glassbox: a scan sweeps across pending jobs and a verdict appears — DeferredByDoze(deep) [REPORTED]">
+  <rect x="0" y="0" width="1200" height="140" rx="16" fill="#0B1113"/>
+  <rect x="0.5" y="0.5" width="1199" height="139" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
+  <text x="40" y="30" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#4A5D5F">GlassBox.explain()</text>
+
+  <!-- pending jobs, minding their own business -->
+  <line x1="160" y1="60" x2="1040" y2="60" stroke="#1D2B2E" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/>
+  <circle cx="240" cy="60" r="6" fill="#2E4A4B">
+    <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.072;0.13;0.24;1" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="360" cy="60" r="6" fill="#2E4A4B">
+    <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.18;0.24;0.35;1" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="480" cy="60" r="6" fill="#2E4A4B">
+    <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.287;0.35;0.46;1" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="600" cy="60" r="6" fill="#2E4A4B">
+    <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.395;0.46;0.57;1" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="720" cy="60" r="6" fill="#2E4A4B">
+    <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.503;0.57;0.68;1" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="840" cy="60" r="6" fill="#2E4A4B">
+    <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.61;0.67;0.78;1" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="960" cy="60" r="6" fill="#2E4A4B">
+    <animate attributeName="fill" values="#2E4A4B;#2E4A4B;#7BEFD8;#2E4A4B;#2E4A4B" keyTimes="0;0.719;0.78;0.89;1" dur="5s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- the sweep -->
+  <g opacity="0">
+    <line x1="0" y1="26" x2="0" y2="94" stroke="#7BEFD8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-14" y1="26" x2="-14" y2="94" stroke="#2E4A4B" stroke-width="2" stroke-linecap="round"/>
+    <animateTransform attributeName="transform" type="translate" values="160 0; 1040 0; 1040 0" keyTimes="0;0.8;1" begin="0s" dur="5s" calcMode="linear" repeatCount="indefinite" additive="replace"/>
+    <animate attributeName="opacity" calcMode="discrete" values="1;0" keyTimes="0;0.8" dur="5s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- the verdict -->
+  <text x="600" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" fill="#4DD8C4" text-anchor="middle" opacity="0">7 pending — DeferredByDoze(deep) <tspan fill="#7BEFD8">[REPORTED]</tspan>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.8;0.99" dur="5s" repeatCount="indefinite"/>
+  </text>
+  <text x="1160" y="122" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F" text-anchor="end">works in ANY app</text>
+</svg>
