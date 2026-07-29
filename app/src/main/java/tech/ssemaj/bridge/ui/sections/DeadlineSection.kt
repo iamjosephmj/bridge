@@ -20,7 +20,8 @@ import tech.ssemaj.bridge.ui.rememberDemoConsole
  */
 @Composable
 fun DeadlineSection() {
-    val console = rememberDemoConsole()
+    // Rehydrated from the journal so a pending deadline run survives a restart visibly.
+    val console = rememberDemoConsole(Names.DEADLINE)
     DemoSection(
         title = "4 · Deadline",
         description = "mustCompleteBy(now + 2 min): the policy engine walks urgency " +

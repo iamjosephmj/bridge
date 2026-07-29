@@ -20,7 +20,8 @@ import tech.ssemaj.bridge.ui.rememberDemoConsole
  */
 @Composable
 fun ChunkedSection() {
-    val console = rememberDemoConsole()
+    // Rehydrated from the journal: an interrupted run shows its resume point on relaunch.
+    val console = rememberDemoConsole(Names.CHUNKED)
     DemoSection(
         title = "2 · Chunked resumable work",
         description = "chunks(10): each chunk commits to the journal, so an interrupted " +
