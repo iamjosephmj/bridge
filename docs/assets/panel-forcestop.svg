@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="250" viewBox="0 0 1200 250" role="img" aria-label="Force-stop replay, measured: attempts 2 vs 2; chunks replayed 1 vs 20; time to complete 61,350 ms vs 72,346 ms (bridge vs workmanager)">
+  <rect x="0" y="0" width="1200" height="250" rx="16" fill="#0B1113"/>
+  <rect x="0.5" y="0.5" width="1199" height="249" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
+  <text x="48" y="52" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="600" fill="#E9F4F2">force-stop replay</text>
+  <text x="48" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#75898B">large_chunked · 200 MB / 40 chunks · process killed mid-run, relaunched</text>
+  <text x="620" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700" fill="#4DD8C4" text-anchor="middle">bridge</text>
+  <text x="920" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#75898B" text-anchor="middle">workmanager</text>
+  <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.00s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="0.00s" dur="0.45s" fill="freeze"/>
+    <text x="48" y="122" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="15" fill="#75898B">attempts</text>
+    <text x="620" y="122" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" font-weight="700" fill="#E9F4F2" text-anchor="middle">2</text>
+    <text x="920" y="122" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" fill="#75898B" text-anchor="middle">2</text>
+  </g>
+  <line x1="48" y1="138" x2="1152" y2="138" stroke="#16211F" stroke-width="1"/>
+  <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.09s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="0.09s" dur="0.45s" fill="freeze"/>
+    <text x="48" y="166" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="15" fill="#75898B">chunks replayed</text>
+    <text x="620" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="30" font-weight="700" fill="#4DD8C4" text-anchor="middle">1</text>
+    <text x="920" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="30" fill="#4A5D5F" text-anchor="middle">20</text>
+  </g>
+  <line x1="48" y1="182" x2="1152" y2="182" stroke="#16211F" stroke-width="1"/>
+  <g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="0.18s" dur="0.45s" fill="freeze"/><animateTransform attributeName="transform" type="translate" from="0 8" to="0 0" begin="0.18s" dur="0.45s" fill="freeze"/>
+    <text x="48" y="210" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="15" fill="#75898B">time to complete</text>
+    <text x="620" y="210" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" font-weight="700" fill="#4DD8C4" text-anchor="middle">61,350 ms</text>
+    <text x="920" y="210" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" fill="#4A5D5F" text-anchor="middle">72,346 ms</text>
+  </g>
+  <text x="1152" y="230" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#4A5D5F" text-anchor="end">Pixel 6 Pro · API 36</text>
+</svg>
