@@ -25,7 +25,11 @@ sealed interface WorkEvent {
         val requiresDeviceIdle: Boolean = false,
         val initialDelayMs: Long = 0L,
         val periodicMs: Long = 0L,
-    ) : WorkEvent
+    ) : WorkEvent {
+        /** Factories live as extensions in `api/EnqueuedEvents.kt` — putting them here
+         *  would give store (the bottom layer) a dependency on api's WorkRequest. */
+        companion object
+    }
 
     @Serializable @SerialName("dispatched")
     data class Dispatched(

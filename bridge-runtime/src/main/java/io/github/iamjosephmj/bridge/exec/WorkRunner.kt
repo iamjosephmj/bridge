@@ -6,6 +6,7 @@ import io.github.iamjosephmj.bridge.api.ChunkedWorker
 import io.github.iamjosephmj.bridge.api.RunContext
 import io.github.iamjosephmj.bridge.api.RunResult
 import io.github.iamjosephmj.bridge.api.WorkerRegistry
+import io.github.iamjosephmj.bridge.api.nextCycle
 import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.RunState
 import io.github.iamjosephmj.bridge.store.StopReason
@@ -35,17 +36,7 @@ class WorkRunner(
         // (CANCELLED does not roll — cancellation ends the series.)
         if (state.periodicMs > 0 &&
             state.runState in setOf(RunState.SUCCEEDED, RunState.FAILED)) {
-            journal.append(WorkEvent.Enqueued(workId, clock.now(), state.workerName,
-                state.generation + 1, importance = state.importance,
-                requiresCharging = state.requiresCharging,
-                requiresUnmetered = state.requiresUnmetered,
-                chunkCount = state.chunkCount, estimatedUpBytes = state.estimatedUpBytes,
-                maxAttempts = state.maxAttempts,
-                requiresNetwork = state.requiresNetwork,
-                requiresBatteryNotLow = state.requiresBatteryNotLow,
-                requiresStorageNotLow = state.requiresStorageNotLow,
-                requiresDeviceIdle = state.requiresDeviceIdle,
-                periodicMs = state.periodicMs))
+            journal.append(WorkEvent.Enqueued.nextCycle(state, clock.now()))
             state = journal.state(workId)!!
         }
         // Periodic work ignores the payload-generation guard: the platform job outlives cycles.
