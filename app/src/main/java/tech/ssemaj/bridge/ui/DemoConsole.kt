@@ -16,8 +16,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Tiny per-section "console": a button starts a suspend block off the main thread and the
- * block appends lines that render live in the section's [ResultText]. Starting a new run
+ * Tiny per-screen "console": a button starts a suspend block off the main thread and the
+ * block appends lines that render live in the screen's [ConsolePanel]. Starting a new run
  * cancels the previous one so buttons stay idempotent.
  */
 class DemoConsole(private val scope: CoroutineScope) {

@@ -1,4 +1,4 @@
-package tech.ssemaj.bridge.ui.sections
+package tech.ssemaj.bridge.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -10,25 +10,34 @@ import androidx.compose.ui.unit.dp
 import io.github.iamjosephmj.bridge.Bridge
 import io.github.iamjosephmj.bridge.api.workRequest
 import tech.ssemaj.bridge.demos.Names
-import tech.ssemaj.bridge.ui.DemoSection
-import tech.ssemaj.bridge.ui.ResultText
+import tech.ssemaj.bridge.ui.ConsolePanel
+import tech.ssemaj.bridge.ui.FeatureScreen
 import tech.ssemaj.bridge.ui.rememberDemoConsole
 
-/**
- * Demo 5 — periodic work.
- *
- * `periodic(15 min)` (the platform floor) re-enqueues a fresh generation after each
- * completed cycle. `Bridge.cancel(name)` ends the series — the state fold shows
- * CANCELLED and the OS job is withdrawn.
- */
+private val SNIPPET = """
+    Bridge.enqueue(
+        workRequest("demo-periodic", "demo-worker") {
+            periodic(15 * 60_000L)   // platform floor
+        }
+    )
+
+    Bridge.cancel("demo-periodic")   // ends the series
+""".trimIndent()
+
+/** Periodic work — same demo logic as the original section: start + cancel. */
 @Composable
-fun PeriodicSection() {
+fun PeriodicScreen(onBack: () -> Unit) {
     // Rehydrated from the journal: an active periodic series is picked up on relaunch.
     val console = rememberDemoConsole(Names.PERIODIC)
-    DemoSection(
-        title = "5 · Periodic",
-        description = "periodic(15 min): each cycle is a new generation of the same " +
-            "work name. Cancel ends the series.",
+    FeatureScreen(
+        title = "Periodic",
+        explainer = "periodic(15 min) — the platform floor — re-enqueues a fresh generation " +
+            "of the same work name after each completed cycle, so the journal keeps one " +
+            "continuous history per name instead of scattering runs across random UUIDs. " +
+            "Bridge.cancel(name) ends the series: the state fold shows CANCELLED and the " +
+            "underlying OS job is withdrawn.",
+        snippet = SNIPPET,
+        onBack = onBack,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
@@ -51,6 +60,6 @@ fun PeriodicSection() {
                 }
             }) { Text("Cancel") }
         }
-        ResultText(console.text)
+        ConsolePanel(console.text)
     }
 }
