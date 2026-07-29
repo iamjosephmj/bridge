@@ -65,11 +65,11 @@ class ReconcilerTest {
 
         val dispatched1 = journal.state("dispatched1")!!
         assertThat(dispatched1.runState).isEqualTo(RunState.DISPATCHED)
-        assertThat(dispatched1.lastStopReason).isEqualTo(STOP_REASON_FORCE_STOP)
+        assertThat(dispatched1.lastStopReason).isEqualTo(io.github.iamjosephmj.bridge.store.StopReason.FORCE_STOP.code)
 
         val dispatched2 = journal.state("dispatched2")!!
         assertThat(dispatched2.runState).isEqualTo(RunState.DISPATCHED)
-        assertThat(dispatched2.lastStopReason).isEqualTo(STOP_REASON_FORCE_STOP)
+        assertThat(dispatched2.lastStopReason).isEqualTo(io.github.iamjosephmj.bridge.store.StopReason.FORCE_STOP.code)
 
         // Settled by death attribution (process assumed dead), not by the force-stop batch,
         // but still live afterwards and therefore re-dispatched below.
@@ -99,7 +99,7 @@ class ReconcilerTest {
         assertThat(journal.events("dispatched2").none { it is WorkEvent.Stopped }).isTrue()
         // No Stopped event anywhere carries the force-stop reason.
         assertThat(journal.events("running1").none {
-            it is WorkEvent.Stopped && it.stopReason == STOP_REASON_FORCE_STOP
+            it is WorkEvent.Stopped && it.stopReason == io.github.iamjosephmj.bridge.store.StopReason.FORCE_STOP.code
         }).isTrue()
     }
 }

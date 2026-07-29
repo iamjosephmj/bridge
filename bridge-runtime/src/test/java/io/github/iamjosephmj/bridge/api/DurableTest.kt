@@ -123,6 +123,6 @@ class DurableTest {
         // Still ENQUEUED (parked), never FAILED; park stop reason journaled.
         assertEquals("ENQUEUED", journal.state("p")!!.runState.name)
         assertTrue(journal.events("p").filterIsInstance<WorkEvent.Stopped>()
-            .all { it.stopReason == io.github.iamjosephmj.bridge.exec.STOP_REASON_PARKED })
+            .all { it.stopReason == io.github.iamjosephmj.bridge.store.StopReason.PARKED.code })
     }
 }

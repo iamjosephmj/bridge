@@ -79,7 +79,7 @@ class EndToEndTest {
         assertThat(stepExecutions.get()).isEqualTo(2)
         assertThat(Bridge.events(name).count {
             it is io.github.iamjosephmj.bridge.store.WorkEvent.Stopped &&
-                it.stopReason == io.github.iamjosephmj.bridge.exec.STOP_REASON_PARKED
+                it.stopReason == io.github.iamjosephmj.bridge.store.StopReason.PARKED.code
         }).isAtLeast(1)
     }
 

@@ -8,15 +8,11 @@ import io.github.iamjosephmj.bridge.api.RunResult
 import io.github.iamjosephmj.bridge.api.WorkerRegistry
 import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.RunState
+import io.github.iamjosephmj.bridge.store.StopReason
 import io.github.iamjosephmj.bridge.store.WorkEvent
 import kotlinx.coroutines.CancellationException
 
 enum class RunOutcome { COMPLETED, FAILED, RETRY }
-
-private const val STOP_REASON_RETRY = 0
-private const val STOP_REASON_SYSTEM_STOP = 1
-/** Durable timer/await park — excluded from crash counting and attempt limits. */
-const val STOP_REASON_PARKED = 2
 
 /** Internal signal from chunked worker: distinguishes system stop from worker results. */
 private sealed class ChunkRunResult {
@@ -70,7 +66,7 @@ class WorkRunner(
             val result: RunResult = if (state.chunkCount > 0 && worker is ChunkedWorker) {
                 when (val chunkResult = runChunked(worker, ctx, workId, state.nextChunk, state.chunkCount, isStopped)) {
                     is ChunkRunResult.SystemStopped -> {
-                        journal.append(WorkEvent.Stopped(workId, clock.now(), STOP_REASON_SYSTEM_STOP))
+                        journal.append(WorkEvent.Stopped(workId, clock.now(), StopReason.SYSTEM_STOP.code))
                         return RunOutcome.RETRY
                     }
                     is ChunkRunResult.WorkerResult -> chunkResult.result
@@ -87,7 +83,7 @@ class WorkRunner(
                     .let { RunOutcome.FAILED }
                 is RunResult.Retry -> retryOrFail(workId, deliveryCount, state.maxAttempts, before)
                 is RunResult.Parked -> {
-                    journal.append(WorkEvent.Stopped(workId, clock.now(), STOP_REASON_PARKED))
+                    journal.append(WorkEvent.Stopped(workId, clock.now(), StopReason.PARKED.code))
                     RunOutcome.RETRY
                 }
             }
@@ -128,7 +124,7 @@ class WorkRunner(
         if (deliveryCount >= maxAttempts) {
             finish(workId, before, success = false); RunOutcome.FAILED
         } else {
-            journal.append(WorkEvent.Stopped(workId, clock.now(), STOP_REASON_RETRY))
+            journal.append(WorkEvent.Stopped(workId, clock.now(), StopReason.RETRY.code))
             RunOutcome.RETRY
         }
 }

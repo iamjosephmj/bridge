@@ -80,5 +80,29 @@ sealed interface WorkEvent {
     data class PolicyDecision(
         override val workId: String, override val at: Long,
         val decision: String, val why: String,
-    ) : WorkEvent
+    ) : WorkEvent {
+        /** Typed view of [decision]; null for strings no known writer produces. */
+        val kind: DecisionKind? get() = DecisionKind.from(decision)
+    }
+}
+
+/**
+ * Typed decision protocol for [WorkEvent.PolicyDecision]. The journal keeps the raw
+ * [WorkEvent.PolicyDecision.decision] string for back-compat; readers should match on
+ * [WorkEvent.PolicyDecision.kind] instead of string-comparing. [ADMIT] covers the
+ * tiered "admit:TIER" form — the tier stays in the string.
+ */
+enum class DecisionKind(val wire: String) {
+    HOLD("hold"),
+    SHED("shed"),
+    PARK("park"),
+    STRUCTURE_MISMATCH("structure-mismatch"),
+    ADMIT("admit");
+
+    companion object {
+        fun from(decision: String): DecisionKind? = when {
+            decision.startsWith("${ADMIT.wire}:") -> ADMIT
+            else -> entries.firstOrNull { it.wire == decision }
+        }
+    }
 }

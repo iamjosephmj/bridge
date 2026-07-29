@@ -3,6 +3,7 @@ package io.github.iamjosephmj.bridge.api
 import io.github.iamjosephmj.bridge.BridgeClock
 import io.github.iamjosephmj.bridge.dispatch.AlarmGateway
 import io.github.iamjosephmj.bridge.signals.SignalSnapshot
+import io.github.iamjosephmj.bridge.store.DecisionKind
 import io.github.iamjosephmj.bridge.store.EventJournal
 import io.github.iamjosephmj.bridge.store.WorkEvent
 import kotlinx.serialization.KSerializer
@@ -125,11 +126,11 @@ class DurableWorker(
             RunResult.Success
         } catch (p: ParkSignal) {
             deps.journal.append(WorkEvent.PolicyDecision(
-                ctx.workId, deps.clock.now(), "park", p.why))
+                ctx.workId, deps.clock.now(), DecisionKind.PARK.wire, p.why))
             RunResult.Parked(p.wakeAtMs)
         } catch (m: DurableStructureMismatch) {
             deps.journal.append(WorkEvent.PolicyDecision(
-                ctx.workId, deps.clock.now(), "structure-mismatch", m.message ?: ""))
+                ctx.workId, deps.clock.now(), DecisionKind.STRUCTURE_MISMATCH.wire, m.message ?: ""))
             RunResult.Failure
         }
     }

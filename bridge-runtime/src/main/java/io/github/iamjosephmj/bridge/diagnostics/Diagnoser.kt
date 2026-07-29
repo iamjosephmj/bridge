@@ -5,7 +5,9 @@ import io.github.iamjosephmj.bridge.signals.SignalKind
 import io.github.iamjosephmj.bridge.signals.SignalSlice
 import io.github.iamjosephmj.bridge.signals.SignalSnapshot
 import io.github.iamjosephmj.bridge.signals.SignalValue
+import io.github.iamjosephmj.bridge.store.DecisionKind
 import io.github.iamjosephmj.bridge.store.RunState
+import io.github.iamjosephmj.bridge.store.StopReason
 import io.github.iamjosephmj.bridge.store.WorkEvent
 import io.github.iamjosephmj.bridge.store.WorkState
 
@@ -53,19 +55,20 @@ object Diagnoser {
         val lastPolicy = events.lastOrNull { it is WorkEvent.PolicyDecision }
             as? WorkEvent.PolicyDecision
         if (lastPolicy != null && events.last() === lastPolicy &&
-            (lastPolicy.decision == "hold" || lastPolicy.decision == "shed")) {
+            (lastPolicy.kind == DecisionKind.HOLD || lastPolicy.kind == DecisionKind.SHED)) {
             matches += Diagnosis.HeldByPolicy(lastPolicy.why) to Basis.INFERRED
         }
         // M5: a park newer than the newest start means the durable block is waiting.
-        if (lastPolicy != null && lastPolicy.decision == "park" &&
-            events.indexOf(lastPolicy as WorkEvent) >
+        if (lastPolicy != null && lastPolicy.kind == DecisionKind.PARK &&
+            events.indexOfLast { it === lastPolicy } >
                 events.indexOfLast { it is WorkEvent.Started }) {
             matches += Diagnosis.DurableParked(lastPolicy.why) to Basis.INFERRED
         }
         val genEvents = events.filter {
             it !is WorkEvent.Enqueued || it.generation == state.generation }
         val crashes = genEvents.count { it is WorkEvent.Died } +
-            genEvents.count { it is WorkEvent.Stopped && it.stopReason == 0 /* retry */ }
+            genEvents.count { it is WorkEvent.Stopped &&
+                StopReason.from(it.stopReason) == StopReason.RETRY }
         // "Between attempts" = the latest crash comes after the latest start; re-dispatch
         // records (Dispatched/PolicyDecision) after the crash don't clear the throttle.
         val lastStart = genEvents.indexOfLast { it is WorkEvent.Started }

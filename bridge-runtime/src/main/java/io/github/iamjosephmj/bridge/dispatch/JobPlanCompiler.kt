@@ -27,8 +27,9 @@ object JobPlanCompiler {
         if (itemConstraints != null) {
             // 1:1 path with an exact per-item constraint set — host-class shape ignored.
             when (itemConstraints.network) {
-                1 -> b.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                2 -> b.setRequiredNetworkType(JobInfo.NETWORK_TYPE_UNMETERED)
+                NetworkNeed.NONE -> Unit
+                NetworkNeed.ANY -> b.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                NetworkNeed.UNMETERED -> b.setRequiredNetworkType(JobInfo.NETWORK_TYPE_UNMETERED)
             }
             if (itemConstraints.charging) b.setRequiresCharging(true)
             if (itemConstraints.batteryNotLow) b.setRequiresBatteryNotLow(true)
@@ -39,7 +40,7 @@ object JobPlanCompiler {
             } else if (itemConstraints.minLatencyMs > 0) {
                 b.setMinimumLatency(itemConstraints.minLatencyMs)
             } else {
-                val empty = itemConstraints.network == 0 && !itemConstraints.charging &&
+                val empty = itemConstraints.network == NetworkNeed.NONE && !itemConstraints.charging &&
                     !itemConstraints.batteryNotLow && !itemConstraints.storageNotLow &&
                     !itemConstraints.deviceIdle
                 if (empty) b.setMinimumLatency(1L)   // build() rejects zero constraints
