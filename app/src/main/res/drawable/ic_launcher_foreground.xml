@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Bridge launcher glyph: a minimal bridge arch drawn as an interrupted
-    stroke. The arc stops, leaves a gap, and picks up exactly where it
-    stopped (lighter mint) - work that survives interruption and resumes.
+    Bridge launcher glyph, candidate C: "Solid bridge silhouette".
+    A filled rounded-rect deck plus two chunky mint towers - all mass,
+    no strokes. The right tower's cap is detached and floats above it
+    in lighter mint (Mint200): the gap-and-resume echo - work that
+    survives interruption and picks up where it stopped.
     All geometry stays inside the adaptive-icon safe zone (middle ~60%).
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -11,24 +13,23 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Deck line (Mint300, app accent) -->
+    <!-- Deck: rounded rect x18 y62 w72 h16 rx8 (Mint300, app accent) -->
     <path
-        android:pathData="M28,72 L80,72"
-        android:strokeColor="#4DD8C4"
-        android:strokeWidth="7"
-        android:strokeLineCap="round" />
+        android:pathData="M26,62 H82 A8,8 0 0 1 82,78 H26 A8,8 0 0 1 26,62 Z"
+        android:fillColor="#4DD8C4" />
 
-    <!-- Arch, first span: 180deg to 105deg of a circle r=24 centered at (54,65) -->
+    <!-- Left tower: rounded top, bottom tucked under the deck -->
     <path
-        android:pathData="M30,65 A24,24 0 0 1 47.79,41.82"
-        android:strokeColor="#4DD8C4"
-        android:strokeWidth="7"
-        android:strokeLineCap="round" />
+        android:pathData="M32,37 A7,7 0 0 1 46,37 V66 H32 Z"
+        android:fillColor="#4DD8C4" />
 
-    <!-- Arch, resumed span after the gap: 68deg to 0deg (Mint200 highlight) -->
+    <!-- Right tower: shorter, rounded top, bottom tucked under the deck -->
     <path
-        android:pathData="M62.99,42.75 A24,24 0 0 1 78,65"
-        android:strokeColor="#7BEFD8"
-        android:strokeWidth="7"
-        android:strokeLineCap="round" />
+        android:pathData="M62,43 A7,7 0 0 1 76,43 V66 H62 Z"
+        android:fillColor="#4DD8C4" />
+
+    <!-- Floating cap above the right tower (Mint200 highlight) -->
+    <path
+        android:pathData="M66,24 H72 A4,4 0 0 1 72,32 H66 A4,4 0 0 1 66,24 Z"
+        android:fillColor="#7BEFD8" />
 </vector>
