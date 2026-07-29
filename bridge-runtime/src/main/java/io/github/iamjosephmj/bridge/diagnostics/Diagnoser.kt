@@ -61,6 +61,12 @@ object Diagnoser {
         }
 
         // 2. Bridge's own held decisions from the journal.
+        val lastPolicy = events.lastOrNull { it is WorkEvent.PolicyDecision }
+            as? WorkEvent.PolicyDecision
+        if (lastPolicy != null && events.last() === lastPolicy &&
+            (lastPolicy.decision == "hold" || lastPolicy.decision == "shed")) {
+            matches += Diagnosis.HeldByPolicy(lastPolicy.why) to Basis.INFERRED
+        }
         val genEvents = events.filter {
             it !is WorkEvent.Enqueued || it.generation == state.generation }
         val crashes = genEvents.count { it is WorkEvent.Died } +

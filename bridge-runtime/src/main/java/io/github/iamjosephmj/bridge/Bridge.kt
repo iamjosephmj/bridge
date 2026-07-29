@@ -7,6 +7,7 @@ import io.github.iamjosephmj.bridge.api.WorkerRegistry
 import io.github.iamjosephmj.bridge.diagnostics.*
 import io.github.iamjosephmj.bridge.dispatch.*
 import io.github.iamjosephmj.bridge.exec.*
+import io.github.iamjosephmj.bridge.policy.PolicyEngine
 import io.github.iamjosephmj.bridge.signals.*
 import io.github.iamjosephmj.bridge.store.*
 import java.util.concurrent.Executor
@@ -56,11 +57,14 @@ object Bridge {
         conformance = conf
         val gw = b.gateway ?: SelectingJobGateway(
             SystemJobGateway(appContext), OneToOneJobGateway(appContext), conf)
-        val d = Dispatcher(j, gw, b.clock)
         val log = SignalLog(b.transitionStore ?: SqliteTransitionStore(appContext))
         val sources = b.signalSources ?: AndroidSignalSources.all(appContext)
         val hub = SignalHub(sources, log, b.clock)
         signalLog = log; signalHub = hub
+        val d = Dispatcher(j, gw, b.clock,
+            policy = PolicyEngine(android.os.Build.VERSION.SDK_INT),
+            alarmGateway = SystemAlarmGateway(appContext),
+            snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) })
         try { SignalBroadcasts(hub, sources).start(appContext) } catch (_: Exception) { }
         val runner = WorkRunner(j, b.registry, SystemBlackBox(appContext),
             b.costMeter ?: HealthStatsCostMeter(appContext), b.clock)

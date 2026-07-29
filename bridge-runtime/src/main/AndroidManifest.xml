@@ -11,6 +11,10 @@
             android:permission="android.permission.BIND_JOB_SERVICE"
             android:exported="false" />
 
+        <!-- L4 deadline-escalation alarm tier (setAndAllowWhileIdle → reconcile). -->
+        <receiver android:name="io.github.iamjosephmj.bridge.dispatch.BridgeAlarmReceiver"
+            android:exported="false" />
+
         <!-- adb diagnostics entry point; see ReportReceiver kdoc for the exported rationale. -->
         <receiver android:name="io.github.iamjosephmj.bridge.diagnostics.ReportReceiver"
             android:exported="true">

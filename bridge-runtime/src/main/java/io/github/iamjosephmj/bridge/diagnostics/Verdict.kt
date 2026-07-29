@@ -13,6 +13,8 @@ sealed interface Diagnosis {
     data class AwaitingConstraint(val constraint: String) : Diagnosis   // "charging" | "unmetered"
     object AwaitingConformanceFallback : Diagnosis { override fun toString() = "AwaitingConformanceFallback" }
     data class ThrottledAfterCrashes(val crashes: Int) : Diagnosis
+    /** Bridge's own L4 judgment held/shed this work; `why` is the journaled arithmetic. */
+    data class HeldByPolicy(val why: String) : Diagnosis
     data class NotDispatched(val reason: String) : Diagnosis
     object Running : Diagnosis { override fun toString() = "Running" }
     object Finished : Diagnosis { override fun toString() = "Finished" }
@@ -72,6 +74,7 @@ data class Verdict(
             is Diagnosis.DeferredByDoze -> "DeferredByDoze(${if (d.deep) "deep" else "light"})"
             is Diagnosis.AwaitingConstraint -> "AwaitingConstraint(${d.constraint})"
             is Diagnosis.ThrottledAfterCrashes -> "ThrottledAfterCrashes(${d.crashes})"
+            is Diagnosis.HeldByPolicy -> "HeldByPolicy(${d.why})"
             is Diagnosis.NotDispatched -> "NotDispatched(${d.reason})"
             is Diagnosis.Unexplained -> "Unexplained(${d.note})"
             else -> d.toString()
