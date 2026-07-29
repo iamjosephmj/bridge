@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="260" viewBox="0 0 1200 260" role="img" aria-label="The adoption route drawn as a small bridge: glassbox (diagnose from the shore), compat (swap an import), runtime (cross over), sim (practice on dry land). A dot crosses it on loop.">
+  <rect x="0" y="0" width="1200" height="260" rx="16" fill="#0B1113"/>
+  <rect x="0.5" y="0.5" width="1199" height="259" rx="16" fill="none" stroke="#1D2B2E" stroke-width="1"/>
+
+  <text x="48" y="48" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="600" fill="#E9F4F2">the adoption route</text>
+  <text x="1152" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#4A5D5F" text-anchor="end">every step reversible · no leap required</text>
+
+  <!-- water -->
+  <line x1="280" y1="206" x2="920" y2="206" stroke="#1D2B2E" stroke-width="2" stroke-dasharray="10 14" stroke-linecap="round"/>
+  <line x1="320" y1="218" x2="880" y2="218" stroke="#16211F" stroke-width="2" stroke-dasharray="6 18" stroke-linecap="round"/>
+
+  <!-- shores -->
+  <rect x="32" y="176" width="230" height="40" rx="10" fill="#0E171A" stroke="#1D2B2E"/>
+  <rect x="938" y="176" width="230" height="40" rx="10" fill="#0E171A" stroke="#1D2B2E"/>
+
+  <!-- the bridge itself: deck + two towers, one floating cap (the icon, at work) -->
+  <rect x="240" y="150" width="720" height="14" rx="7" fill="#4DD8C4"/>
+  <path d="M430,104 A18,18 0 0 1 466,104 V160 H430 Z" fill="#4DD8C4"/>
+  <path d="M740,112 A18,18 0 0 1 776,112 V160 H740 Z" fill="#4DD8C4"/>
+  <g>
+    <rect x="746" y="82" width="24" height="10" rx="5" fill="#7BEFD8"/>
+    <animateTransform attributeName="transform" type="translate"
+      values="0 0; 0 -4; 0 0" keyTimes="0;0.5;1" dur="3.2s"
+      calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+      repeatCount="indefinite"/>
+  </g>
+
+  <!-- the traveler: your app, crossing at its own pace, pausing at each stop -->
+  <circle r="8" fill="#7BEFD8">
+    <animateMotion dur="6s" repeatCount="indefinite" calcMode="linear"
+      path="M110,168 L240,142 L960,142 L1100,168"
+      keyPoints="0;0.03;0.03;0.354;0.354;0.636;0.636;1"
+      keyTimes="0;0.04;0.18;0.34;0.48;0.64;0.78;1"/>
+  </circle>
+
+  <!-- stations -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">
+    <circle cx="140" cy="222" r="3" fill="#2E4A4B"/>
+    <text x="140" y="241" font-size="16" font-weight="700" fill="#7BEFD8">glassbox</text>
+    <text x="140" y="256" font-size="11" fill="#75898B">diagnose from the shore</text>
+    <circle cx="460" cy="222" r="3" fill="#2E4A4B"/>
+    <text x="460" y="241" font-size="16" font-weight="700" fill="#7BEFD8">compat</text>
+    <text x="460" y="256" font-size="11" fill="#75898B">swap an import</text>
+    <circle cx="740" cy="222" r="3" fill="#2E4A4B"/>
+    <text x="740" y="241" font-size="16" font-weight="700" fill="#4DD8C4">runtime</text>
+    <text x="740" y="256" font-size="11" fill="#75898B">cross over</text>
+    <circle cx="1060" cy="222" r="3" fill="#2E4A4B"/>
+    <text x="1060" y="241" font-size="16" font-weight="700" fill="#7BEFD8">sim</text>
+    <text x="1060" y="256" font-size="11" fill="#75898B">practice on dry land</text>
+  </g>
+</svg>

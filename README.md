@@ -1,8 +1,9 @@
 <div align="center">
 
-# Bridge
+<img src="docs/assets/hero.svg" alt="Bridge — Android background work that survives death, and explains itself." width="900">
 
-### Android background work that survives death — and explains itself.
+<br>
+<br>
 
 <img alt="API 26+" src="https://img.shields.io/badge/API-26%2B-brightgreen"> <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white"> <img alt="Coroutines" src="https://img.shields.io/badge/coroutines-first--class-blue"> <img alt="Tests" src="https://img.shields.io/badge/tests-JVM%20sim%20%2B%20device%20suite-success"> <img alt="Modules" src="https://img.shields.io/badge/modules-glassbox%20%C2%B7%20compat%20%C2%B7%20runtime%20%C2%B7%20sim-informational"> <img alt="Status" src="https://img.shields.io/badge/status-v0.5%20%2B%20parity%20tier-orange">
 
@@ -23,13 +24,26 @@ When work stalls, Bridge tells you <i>why</i>, with the platform's own evidence 
 
 Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same workload corpus on both backends. Raw reports: [`bench/scripts/reports/`](bench/scripts/reports/).
 
-<table align="center">
-<tr>
-<td valign="top">
+<div align="center">
 
-<div align="center"><b>1 vs 20 — force-stop replay</b></div>
+<img src="docs/assets/killdemo.svg" alt="Animated force-stop demo: both schedulers get killed at chunk 6. Bridge resumes at chunk 6; WorkManager starts over from chunk 0. Measured: 1 chunk replayed vs 20." width="920">
 
-`force-stop` scenario, `large_chunked` (200 MB / 40 chunks), process killed mid-run and relaunched:
+<sub><b>Try killing it. It doesn't mind.</b> Measured on device: Bridge replayed <b>1</b> chunk; WorkManager replayed <b>20</b>.</sub>
+
+<br>
+<br>
+
+<img src="docs/assets/whyPending.svg" alt="Animated whyPending terminal: WorkManager answers RUNNING (a lie); Bridge answers DeferredByDoze(deep) [REPORTED] — the platform's own testimony." width="920">
+
+<sub>Same stall, both APIs asked <i>why</i>. One of them answered. The other one said <b>RUNNING</b>, which was not true.</sub>
+
+</div>
+
+<details>
+<summary><b>Raw numbers</b> (for citing)</summary>
+<br>
+
+**1 vs 20 — force-stop replay.** `force-stop` scenario, `large_chunked` (200 MB / 40 chunks), process killed mid-run and relaunched:
 
 | metric | bridge | workmanager |
 |---|---|---|
@@ -39,12 +53,7 @@ Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same w
 
 <sub>Bridge re-executed only the chunk in flight at the kill; every completed chunk's result survived. WorkManager, with no resume primitive, restarted from chunk 0.</sub>
 
-</td>
-<td valign="top">
-
-<div align="center"><b>The stall verdict</b></div>
-
-`stall` scenario: unplugged, demoted to RARE, deep Doze forced — then both APIs asked "why?":
+**The stall verdict.** `stall` scenario: unplugged, demoted to RARE, deep Doze forced — then both APIs asked "why?":
 
 | item | workmanager says | bridge says |
 |---|---|---|
@@ -55,9 +64,7 @@ Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same w
 
 <sub>WorkManager reports <b>RUNNING</b> for jobs the forced idle has stopped — a stale answer, not just an empty one. Bridge's verdicts carry <code>basis=REPORTED</code>: they come from <code>getPendingJobReasons</code>, the platform's own explanation, not inference.</sub>
 
-</td>
-</tr>
-</table>
+</details>
 
 <div align="center"><sub>And the crown result: a durable coroutine force-stopped mid-<code>delay(20s)</code>, relaunched after the timer elapsed while the process was dead — <b>SUCCEEDED</b>, each step executed exactly once. Details below.</sub></div>
 
@@ -295,18 +302,15 @@ adb shell am broadcast -a io.github.iamjosephmj.bridge.REPORT \
 
 ## Architecture
 
-Four modules, a ladder of commitment — adopt diagnostics without the scheduler, or the façade without a rewrite:
+Four modules, a ladder of commitment — adopt diagnostics without the scheduler, or the façade without a rewrite. Here is the route, drawn as the only diagram this project was ever going to use:
 
-```mermaid
-graph LR
-    G["bridge-glassbox<br>signal hub · signal log · diagnosis types<br>standalone — works in ANY app"]
-    C["bridge-compat<br>androidx.work-shaped façade"]
-    R["bridge-runtime<br>the scheduler: journal · dispatch ·<br>policy · durable coroutines"]
-    S["bridge-sim<br>deterministic JVM device simulator"]
-    C --> R
-    R --> G
-    S --> R
-```
+<div align="center">
+
+<img src="docs/assets/ladder.svg" alt="The adoption route drawn as a small bridge: glassbox (diagnose from the shore) → compat (swap an import) → runtime (cross over), with sim (practice on dry land) on the far bank. A dot crosses it on loop." width="920">
+
+<sub><code>bridge-glassbox</code> → <code>bridge-compat</code> → <code>bridge-runtime</code>, rehearsed against <code>bridge-sim</code>. Every step reversible.</sub>
+
+</div>
 
 Inside `bridge-runtime`, layers stack strictly — each depends only on those below:
 
