@@ -9,7 +9,7 @@ import io.github.iamjosephmj.bridge.diagnostics.Basis
 import io.github.iamjosephmj.bridge.diagnostics.Diagnosis
 import org.junit.Test
 
-private class OkWorker : BridgeWorker {
+internal class OkWorker : BridgeWorker {
     override suspend fun run(ctx: RunContext) = RunResult.Success
 }
 

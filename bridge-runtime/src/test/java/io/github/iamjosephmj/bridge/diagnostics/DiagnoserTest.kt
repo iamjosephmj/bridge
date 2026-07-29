@@ -94,6 +94,23 @@ class DiagnoserTest {
         assertTrue(v.diagnosis is Diagnosis.NotDispatched)
     }
 
+    @Test fun `policy hold is the primary diagnosis and outranks device inference`() {
+        val events = enqueued() + WorkEvent.PolicyDecision("w", 300L, "hold",
+            "estimated 12m exceeds ~10m bucket window (bucket 20)")
+        val v = diagnose(events, snapshot(
+            SignalKind.STANDBY_BUCKET to SignalValue.Bucket(20)))!!
+        assertEquals(Diagnosis.HeldByPolicy(
+            "estimated 12m exceeds ~10m bucket window (bucket 20)"), v.diagnosis)
+    }
+
+    @Test fun `stale policy decision (not last event) does not diagnose`() {
+        val events = enqueued() +
+            WorkEvent.PolicyDecision("w", 300L, "hold", "thermal") +
+            WorkEvent.Dispatched("w", 400L, "DEFAULT", 1)
+        val v = diagnose(events, snapshot())!!
+        assertTrue(v.diagnosis !is Diagnosis.HeldByPolicy)
+    }
+
     @Test fun `running and finished are honest terminals`() {
         val running = dispatched(enqueued()) + WorkEvent.Started("w", 300L, 1, 1)
         assertEquals(Diagnosis.Running, diagnose(running, snapshot())!!.diagnosis)

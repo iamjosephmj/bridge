@@ -22,6 +22,8 @@ class AndroidSignalSourcesTest {
         assertEquals(SignalValue.Unknown, BgRestrictedSource(app).read())
         assertEquals(SignalValue.Unknown, ExitInfoSignalSource(app).read())
         assertEquals(SignalValue.Unknown, PendingReasonsSource(app).read())
+        assertEquals(SignalValue.Unknown, ThermalSource(app).read())
+        assertEquals(SignalValue.Unknown, ChargeTimeSource(app).read())
     }
 
     @Test

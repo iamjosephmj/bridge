@@ -35,14 +35,20 @@ class SignalBroadcasts internal constructor(
         }
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context, intent: Intent) {
+                var burstDrain = false
                 if (intent.action == PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED) {
                     val pm = c.getSystemService(PowerManager::class.java)
                     val deep = pm?.isDeviceIdleMode ?: false
                     // Deep idle just exited → classic maintenance-window shape for ~30s.
-                    if (lastDeepIdle && !deep) markMaintenanceWindow()
+                    if (lastDeepIdle && !deep) { markMaintenanceWindow(); burstDrain = true }
                     lastDeepIdle = deep
                 }
                 try { hub.snapshot(Trigger.BROADCAST) } catch (_: Exception) { /* never crash host app */ }
+                // M3 Doze strategy: drain every eligible item the moment a window opens.
+                if (burstDrain) {
+                    try { io.github.iamjosephmj.bridge.Bridge.reconcileIfInitialized() }
+                    catch (_: Exception) { }
+                }
             }
         }
         if (Build.VERSION.SDK_INT >= 33) {

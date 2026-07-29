@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 enum class SignalKind {
     PENDING_REASONS, STANDBY_BUCKET, BG_RESTRICTED, DATA_SAVER,
     DOZE, MAINTENANCE_WINDOW, NETWORK_VALIDATED, BATT_OPT_EXEMPT, PROCESS_DEATH,
+    THERMAL,        // M3: PowerManager thermal status (29+)
+    CHARGE_TIME,    // M3: BatteryManager.computeChargeTimeRemaining minutes (28+)
 }
 
 enum class DozeMode { NONE, LIGHT, DEEP }
@@ -34,6 +36,10 @@ sealed interface SignalValue {
 
     @Serializable @SerialName("death")
     data class Death(val exitReason: Int, val atMs: Long) : SignalValue
+
+    /** Generic integer signal (thermal status level, minutes of charge remaining, …). */
+    @Serializable @SerialName("count")
+    data class Count(val value: Int) : SignalValue
 }
 
 @Serializable

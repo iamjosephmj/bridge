@@ -74,6 +74,7 @@ object LedgerFold {
                     if (e.cpuUserMs + e.cpuSystemMs + e.txBytes + e.rxBytes > 0)
                         CostDelta(e.cpuUserMs, e.cpuSystemMs, e.txBytes, e.rxBytes) else null)
                 is WorkEvent.Cancelled -> close(e.at, LedgerOutcome.Cancelled, null)
+                is WorkEvent.PolicyDecision -> Unit   // judgment records aren't run boundaries
             }
         }
         close(null, LedgerOutcome.InFlight, null)

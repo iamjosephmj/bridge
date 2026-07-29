@@ -21,6 +21,7 @@ object AndroidSignalSources {
             PendingReasonsSource(app), StandbyBucketSource(app), BgRestrictedSource(app),
             DataSaverSource(app), DozeSource(app), MaintenanceWindowSource(),
             NetworkValidatedSource(app), BattOptExemptSource(app), ExitInfoSignalSource(app),
+            ThermalSource(app), ChargeTimeSource(app),
         )
     }
 }
@@ -105,6 +106,26 @@ internal class BattOptExemptSource(private val context: Context) : SignalSource 
     override fun read(): SignalValue {
         val pm = context.getSystemService(PowerManager::class.java) ?: return SignalValue.Unknown
         return SignalValue.Flag(pm.isIgnoringBatteryOptimizations(context.packageName))
+    }
+}
+
+internal class ThermalSource(private val context: Context) : SignalSource {
+    override val kind = SignalKind.THERMAL
+    override fun read(): SignalValue {
+        if (Build.VERSION.SDK_INT < 29) return SignalValue.Unknown
+        val pm = context.getSystemService(PowerManager::class.java) ?: return SignalValue.Unknown
+        return SignalValue.Count(pm.currentThermalStatus)
+    }
+}
+
+internal class ChargeTimeSource(private val context: Context) : SignalSource {
+    override val kind = SignalKind.CHARGE_TIME
+    override fun read(): SignalValue {
+        if (Build.VERSION.SDK_INT < 28) return SignalValue.Unknown
+        val bm = context.getSystemService(android.os.BatteryManager::class.java)
+            ?: return SignalValue.Unknown
+        val ms = bm.computeChargeTimeRemaining()
+        return if (ms < 0) SignalValue.Unknown else SignalValue.Count((ms / 60_000L).toInt())
     }
 }
 

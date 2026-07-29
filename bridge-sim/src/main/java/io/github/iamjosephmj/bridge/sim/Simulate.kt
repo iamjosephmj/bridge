@@ -15,7 +15,7 @@ object Buckets {
     const val RESTRICTED = 45
 }
 
-class SimScope internal constructor(private val device: SimulatedDevice) {
+class SimScope internal constructor(internal val device: SimulatedDevice) {
     private val timeline get() = device.timeline
 
     fun worker(name: String, factory: () -> BridgeWorker) = device.worker(name, factory)
@@ -53,6 +53,10 @@ class SimScope internal constructor(private val device: SimulatedDevice) {
 
     fun charging(on: Boolean, fromMs: Long = 0L) =
         timeline.set("charging", SignalValue.Flag(on), fromMs)
+
+    /** PowerManager thermal status level (0 NONE … 3 SEVERE …). */
+    fun thermal(status: Int, fromMs: Long = 0L) =
+        timeline.set(SignalKind.THERMAL, SignalValue.Count(status), fromMs)
 
     fun unmetered(on: Boolean, fromMs: Long = 0L) =
         timeline.set("unmetered", SignalValue.Flag(on), fromMs)

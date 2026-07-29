@@ -11,7 +11,26 @@ per-run cost via HealthStats.
 - Benchmark vs WorkManager: `bench/README.md`
 - Simulator: `bridge-sim/README.md`
 
-Status: M2 (glass box v0.2).
+Status: M3 (judgment v0.3).
+
+## M3 — judgment
+
+An L4 policy engine sits in front of dispatch — pure functions from
+(journal, signals, request) to decisions, every decision journaled as
+`PolicyDecision` and surfaced by `whyPending()` as `HeldByPolicy(why)`:
+
+- **Admission control:** thermal-SEVERE holds; demoted-bucket quota arithmetic
+  (ledger-measured duration vs the ~10-minute window heuristic — chunked work
+  always admits, that's what chunks are for).
+- **Quota budgeting:** LOW/MIN work sheds explicitly in FREQUENT-or-worse
+  buckets ("quota reserved for higher-value work"), never silently.
+- **Deadline escalation:** `mustCompleteBy(T)` walks DEFAULT → EXPEDITED →
+  while-idle alarm as T nears, each step journaled, skips recorded on API
+  levels lacking a tier. Dispatched work re-tiers in place.
+- **Doze strategy:** maintenance-window burst-drain and doze-exit freshness
+  dispatch via the signal-hub broadcasts.
+
+Design: `docs/superpowers/specs/2026-07-29-bridge-m3-judgment-design.md`.
 
 ## M2 — the glass box
 

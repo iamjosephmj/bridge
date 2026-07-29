@@ -18,6 +18,7 @@ sealed interface WorkEvent {
         val chunkCount: Int = 0,             // 0 = not chunked
         val estimatedUpBytes: Long = 0L,
         val maxAttempts: Int = 3,
+        val deadlineMs: Long = 0L,           // 0 = no deadline (mustCompleteBy)
     ) : WorkEvent
 
     @Serializable @SerialName("dispatched")
@@ -57,4 +58,11 @@ sealed interface WorkEvent {
 
     @Serializable @SerialName("cancelled")
     data class Cancelled(override val workId: String, override val at: Long) : WorkEvent
+
+    /** L4 judgment record: "hold" / "shed" / "admit:EXPEDITED" / "escalate:ALARM" / "skip:EXPEDITED". */
+    @Serializable @SerialName("policyDecision")
+    data class PolicyDecision(
+        override val workId: String, override val at: Long,
+        val decision: String, val why: String,
+    ) : WorkEvent
 }

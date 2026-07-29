@@ -61,12 +61,21 @@ object Diagnoser {
         }
 
         // 2. Bridge's own held decisions from the journal.
+        val lastPolicy = events.lastOrNull { it is WorkEvent.PolicyDecision }
+            as? WorkEvent.PolicyDecision
+        if (lastPolicy != null && events.last() === lastPolicy &&
+            (lastPolicy.decision == "hold" || lastPolicy.decision == "shed")) {
+            matches += Diagnosis.HeldByPolicy(lastPolicy.why) to Basis.INFERRED
+        }
         val genEvents = events.filter {
             it !is WorkEvent.Enqueued || it.generation == state.generation }
         val crashes = genEvents.count { it is WorkEvent.Died } +
             genEvents.count { it is WorkEvent.Stopped && it.stopReason == 0 /* retry */ }
-        if (crashes >= 2 && genEvents.lastOrNull().let {
-                it is WorkEvent.Stopped || it is WorkEvent.Died }) {
+        // "Between attempts" = the latest crash comes after the latest start; re-dispatch
+        // records (Dispatched/PolicyDecision) after the crash don't clear the throttle.
+        val lastStart = genEvents.indexOfLast { it is WorkEvent.Started }
+        val lastCrash = genEvents.indexOfLast { it is WorkEvent.Stopped || it is WorkEvent.Died }
+        if (crashes >= 2 && lastCrash > lastStart) {
             matches += Diagnosis.ThrottledAfterCrashes(crashes) to Basis.INFERRED
         }
         // 3. Device-state inference, most-blocking first.
