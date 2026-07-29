@@ -43,7 +43,7 @@ chains. `Bridge.initialize {}` must run before compat calls (Application.onCreat
 Even before touching your workers, Bridge answers questions WorkManager cannot:
 
 ```kotlin
-Bridge.whyPending("sync")?.render(now)   // the cause, not just ENQUEUED
+Bridge.whyPending("sync").render(now)   // the cause, not just ENQUEUED
 Bridge.ledger("sync")                    // per-run history, deaths, device context
 Bridge.report()                          // whole-app health incl. cost flags
 ```
