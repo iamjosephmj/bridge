@@ -21,6 +21,10 @@ data class ItemConstraints(
     val deviceIdle: Boolean,
     val minLatencyMs: Long = 0L, // remaining initial delay at dispatch time
     val periodicMs: Long = 0L,   // JobInfo.setPeriodic interval
+    val contentUris: List<String> = emptyList(),  // JobInfo.TriggerContentUri per uri
+    val contentDescendants: Boolean = false,      // FLAG_NOTIFY_FOR_DESCENDANTS on every uri
+    val contentUpdateDelayMs: Long = 0L,          // setTriggerContentUpdateDelay when > 0
+    val contentMaxDelayMs: Long = 0L,             // setTriggerContentMaxDelay when > 0
 )
 
 data class WorkItemPayload(
