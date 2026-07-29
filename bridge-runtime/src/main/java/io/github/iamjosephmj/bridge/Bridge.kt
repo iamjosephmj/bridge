@@ -70,10 +70,11 @@ object Bridge {
         val appContext = context.applicationContext
         val j = Journal(appContext, b.dbName,
             b.ioExecutor ?: Executors.newSingleThreadExecutor())
-        val conf = Conformance(appContext.getSharedPreferences(
-            "bridge.conformance", Context.MODE_PRIVATE))
+        val kv = j.kvStore()
+        kv.importLegacyPrefs(appContext)   // one-time SharedPreferences -> kv migration
+        val conf = Conformance(kv)
         val gw = b.gateway ?: SelectingJobGateway(
-            SystemJobGateway(appContext), OneToOneJobGateway(appContext), conf)
+            SystemJobGateway(appContext), OneToOneJobGateway(appContext, kv), conf)
         val log = SignalLog(b.transitionStore ?: SqliteTransitionStore(appContext))
         val sources = b.signalSources ?: AndroidSignalSources.all(appContext)
         val hub = SignalHub(sources, log, b.clock)
