@@ -114,8 +114,14 @@ fun HomeScreen(onOpen: (Feature) -> Unit) {
 private fun StatusPanel() {
     var report by remember { mutableStateOf("") }
     val refresh = { report = Bridge.report().render(System.currentTimeMillis()) }
-    // Render once on first composition — i.e. on every app launch.
-    LaunchedEffect(Unit) { refresh() }
+    // Render once on first composition — i.e. on every app launch. Initialization runs
+    // async (Bridge.initializeAsync in BridgeShowcaseApp), so wait for readiness before
+    // the first render; report() itself degrades gracefully pre-ready, and the manual
+    // Refresh button keeps its synchronous contract.
+    LaunchedEffect(Unit) {
+        Bridge.awaitReady()
+        refresh()
+    }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainer,
