@@ -156,7 +156,10 @@ recorded as `Unknown`.
 
 ## 6. Simulator (`bridge-sim`)
 
-JVM-only Gradle module depending on `bridge-runtime`. Three seams:
+Gradle module depending on `bridge-runtime` (implemented as a `com.android.library`
+module whose simulator classes have no `android.*` imports and whose scenario tests are
+plain JVM unit tests — a pure-JVM module cannot compile against bridge-runtime's Android
+classes). Three seams:
 `BridgeClock` (M1), `SignalSource` (M2), `JobGateway` (M1). The simulator
 supplies `FakeClock` (time jumps, no sleeping), scripted sources, and
 `SimulatedGateway`.
