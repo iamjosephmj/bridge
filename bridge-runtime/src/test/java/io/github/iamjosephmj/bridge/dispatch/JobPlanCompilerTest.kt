@@ -33,7 +33,8 @@ class JobPlanCompilerTest {
     }
 
     @Test fun `default work maps to DEFAULT`() {
-        assertThat(HostJobClass.forWork(state())).isEqualTo(HostJobClass.DEFAULT)
+        // Constraint-free work no longer waits for network (constraints-parity fix).
+        assertThat(HostJobClass.forWork(state())).isEqualTo(HostJobClass.NO_NETWORK)
     }
 
     @Test fun `UNMETERED_CHARGING JobInfo requires unmetered network and charging`() {

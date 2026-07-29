@@ -91,7 +91,11 @@ class SimulatedDevice internal constructor() {
             chunkCount = request.chunkCount,
             estimatedUpBytes = request.estimatedUpBytes,
             maxAttempts = request.maxAttempts,
-            deadlineMs = request.deadlineMs))
+            deadlineMs = request.deadlineMs,
+            requiresNetwork = request.requiresNetwork,
+            requiresBatteryNotLow = request.requiresBatteryNotLow,
+            requiresStorageNotLow = request.requiresStorageNotLow,
+            requiresDeviceIdle = request.requiresDeviceIdle))
         // Sync sources before the dispatch decision — policy must see the scripted present.
         for (src in sources) src.value = timeline.valueAt(src.kind, clock.now())
         dispatcher.dispatch(request.name)

@@ -67,15 +67,19 @@ class PolicyEngine(private val apiLevel: Int) {
                 .lastOrNull { it.generation == state.generation }?.at ?: now
             val total = (state.deadlineMs - enqueuedAt).coerceAtLeast(1)
             val fraction = (state.deadlineMs - now).toDouble() / total
+            val base = HostJobClass.forWork(state)
+            // Mid-tier escalation only promotes DEFERRABLE work; other bases keep their
+            // constraint shape (escalating NO_NETWORK to DEFAULT would ADD a constraint).
+            val mid = if (base == HostJobClass.DEFERRABLE) HostJobClass.DEFAULT else base
             return when {
-                fraction > 0.5 -> Decision.Admit(HostJobClass.forWork(state))
-                fraction > 0.25 -> Decision.Admit(HostJobClass.DEFAULT, "deadline < 50% remaining")
+                fraction > 0.5 -> Decision.Admit(base)
+                fraction > 0.25 -> Decision.Admit(mid, "deadline < 50% remaining")
                 fraction > 0.10 ->
                     if (apiLevel >= 31) Decision.Admit(HostJobClass.EXPEDITED, "deadline < 25% remaining")
-                    else Decision.Admit(HostJobClass.DEFAULT,
+                    else Decision.Admit(mid,
                         "deadline < 25% remaining; skip:EXPEDITED (API $apiLevel < 31)")
                 else -> Decision.Admit(HostJobClass.EXPEDITED.takeIf { apiLevel >= 31 }
-                    ?: HostJobClass.DEFAULT, ESCALATE_ALARM_WHY)
+                    ?: mid, ESCALATE_ALARM_WHY)
             }
         }
 

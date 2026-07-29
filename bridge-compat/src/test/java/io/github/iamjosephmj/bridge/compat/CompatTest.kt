@@ -83,10 +83,28 @@ class CompatTest {
         BridgeWorkManager.enqueueUniqueWork("constrained", ExistingWorkPolicy.KEEP,
             request(RecordingWorker::class.java, Constraints.Builder()
                 .setRequiresCharging(true)
-                .setRequiredNetworkType(NetworkType.UNMETERED).build()))
+                .setRequiredNetworkType(NetworkType.UNMETERED)
+                .setRequiresBatteryNotLow(true)
+                .setRequiresStorageNotLow(true)
+                .setRequiresDeviceIdle(true).build()))
         val state = Bridge.state("constrained")!!
         assertThat(state.requiresCharging).isTrue()
         assertThat(state.requiresUnmetered).isTrue()
+        assertThat(state.requiresBatteryNotLow).isTrue()
+        assertThat(state.requiresStorageNotLow).isTrue()
+        assertThat(state.requiresDeviceIdle).isTrue()
+    }
+
+    @Test fun `CONNECTED network maps, NOT_REQUIRED leaves work offline-runnable`() {
+        BridgeWorkManager.enqueueUniqueWork("net", ExistingWorkPolicy.KEEP,
+            request(RecordingWorker::class.java, Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED).build()))
+        assertThat(Bridge.state("net")!!.requiresNetwork).isTrue()
+        BridgeWorkManager.enqueueUniqueWork("offline", ExistingWorkPolicy.KEEP,
+            request(RecordingWorker::class.java))
+        val offline = Bridge.state("offline")!!
+        assertThat(offline.requiresNetwork).isFalse()
+        assertThat(offline.requiresUnmetered).isFalse()
     }
 
     @Test fun `chain runs links in order as chunks of one item`() {

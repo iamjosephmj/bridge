@@ -93,7 +93,7 @@ class PolicyDispatchTest {
     @Test fun `no policy engine - M1 behavior unchanged`() {
         enqueue()
         Dispatcher(journal, gateway, clock).dispatch("w")
-        assertEquals(HostJobClass.DEFAULT, gateway.enqueued.single().first)
+        assertEquals(HostJobClass.NO_NETWORK, gateway.enqueued.single().first)
         assertTrue(journal.events("w").none { it is WorkEvent.PolicyDecision })
     }
 }

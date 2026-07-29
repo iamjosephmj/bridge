@@ -26,7 +26,7 @@ class PolicyEngineTest {
         engine.decide(foldWorkState(events)!!, events, snap, now)
 
     @Test fun `no signals, no deadline - admits default tier`() {
-        assertEquals(Decision.Admit(HostJobClass.DEFAULT), decide(events(), snapshot()))
+        assertEquals(Decision.Admit(HostJobClass.NO_NETWORK), decide(events(), snapshot()))
     }
 
     @Test fun `thermal SEVERE holds non-deadline work`() {
@@ -75,7 +75,7 @@ class PolicyEngineTest {
     @Test fun `deadline escalation walks tiers by remaining fraction`() {
         val evs = events(deadlineMs = 10_000L)   // enqueued at 0, deadline 10s
         fun tierAt(now: Long) = (decide(evs, snapshot(), now) as Decision.Admit)
-        assertEquals(HostJobClass.DEFAULT, tierAt(2_000L).tier)          // 80% left: normal
+        assertEquals(HostJobClass.NO_NETWORK, tierAt(2_000L).tier)       // 80% left: base tier
         assertEquals("deadline < 50% remaining", tierAt(6_000L).why)     // 40% left
         assertEquals(HostJobClass.EXPEDITED, tierAt(8_000L).tier)        // 20% left
         val alarm = tierAt(9_500L)                                       // 5% left
@@ -87,7 +87,7 @@ class PolicyEngineTest {
         val evs = events(deadlineMs = 10_000L)
         val d = engine26.decide(foldWorkState(evs)!!, evs, snapshot(), now = 8_000L)
         d as Decision.Admit
-        assertEquals(HostJobClass.DEFAULT, d.tier)
+        assertEquals(HostJobClass.NO_NETWORK, d.tier)   // mid tier keeps the base shape
         assertTrue(d.why!!.contains("skip:EXPEDITED"))
     }
 
@@ -102,6 +102,6 @@ class PolicyEngineTest {
             override fun get(key: SignalKind): SignalValue = throw IllegalStateException("boom")
         })
         val d = engine.decide(foldWorkState(events())!!, events(), poisoned, 1000L)
-        assertEquals(Decision.Admit(HostJobClass.DEFAULT), d)
+        assertEquals(Decision.Admit(HostJobClass.NO_NETWORK), d)
     }
 }

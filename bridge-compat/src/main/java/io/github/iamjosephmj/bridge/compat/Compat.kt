@@ -22,18 +22,27 @@ abstract class Worker {
     }
 }
 
-enum class NetworkType { CONNECTED, UNMETERED }
+enum class NetworkType { NOT_REQUIRED, CONNECTED, UNMETERED }
 
 class Constraints private constructor(
     val requiresCharging: Boolean,
     val requiredNetworkType: NetworkType,
+    val requiresBatteryNotLow: Boolean,
+    val requiresStorageNotLow: Boolean,
+    val requiresDeviceIdle: Boolean,
 ) {
     class Builder {
         private var charging = false
-        private var network = NetworkType.CONNECTED
+        private var network = NetworkType.NOT_REQUIRED
+        private var batteryNotLow = false
+        private var storageNotLow = false
+        private var deviceIdle = false
         fun setRequiresCharging(value: Boolean) = apply { charging = value }
         fun setRequiredNetworkType(type: NetworkType) = apply { network = type }
-        fun build() = Constraints(charging, network)
+        fun setRequiresBatteryNotLow(value: Boolean) = apply { batteryNotLow = value }
+        fun setRequiresStorageNotLow(value: Boolean) = apply { storageNotLow = value }
+        fun setRequiresDeviceIdle(value: Boolean) = apply { deviceIdle = value }
+        fun build() = Constraints(charging, network, batteryNotLow, storageNotLow, deviceIdle)
     }
     companion object { val NONE = Builder().build() }
 }

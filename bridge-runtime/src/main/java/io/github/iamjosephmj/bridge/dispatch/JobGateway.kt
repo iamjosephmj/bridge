@@ -8,7 +8,20 @@ import android.content.Intent
 import android.os.Build
 import android.os.PersistableBundle
 
-data class WorkItemPayload(val workId: String, val generation: Int)
+/** Exact per-item constraint set for work no multiplexed host class expresses. */
+data class ItemConstraints(
+    val network: Int,            // 0 none, 1 any, 2 unmetered
+    val charging: Boolean,
+    val batteryNotLow: Boolean,
+    val storageNotLow: Boolean,
+    val deviceIdle: Boolean,
+)
+
+data class WorkItemPayload(
+    val workId: String,
+    val generation: Int,
+    val constraints: ItemConstraints? = null,   // non-null → must use the 1:1 path
+)
 
 const val EXTRA_WORK_ID = "bridge.EXTRA_WORK_ID"
 const val EXTRA_GENERATION = "bridge.EXTRA_GENERATION"
@@ -60,7 +73,7 @@ class OneToOneJobGateway(private val context: Context) : JobGateway {
             putInt(EXTRA_GENERATION, payload.generation)
         }
         val info = JobPlanCompiler.jobInfo(context, hostClass, component,
-            oneToOneJobId(payload.workId), extras)
+            oneToOneJobId(payload.workId), extras, payload.constraints)
         return try {
             scheduler.schedule(info) == JobScheduler.RESULT_SUCCESS
         } catch (e: Exception) {

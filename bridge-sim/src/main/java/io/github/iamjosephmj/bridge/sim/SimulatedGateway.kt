@@ -44,9 +44,24 @@ class SimulatedGateway(
             return@filter false
 
         val doze = timeline.valueAt(SignalKind.DOZE, atMs)
+        val dozeMode = (doze as? SignalValue.Doze)?.mode ?: DozeMode.NONE
         val inMaintenance =
             (timeline.valueAt(SignalKind.MAINTENANCE_WINDOW, atMs) as? SignalValue.Flag)?.on == true
-        if (doze is SignalValue.Doze && doze.mode == DozeMode.DEEP && !inMaintenance)
+        // Device-idle work is inverted: it runs ONLY while the device is idle.
+        if (state.requiresDeviceIdle) {
+            if (dozeMode == DozeMode.NONE) return@filter false
+        } else if (dozeMode == DozeMode.DEEP && !inMaintenance) {
+            return@filter false
+        }
+
+        if (state.requiresBatteryNotLow &&
+            (timeline.valueAt("batteryLow", atMs) as? SignalValue.Flag)?.on == true)
+            return@filter false
+        if (state.requiresStorageNotLow &&
+            (timeline.valueAt("storageLow", atMs) as? SignalValue.Flag)?.on == true)
+            return@filter false
+        if (state.requiresNetwork &&
+            timeline.valueAt(SignalKind.NETWORK_VALIDATED, atMs) == SignalValue.Flag(false))
             return@filter false
 
         if (state.requiresUnmetered) {
