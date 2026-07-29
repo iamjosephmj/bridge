@@ -156,6 +156,7 @@ Bridge.enqueue(workRequest("nightly-sync", "sync") {
     batteryNotLow()
     storageNotLow()
     deviceIdle()                 // JobInfo.setRequiresDeviceIdle
+    contentTrigger("content://media/photos", descendants = true)  // JobInfo.TriggerContentUri
     importance(Importance.LOW)   // feeds the policy engine, not just the platform
     initialDelay(10 * 60_000L)   // exact-path setMinimumLatency
     maxAttempts(5)
@@ -336,7 +337,7 @@ Cheap enough to forget it's there.
 The receipts above are real. Here is what they don't cover yet.
 
 - **Hardware evidence is one device**: every "device-verified" number above comes from a single Pixel 6 Pro on API 36. That is real evidence and it is also just one point. An OEM matrix (Samsung, Xiaomi, OnePlus, Oppo — the aggressive-killer crowd) is the top validation priority.
-- **Remaining WorkManager gaps**: `Data` payloads, tags, LiveData/Flow observers, content-URI triggers, multi-branch chains. Keep work that needs these on WorkManager (the compat façade keeps both runnable side by side).
+- **Remaining WorkManager gaps**: `Data` payloads, tags, LiveData/Flow observers, multi-branch chains. Keep work that needs these on WorkManager (the compat façade keeps both runnable side by side).
 - **Cost auto-demotion** is flag-only in v0.5 (`report()` flags LOW/MIN work measuring 3× the pool median); acting on it is planned opt-in.
 - **Current tier**: v0.5 + parity tier — full constraint surface (three silent constraint-loss bugs fixed en route), `initialDelay`, `periodic`, durable coroutines, compat façade, policy engine, glass box.
 

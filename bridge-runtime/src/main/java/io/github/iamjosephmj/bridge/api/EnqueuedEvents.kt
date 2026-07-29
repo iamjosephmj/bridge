@@ -25,7 +25,11 @@ fun WorkEvent.Enqueued.Companion.of(
     requiresStorageNotLow = request.requiresStorageNotLow,
     requiresDeviceIdle = request.requiresDeviceIdle,
     initialDelayMs = request.initialDelayMs,
-    periodicMs = request.periodicMs)
+    periodicMs = request.periodicMs,
+    contentUris = request.contentUris,
+    contentDescendants = request.contentDescendants,
+    contentUpdateDelayMs = request.contentUpdateDelayMs,
+    contentMaxDelayMs = request.contentMaxDelayMs)
 
 /**
  * Journal record rolling periodic work from a terminal cycle into the next generation.
@@ -33,7 +37,9 @@ fun WorkEvent.Enqueued.Companion.of(
  * Deliberately drops deadlineMs and initialDelayMs: a deadline (mustCompleteBy) is an
  * absolute wall-clock point that belonged to the original request — carrying it forward
  * would make every later cycle instantly overdue — and initial delay gates only the
- * first cycle; the period itself paces every subsequent one.
+ * first cycle; the period itself paces every subsequent one. Content-trigger fields are
+ * absent by construction: the builder forbids periodic + contentTrigger (as the platform
+ * does), so periodic state never carries them.
  */
 fun WorkEvent.Enqueued.Companion.nextCycle(state: WorkState, at: Long): WorkEvent.Enqueued =
     WorkEvent.Enqueued(

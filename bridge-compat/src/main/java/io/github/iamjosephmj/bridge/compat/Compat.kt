@@ -24,12 +24,18 @@ abstract class Worker {
 
 enum class NetworkType { NOT_REQUIRED, CONNECTED, UNMETERED }
 
+/** androidx.work.Constraints.ContentUriTrigger shape: one watched uri + descendants flag. */
+data class ContentUriTrigger(val uri: String, val triggerForDescendants: Boolean)
+
 class Constraints private constructor(
     val requiresCharging: Boolean,
     val requiredNetworkType: NetworkType,
     val requiresBatteryNotLow: Boolean,
     val requiresStorageNotLow: Boolean,
     val requiresDeviceIdle: Boolean,
+    val contentUriTriggers: List<ContentUriTrigger> = emptyList(),
+    val contentTriggerUpdateDelayMs: Long = 0L,
+    val contentTriggerMaxDelayMs: Long = 0L,
 ) {
     class Builder {
         private var charging = false
@@ -37,12 +43,20 @@ class Constraints private constructor(
         private var batteryNotLow = false
         private var storageNotLow = false
         private var deviceIdle = false
+        private val contentUriTriggers = mutableListOf<ContentUriTrigger>()
+        private var contentUpdateDelayMs = 0L
+        private var contentMaxDelayMs = 0L
         fun setRequiresCharging(value: Boolean) = apply { charging = value }
         fun setRequiredNetworkType(type: NetworkType) = apply { network = type }
         fun setRequiresBatteryNotLow(value: Boolean) = apply { batteryNotLow = value }
         fun setRequiresStorageNotLow(value: Boolean) = apply { storageNotLow = value }
         fun setRequiresDeviceIdle(value: Boolean) = apply { deviceIdle = value }
-        fun build() = Constraints(charging, network, batteryNotLow, storageNotLow, deviceIdle)
+        fun addContentUriTrigger(uri: String, triggerForDescendants: Boolean) =
+            apply { contentUriTriggers += ContentUriTrigger(uri, triggerForDescendants) }
+        fun setTriggerContentUpdateDelay(ms: Long) = apply { require(ms > 0); contentUpdateDelayMs = ms }
+        fun setTriggerContentMaxDelay(ms: Long) = apply { require(ms > 0); contentMaxDelayMs = ms }
+        fun build() = Constraints(charging, network, batteryNotLow, storageNotLow, deviceIdle,
+            contentUriTriggers.toList(), contentUpdateDelayMs, contentMaxDelayMs)
     }
     companion object { val NONE = Builder().build() }
 }

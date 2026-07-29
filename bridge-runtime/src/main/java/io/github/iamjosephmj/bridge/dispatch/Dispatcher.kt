@@ -79,6 +79,10 @@ class Dispatcher(
                         (state.enqueuedAt + state.initialDelayMs - clock.now()).coerceAtLeast(0L)
                     else 0L,
                     periodicMs = state.periodicMs,
+                    contentUris = state.contentUris,
+                    contentDescendants = state.contentDescendants,
+                    contentUpdateDelayMs = state.contentUpdateDelayMs,
+                    contentMaxDelayMs = state.contentMaxDelayMs,
                 ) else null
                 if (state.runState == RunState.DISPATCHED) {
                     // Escalation of an already-dispatched item: withdraw it from the old

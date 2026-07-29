@@ -80,6 +80,13 @@ object BridgeWorkManager {
         if (all.any { it.requiresBatteryNotLow }) batteryNotLow()
         if (all.any { it.requiresStorageNotLow }) storageNotLow()
         if (all.any { it.requiresDeviceIdle }) deviceIdle()
+        val triggers = all.flatMap { it.contentUriTriggers }
+        if (triggers.isNotEmpty()) {
+            contentTrigger(*triggers.map { it.uri }.distinct().toTypedArray(),
+                descendants = triggers.any { it.triggerForDescendants },
+                updateDelayMs = all.maxOf { it.contentTriggerUpdateDelayMs },
+                maxDelayMs = all.maxOf { it.contentTriggerMaxDelayMs })
+        }
     }
 
     fun getWorkInfoState(name: String): WorkInfoState? = when (Bridge.state(name)?.runState) {

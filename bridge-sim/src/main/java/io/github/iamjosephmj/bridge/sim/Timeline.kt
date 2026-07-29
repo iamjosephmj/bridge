@@ -24,6 +24,10 @@ class Timeline {
     fun valueAt(key: String, atMs: Long): SignalValue? =
         tracks[key]?.lastOrNull { it.first <= atMs }?.second
 
+    /** Time of the latest [set] on [key] at or before [atMs]; null when never set. */
+    fun lastSetAt(key: String, atMs: Long): Long? =
+        tracks[key]?.lastOrNull { it.first <= atMs }?.first
+
     fun valueAt(kind: SignalKind, atMs: Long): SignalValue =
         valueAt(kind.name, atMs) ?: defaultFor(kind)
 

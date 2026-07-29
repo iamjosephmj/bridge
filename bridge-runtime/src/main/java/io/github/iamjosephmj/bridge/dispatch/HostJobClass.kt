@@ -44,4 +44,6 @@ val WorkState.needsExactConstraints: Boolean
         // constraint-free host job is unrepresentable. schedule()+1ms latency is legal.
         hasNoConstraints ||
         // Timing shapes are illegal for enqueue()-style jobs; both ride exact JobInfos.
-        initialDelayMs > 0 || periodicMs > 0
+        initialDelayMs > 0 || periodicMs > 0 ||
+        // Content triggers are per-item by nature — one TriggerContentUri set per JobInfo.
+        contentUris.isNotEmpty()

@@ -95,6 +95,23 @@ class CompatTest {
         assertThat(state.requiresDeviceIdle).isTrue()
     }
 
+    @Test fun `content uri triggers map through, unioned across a chain`() {
+        BridgeWorkManager.beginUniqueWork("watch", ExistingWorkPolicy.KEEP,
+            request(RecordingWorker::class.java, Constraints.Builder()
+                .addContentUriTrigger("content://media/photos", true)
+                .setTriggerContentUpdateDelay(500L).build()))
+            .then(request(SecondWorker::class.java, Constraints.Builder()
+                .addContentUriTrigger("content://media/videos", false)
+                .setTriggerContentMaxDelay(5_000L).build()))
+            .enqueue()
+        val state = Bridge.state("watch")!!
+        assertThat(state.contentUris)
+            .containsExactly("content://media/photos", "content://media/videos")
+        assertThat(state.contentDescendants).isTrue()
+        assertThat(state.contentUpdateDelayMs).isEqualTo(500L)
+        assertThat(state.contentMaxDelayMs).isEqualTo(5_000L)
+    }
+
     @Test fun `CONNECTED network maps, NOT_REQUIRED leaves work offline-runnable`() {
         BridgeWorkManager.enqueueUniqueWork("net", ExistingWorkPolicy.KEEP,
             request(RecordingWorker::class.java, Constraints.Builder()

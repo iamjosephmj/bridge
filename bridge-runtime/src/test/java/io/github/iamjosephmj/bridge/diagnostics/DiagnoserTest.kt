@@ -79,6 +79,13 @@ class DiagnoserTest {
         assertEquals(Diagnosis.AwaitingConstraint("charging"), v.diagnosis)
     }
 
+    @Test fun `content-trigger work awaits a content change`() {
+        val events = dispatched(listOf(WorkEvent.Enqueued("w", 100L, "worker", 1,
+            importance = 2, contentUris = listOf("content://media/photos"))))
+        val v = diagnose(events, snapshot())!!
+        assertEquals(Diagnosis.AwaitingConstraint("content-change"), v.diagnosis)
+    }
+
     @Test fun `crash throttling detected from journal`() {
         val events = dispatched(enqueued()) +
             WorkEvent.Started("w", 300L, 1, 1) +

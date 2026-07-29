@@ -3,6 +3,7 @@ package io.github.iamjosephmj.bridge.dispatch
 import android.app.job.JobInfo
 import android.content.ComponentName
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.os.PersistableBundle
 
@@ -35,6 +36,17 @@ object JobPlanCompiler {
             if (itemConstraints.batteryNotLow) b.setRequiresBatteryNotLow(true)
             if (itemConstraints.storageNotLow) b.setRequiresStorageNotLow(true)
             if (itemConstraints.deviceIdle) b.setRequiresDeviceIdle(true)
+            for (uri in itemConstraints.contentUris) {
+                // Trigger jobs can't be persisted (we never persist) nor periodic (the
+                // builder forbids the combination upstream). Backoff is legal with triggers.
+                b.addTriggerContentUri(JobInfo.TriggerContentUri(Uri.parse(uri),
+                    if (itemConstraints.contentDescendants)
+                        JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS else 0))
+            }
+            if (itemConstraints.contentUpdateDelayMs > 0)
+                b.setTriggerContentUpdateDelay(itemConstraints.contentUpdateDelayMs)
+            if (itemConstraints.contentMaxDelayMs > 0)
+                b.setTriggerContentMaxDelay(itemConstraints.contentMaxDelayMs)
             if (itemConstraints.periodicMs > 0) {
                 b.setPeriodic(itemConstraints.periodicMs)
             } else if (itemConstraints.minLatencyMs > 0) {
@@ -42,7 +54,8 @@ object JobPlanCompiler {
             } else {
                 val empty = itemConstraints.network == NetworkNeed.NONE && !itemConstraints.charging &&
                     !itemConstraints.batteryNotLow && !itemConstraints.storageNotLow &&
-                    !itemConstraints.deviceIdle
+                    !itemConstraints.deviceIdle &&
+                    itemConstraints.contentUris.isEmpty()   // a trigger IS a constraint
                 if (empty) b.setMinimumLatency(1L)   // build() rejects zero constraints
             }
             if (Build.VERSION.SDK_INT >= 35) b.setTraceTag("bridge:exact")

@@ -20,10 +20,12 @@ class ConstraintsParityTest {
         charging: Boolean = false, unmetered: Boolean = false, network: Boolean = false,
         batteryNotLow: Boolean = false, storageNotLow: Boolean = false,
         deviceIdle: Boolean = false, importance: Int = 2,
+        contentUris: List<String> = emptyList(),
     ) = foldWorkState(listOf(WorkEvent.Enqueued("w", 1L, "worker", 1,
         importance = importance, requiresCharging = charging, requiresUnmetered = unmetered,
         requiresNetwork = network, requiresBatteryNotLow = batteryNotLow,
-        requiresStorageNotLow = storageNotLow, requiresDeviceIdle = deviceIdle)))!!
+        requiresStorageNotLow = storageNotLow, requiresDeviceIdle = deviceIdle,
+        contentUris = contentUris)))!!
 
     @Test fun `routing - common shapes multiplex, exact tail goes 1-to-1`() {
         assertThat(HostJobClass.forWork(enqueued())).isEqualTo(HostJobClass.NO_NETWORK)
@@ -38,6 +40,8 @@ class ConstraintsParityTest {
         assertThat(enqueued(batteryNotLow = true).needsExactConstraints).isTrue()
         assertThat(enqueued(storageNotLow = true).needsExactConstraints).isTrue()
         assertThat(enqueued(deviceIdle = true).needsExactConstraints).isTrue()
+        assertThat(enqueued(contentUris = listOf("content://media/photos"))
+            .needsExactConstraints).isTrue()
     }
 
     @Test fun `exact constraints compile to an exact JobInfo`() {
@@ -76,6 +80,28 @@ class ConstraintsParityTest {
         assertThat(delayed.minLatencyMillis).isEqualTo(5_000L)
     }
 
+    @Test fun `content triggers compile to TriggerContentUris with flags and delays`() {
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val info = JobPlanCompiler.jobInfo(ctx, HostJobClass.DEFAULT,
+            ComponentName("p", "c"), jobId = 720_004,
+            itemConstraints = ItemConstraints(NetworkNeed.NONE, false, false, false, false,
+                contentUris = listOf("content://media/photos", "content://media/videos"),
+                contentDescendants = true,
+                contentUpdateDelayMs = 500L, contentMaxDelayMs = 5_000L))
+        val triggers = info.triggerContentUris!!
+        assertThat(triggers.map { it.uri.toString() })
+            .containsExactly("content://media/photos", "content://media/videos")
+        assertThat(triggers.map { it.flags }).containsExactly(
+            android.app.job.JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS,
+            android.app.job.JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS)
+        assertThat(info.triggerContentUpdateDelay).isEqualTo(500L)
+        assertThat(info.triggerContentMaxDelay).isEqualTo(5_000L)
+        // A trigger IS a constraint: no 1ms min-latency fallback smuggled in.
+        assertThat(info.minLatencyMillis).isEqualTo(0L)
+        // Platform rule check: backoff criteria coexists with triggers (build() accepted it).
+        assertThat(info.isPersisted).isFalse()
+    }
+
     @Test fun `dispatcher attaches exact constraints and selecting gateway honors them`() {
         val journal = InMemoryJournal()
         journal.append(WorkEvent.Enqueued("w", 1L, "worker", 1, importance = 2,
@@ -86,6 +112,18 @@ class ConstraintsParityTest {
         assertThat(payload.constraints).isEqualTo(ItemConstraints(
             network = NetworkNeed.NONE, charging = true, batteryNotLow = false,
             storageNotLow = false, deviceIdle = false))
+
+        // Content-trigger work rides the same exact path with its trigger set attached.
+        journal.append(WorkEvent.Enqueued("t", 1L, "worker", 1, importance = 2,
+            contentUris = listOf("content://media/photos"), contentDescendants = true,
+            contentUpdateDelayMs = 500L))
+        Dispatcher(journal, fake, FakeClock(1L)).dispatch("t")
+        val triggered = fake.enqueued.last().second
+        assertThat(triggered.constraints).isEqualTo(ItemConstraints(
+            network = NetworkNeed.NONE, charging = false, batteryNotLow = false,
+            storageNotLow = false, deviceIdle = false,
+            contentUris = listOf("content://media/photos"), contentDescendants = true,
+            contentUpdateDelayMs = 500L))
 
         // SelectingJobGateway must route exact-constraint payloads 1:1 even in MULTIPLEXED.
         val mux = FakeJobGateway(); val oneToOne = FakeJobGateway()

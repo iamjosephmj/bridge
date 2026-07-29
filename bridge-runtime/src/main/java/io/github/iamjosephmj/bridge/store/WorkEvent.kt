@@ -25,6 +25,11 @@ sealed interface WorkEvent {
         val requiresDeviceIdle: Boolean = false,
         val initialDelayMs: Long = 0L,
         val periodicMs: Long = 0L,
+        // Content-URI trigger (defaults keep pre-trigger journals decoding).
+        val contentUris: List<String> = emptyList(),
+        val contentDescendants: Boolean = false,
+        val contentUpdateDelayMs: Long = 0L,
+        val contentMaxDelayMs: Long = 0L,
     ) : WorkEvent {
         /** Factories live as extensions in `api/EnqueuedEvents.kt` — putting them here
          *  would give store (the bottom layer) a dependency on api's WorkRequest. */

@@ -71,6 +71,10 @@ class SimScope internal constructor(internal val device: SimulatedDevice) {
     fun unmetered(on: Boolean, fromMs: Long = 0L) =
         timeline.set("unmetered", SignalValue.Flag(on), fromMs)
 
+    /** Script a content change under [uri] at [atMs] — releases contentTrigger work enqueued by then. */
+    fun contentChanged(uri: String, atMs: Long = 0L) =
+        timeline.set("content:$uri", SignalValue.Flag(true), atMs)
+
     fun enqueue(request: WorkRequest): SimHandle = device.enqueue(request)
 
     fun durable(name: String, block: io.github.iamjosephmj.bridge.api.DurableBlock) =
