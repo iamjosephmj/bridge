@@ -26,6 +26,8 @@ class WorkRequestBuilder internal constructor(
         require(count > 0) { "chunk count must be positive" }
         chunkCount = count; this.estimatedUpBytes = estimatedUpBytes
     }
+    /** Size hint for un-chunked work; feeds L4 quota admission (~1MB/s heuristic). */
+    fun estimatedBytes(bytes: Long) { require(bytes > 0); estimatedUpBytes = bytes }
     fun maxAttempts(value: Int) { require(value > 0); maxAttempts = value }
     /** Deadline for L4 escalation: the policy engine walks urgency tiers as this nears. */
     fun mustCompleteBy(atMs: Long) { require(atMs > 0); deadlineMs = atMs }

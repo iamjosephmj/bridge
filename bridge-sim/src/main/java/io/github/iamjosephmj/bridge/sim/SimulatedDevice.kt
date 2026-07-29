@@ -47,7 +47,11 @@ class SimulatedDevice internal constructor() {
     }
     private val hub = SignalHub(sources, signalLog, clock)
     internal val gateway = SimulatedGateway(timeline, journal)
-    private val dispatcher = Dispatcher(journal, gateway, clock)
+    internal val alarms = io.github.iamjosephmj.bridge.dispatch.FakeAlarmGateway()
+    private val dispatcher = Dispatcher(journal, gateway, clock,
+        policy = io.github.iamjosephmj.bridge.policy.PolicyEngine(apiLevel = 34),
+        alarmGateway = alarms,
+        snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) })
     private val runner = WorkRunner(journal, registry, NoopBlackBox, ZeroCostMeter, clock)
 
     private val tickMs = 60_000L
@@ -65,6 +69,8 @@ class SimulatedDevice internal constructor() {
             estimatedUpBytes = request.estimatedUpBytes,
             maxAttempts = request.maxAttempts,
             deadlineMs = request.deadlineMs))
+        // Sync sources before the dispatch decision — policy must see the scripted present.
+        for (src in sources) src.value = timeline.valueAt(src.kind, clock.now())
         dispatcher.dispatch(request.name)
         hub.snapshot(Trigger.SCHEDULING_DECISION)
         return SimHandle(request.name, this)
@@ -81,6 +87,12 @@ class SimulatedDevice internal constructor() {
         val now = clock.now()
         for (src in sources) src.value = timeline.valueAt(src.kind, now)
         hub.snapshot(Trigger.BROADCAST)
+        // Held/shed work re-runs policy every tick (device: reconcile paths + broadcasts).
+        dispatcher.dispatchAll()
+        // Due while-idle alarms fire and are consumed.
+        alarms.scheduled.removeAll { (at, _) ->
+            if (at <= now) { dispatcher.dispatchAll(); true } else false
+        }
         for (payload in gateway.runnable(now)) {
             val state = journal.state(payload.workId) ?: continue
             val deliveryCount = journal.events(payload.workId)

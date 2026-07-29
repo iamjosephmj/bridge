@@ -71,8 +71,11 @@ object Diagnoser {
             it !is WorkEvent.Enqueued || it.generation == state.generation }
         val crashes = genEvents.count { it is WorkEvent.Died } +
             genEvents.count { it is WorkEvent.Stopped && it.stopReason == 0 /* retry */ }
-        if (crashes >= 2 && genEvents.lastOrNull().let {
-                it is WorkEvent.Stopped || it is WorkEvent.Died }) {
+        // "Between attempts" = the latest crash comes after the latest start; re-dispatch
+        // records (Dispatched/PolicyDecision) after the crash don't clear the throttle.
+        val lastStart = genEvents.indexOfLast { it is WorkEvent.Started }
+        val lastCrash = genEvents.indexOfLast { it is WorkEvent.Stopped || it is WorkEvent.Died }
+        if (crashes >= 2 && lastCrash > lastStart) {
             matches += Diagnosis.ThrottledAfterCrashes(crashes) to Basis.INFERRED
         }
         // 3. Device-state inference, most-blocking first.

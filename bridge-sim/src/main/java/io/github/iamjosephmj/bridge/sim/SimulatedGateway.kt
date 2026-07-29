@@ -22,10 +22,12 @@ class SimulatedGateway(
     private val journal: EventJournal,
 ) : JobGateway {
     private val parked = linkedMapOf<String, WorkItemPayload>()
+    private val hostClasses = mutableMapOf<String, HostJobClass>()
     private val crashBackoffMs = 30 * 60_000L
 
     override fun enqueue(hostClass: HostJobClass, payload: WorkItemPayload): Boolean {
         parked[payload.workId] = payload
+        hostClasses[payload.workId] = hostClass
         return true
     }
 
@@ -58,6 +60,10 @@ class SimulatedGateway(
         val enqueuedAt = journal.events(p.workId)
             .filterIsInstance<WorkEvent.Enqueued>()
             .lastOrNull { it.generation == state.generation }?.at ?: 0L
+        // Expedited jobs get relaxed quota on the platform; the sim models that as a
+        // bucket-floor bypass (fidelity disclaimer in README applies).
+        val expedited = hostClasses[p.workId] == HostJobClass.EXPEDITED
+
         val bucket = (timeline.valueAt(SignalKind.STANDBY_BUCKET, atMs) as? SignalValue.Bucket)?.bucket ?: 10
         val floor = when {
             bucket >= 40 -> 24.h        // RARE
@@ -65,12 +71,15 @@ class SimulatedGateway(
             bucket >= 20 -> 2.h         // WORKING_SET
             else -> 0L
         }
-        if (atMs < enqueuedAt + floor) return@filter false
+        if (!expedited && atMs < enqueuedAt + floor) return@filter false
 
-        // Crash backoff: a recent retry-stop parks the item for 30 simulated minutes.
-        val lastStop = journal.events(p.workId).lastOrNull { it is WorkEvent.Stopped }
-        if (lastStop != null && journal.events(p.workId).last() === lastStop &&
-            atMs < lastStop.at + crashBackoffMs) return@filter false
+        // Crash backoff: a crash newer than the newest start parks the item for 30 simulated
+        // minutes — re-dispatch/policy records appended after the crash don't clear it.
+        val evs = journal.events(p.workId)
+        val lastCrash = evs.indexOfLast { it is WorkEvent.Stopped || it is WorkEvent.Died }
+        val lastStart = evs.indexOfLast { it is WorkEvent.Started }
+        if (lastCrash > lastStart && atMs < evs[lastCrash].at + crashBackoffMs)
+            return@filter false
 
         true
     }

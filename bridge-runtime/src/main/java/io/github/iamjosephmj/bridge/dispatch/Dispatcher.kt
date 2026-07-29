@@ -20,7 +20,12 @@ class Dispatcher(
     @Synchronized
     fun dispatchAll() {
         journal.liveWork()
-            .filter { it.runState == RunState.ENQUEUED }
+            .filter {
+                it.runState == RunState.ENQUEUED ||
+                    // Deadline work re-runs policy even when already with the scheduler —
+                    // escalation must be able to re-tier a pending job as the deadline nears.
+                    (it.runState == RunState.DISPATCHED && it.deadlineMs > 0 && policy != null)
+            }
             .forEach { dispatchState(it) }
     }
 
@@ -32,6 +37,19 @@ class Dispatcher(
 
     private fun dispatchState(state: WorkState) {
         val decision = decide(state)
+        if (state.runState == RunState.DISPATCHED) {
+            // Already with the scheduler: only act on an escalation to a *different* tier —
+            // except the final ALARM stage, whose action (arming the alarm) is tierless and
+            // must fire exactly once per generation.
+            if (decision !is Decision.Admit) return
+            val events = journal.events(state.workId)
+            val lastTier = events.filterIsInstance<WorkEvent.Dispatched>().lastOrNull()?.hostClass
+            if (decision.tier.name == lastTier) {
+                val alarmArmed = events.any {
+                    it is WorkEvent.PolicyDecision && it.why == PolicyEngine.ESCALATE_ALARM_WHY }
+                if (decision.why != PolicyEngine.ESCALATE_ALARM_WHY || alarmArmed) return
+            }
+        }
         when (decision) {
             is Decision.Hold -> { journalDecision(state, "hold", decision.why); return }
             is Decision.Shed -> { journalDecision(state, "shed", decision.why); return }
