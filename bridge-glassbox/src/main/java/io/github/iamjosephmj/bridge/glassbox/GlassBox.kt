@@ -4,11 +4,11 @@ import android.content.Context
 import io.github.iamjosephmj.bridge.BridgeClock
 import io.github.iamjosephmj.bridge.SystemBridgeClock
 import io.github.iamjosephmj.bridge.diagnostics.Basis
+import io.github.iamjosephmj.bridge.diagnostics.DeviceCauses
 import io.github.iamjosephmj.bridge.diagnostics.Diagnosis
 import io.github.iamjosephmj.bridge.diagnostics.Evidence
 import io.github.iamjosephmj.bridge.diagnostics.PlatformPendingReasons
 import io.github.iamjosephmj.bridge.signals.AndroidSignalSources
-import io.github.iamjosephmj.bridge.signals.DozeMode
 import io.github.iamjosephmj.bridge.signals.InMemoryTransitionStore
 import io.github.iamjosephmj.bridge.signals.SignalBroadcasts
 import io.github.iamjosephmj.bridge.signals.SignalHub
@@ -59,17 +59,7 @@ object GlassBox {
         val h = checkNotNull(hub) { "GlassBox.install() not called" }
         val snapshot = h.snapshot(Trigger.DIAGNOSIS)
 
-        val device = mutableListOf<Diagnosis>()
-        if (snapshot.values[SignalKind.BG_RESTRICTED] == SignalValue.Flag(true))
-            device += Diagnosis.BackgroundRestricted
-        (snapshot.values[SignalKind.DOZE] as? SignalValue.Doze)?.let {
-            if (it.mode != DozeMode.NONE) device += Diagnosis.DeferredByDoze(it.mode == DozeMode.DEEP)
-        }
-        (snapshot.values[SignalKind.STANDBY_BUCKET] as? SignalValue.Bucket)?.let {
-            if (it.bucket >= 30) device += Diagnosis.DeferredByStandbyBucket(it.bucket)
-        }
-        if (snapshot.values[SignalKind.DATA_SAVER] == SignalValue.Flag(true))
-            device += Diagnosis.DataSaverBlocked
+        val device = DeviceCauses.from(snapshot)
 
         val reported = (snapshot.values[SignalKind.PENDING_REASONS]
             as? SignalValue.PendingReasons)?.reasons.orEmpty()

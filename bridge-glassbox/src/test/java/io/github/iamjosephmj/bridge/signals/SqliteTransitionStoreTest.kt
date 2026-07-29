@@ -25,4 +25,16 @@ class SqliteTransitionStoreTest {
         assertEquals(listOf(30L to "c"), s.all())
         assertEquals(30L, s.oldestAt())
     }
+
+    @Test fun `replaceAll swaps the whole log in one shot`() {
+        val s = store()
+        s.append(10L, "a"); s.append(20L, "b"); s.append(30L, "c")
+        s.replaceAll(listOf(5L to "x", 6L to "y"))
+        assertEquals(listOf(5L to "x", 6L to "y"), s.all())
+        assertEquals(2, s.count())
+        assertEquals(5L, s.oldestAt())
+        s.replaceAll(emptyList())
+        assertEquals(0, s.count())
+        assertNull(s.oldestAt())
+    }
 }
