@@ -200,6 +200,14 @@ object Bridge {
             .registry.register(name, factory)
     }
 
+    /** Journal completion signal for [io.github.iamjosephmj.bridge.api.DurableHandle.join]. */
+    internal fun addJournalListener(listener: (WorkEvent) -> Unit): AutoCloseable =
+        requireNotNull(runtime) { "Bridge.initialize() not called" }.journal.addListener(listener)
+
+    /** Test hook: how many journal listeners are currently registered. */
+    internal fun journalListenerCount(): Int =
+        (runtime?.journal as? Journal)?.listenerCount() ?: 0
+
     fun state(name: String): WorkState? = runtime?.journal?.state(name)
     fun events(name: String): List<WorkEvent> = runtime?.journal?.events(name) ?: emptyList()
 

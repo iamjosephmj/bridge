@@ -147,6 +147,13 @@ class SimulatedDevice internal constructor() {
     }
 }
 
+/**
+ * Sim-side handle. Deliberately has no suspend `join()`/`await()` parity with
+ * [io.github.iamjosephmj.bridge.api.DurableHandle]: the sim advances *virtual* time
+ * synchronously on the caller's thread, so "suspend until terminal" has no meaning here —
+ * nothing progresses while you wait. [completedWithin] / [verdictAt] are the sim-native
+ * equivalents: advance the clock, then ask.
+ */
 class SimHandle internal constructor(val name: String, private val device: SimulatedDevice) {
     fun verdictAt(ms: Long): Verdict {
         device.advanceTo(ms)

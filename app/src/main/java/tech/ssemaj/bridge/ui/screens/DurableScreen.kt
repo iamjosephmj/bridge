@@ -4,8 +4,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import io.github.iamjosephmj.bridge.Bridge
-import io.github.iamjosephmj.bridge.store.RunState
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import tech.ssemaj.bridge.demos.Names
 import tech.ssemaj.bridge.demos.launchDurableDemo
 import tech.ssemaj.bridge.ui.ConsolePanel
@@ -24,8 +26,9 @@ private val SNIPPET = """
 """.trimIndent()
 
 /**
- * Durable coroutine — same demo logic as the original section: poll the handle's
- * whyPending() headline until terminal.
+ * Durable coroutine demo. The watcher is the new scope-join API: `handle.await()`
+ * suspends on a journal listener until the run is terminal — no polling loop. A small
+ * nudger coroutine stands in for the parked alarm so the demo stays snappy in-app.
  */
 @Composable
 fun DurableScreen(onBack: () -> Unit) {
@@ -47,20 +50,23 @@ fun DurableScreen(onBack: () -> Unit) {
             console.run {
                 val handle = launchDurableDemo()
                 log("launched durable '${handle.name}'")
-                val deadline = System.currentTimeMillis() + 40_000
-                var last: String? = null
-                while (System.currentTimeMillis() < deadline) {
-                    val verdict = handle.whyPending()
-                    // Headline only; the Diagnostics screen shows full renders.
-                    val line = verdict.render(System.currentTimeMillis()).lineSequence().first()
-                    if (line != last) { log(line); last = line }
-                    if (verdict.state in setOf(
-                            RunState.SUCCEEDED, RunState.FAILED, RunState.CANCELLED)) return@run
-                    // Nudge the dispatcher; on a real device the scheduled alarm does this.
-                    Bridge.reconcileIfInitialized()
-                    delay(1_000)
+                // Headline only; the Diagnostics screen shows full renders.
+                log(handle.whyPending().render(System.currentTimeMillis()).lineSequence().first())
+                // The showcase: suspend on the journal until the run is terminal.
+                val terminal = withTimeoutOrNull(40_000) {
+                    coroutineScope {
+                        // Nudge the dispatcher; on a real device the scheduled alarm does this.
+                        val nudger = launch {
+                            while (true) { delay(1_000); Bridge.reconcileIfInitialized() }
+                        }
+                        handle.await().also { nudger.cancel() }
+                    }
                 }
-                log("(gave up watching after 40s — alarm wake-up may still be pending)")
+                if (terminal == null) {
+                    log("(gave up waiting after 40s — alarm wake-up may still be pending)")
+                } else {
+                    log("join() returned — $terminal")
+                }
             }
         }) { Text("Launch durable") }
         ConsolePanel(console.text)
