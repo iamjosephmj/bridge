@@ -30,6 +30,8 @@ Both results measured on a physical <b>Pixel 6 Pro, API 36</b> (2026-07), same w
 
 <sub><b>Try killing it. It doesn't mind.</b> Measured on device: Bridge replayed <b>1</b> chunk; WorkManager replayed <b>20</b>.</sub>
 
+<sub><i>WorkManager reschedules your work after a kill. Bridge resumes it — mid-transfer, at the exact chunk. Both survive; only one remembers.</i></sub>
+
 <br>
 <br>
 
