@@ -143,7 +143,10 @@ class SimulatedDevice internal constructor() {
         val snapshot = hub.snapshot(Trigger.DIAGNOSIS)
         val enqueuedAt = events.filterIsInstance<WorkEvent.Enqueued>()
             .lastOrNull { it.generation == state.generation }?.at ?: 0L
-        return Diagnoser.diagnose(state, events, snapshot, signalLog.slice(enqueuedAt, clock.now()))
+        val prereqsPending = state.prereqs.filter {
+            journal.state(it)?.runState != io.github.iamjosephmj.bridge.store.RunState.SUCCEEDED }
+        return Diagnoser.diagnose(state, events, snapshot,
+            signalLog.slice(enqueuedAt, clock.now()), prereqsPending)
     }
 }
 

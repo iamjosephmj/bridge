@@ -34,6 +34,25 @@ class FlakyWorker : Worker() {
 class FailingWorker : Worker() {
     override fun doWork(): Result { RecordingWorker.order += "X"; return Result.failure() }
 }
+class ProducerWorker : Worker() {
+    override fun doWork(): Result =
+        Result.success(workDataOf("token" to "T-${inputData.getString("seed")}"))
+}
+class SecondProducerWorker : Worker() {
+    override fun doWork(): Result = Result.success(workDataOf("token2" to "U"))
+}
+class ConsumerWorker : Worker() {
+    override fun doWork(): Result {
+        seen = inputData.getString("token")
+        seenKeys = inputData.let { d ->
+            listOf("token", "token2", "own").filter { d.getString(it) != null } }
+        return Result.success(workDataOf("final" to "done"))
+    }
+    companion object {
+        var seen: String? = null
+        var seenKeys: List<String> = emptyList()
+    }
+}
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -186,5 +205,52 @@ class CompatTest {
             request(RecordingWorker::class.java))
         BridgeWorkManager.cancelUniqueWork("c")
         assertThat(BridgeWorkManager.getWorkInfoState("c")).isEqualTo(WorkInfoState.CANCELLED)
+    }
+
+    @Test fun `data flows input to link, link output to next link, and out as outputData`() {
+        ConsumerWorker.seen = null
+        BridgeWorkManager.beginUniqueWork("data-chain", ExistingWorkPolicy.KEEP,
+            OneTimeWorkRequest.Builder(ProducerWorker::class.java)
+                .setInputData(workDataOf("seed" to 42)).build())
+            .then(request(ConsumerWorker::class.java))
+            .enqueue()
+        runParked()
+        assertThat(ConsumerWorker.seen).isEqualTo("T-42")
+        assertThat(BridgeWorkManager.getOutputData("data-chain").getString("final"))
+            .isEqualTo("done")
+    }
+
+    @Test fun `tags map through and cancelAllWorkByTag cancels the tagged set`() {
+        BridgeWorkManager.enqueueUniqueWork("tag-1", ExistingWorkPolicy.KEEP,
+            OneTimeWorkRequest.Builder(RecordingWorker::class.java).addTag("batch").build())
+        BridgeWorkManager.enqueueUniqueWork("tag-2", ExistingWorkPolicy.KEEP,
+            OneTimeWorkRequest.Builder(SecondWorker::class.java).addTag("batch").build())
+        BridgeWorkManager.enqueueUniqueWork("tag-3", ExistingWorkPolicy.KEEP,
+            request(RecordingWorker::class.java))
+        BridgeWorkManager.cancelAllWorkByTag("batch")
+        assertThat(BridgeWorkManager.getWorkInfoState("tag-1")).isEqualTo(WorkInfoState.CANCELLED)
+        assertThat(BridgeWorkManager.getWorkInfoState("tag-2")).isEqualTo(WorkInfoState.CANCELLED)
+        assertThat(BridgeWorkManager.getWorkInfoState("tag-3")).isEqualTo(WorkInfoState.ENQUEUED)
+    }
+
+    @Test fun `combine joins branches and merges their outputs into the joined work`() {
+        ConsumerWorker.seen = null; ConsumerWorker.seenKeys = emptyList()
+        val a = BridgeWorkManager.beginUniqueWork("br-a", ExistingWorkPolicy.KEEP,
+            OneTimeWorkRequest.Builder(ProducerWorker::class.java)
+                .setInputData(workDataOf("seed" to 1)).build())
+        val b = BridgeWorkManager.beginUniqueWork("br-b", ExistingWorkPolicy.KEEP,
+            request(SecondProducerWorker::class.java))
+        WorkContinuation.combine(listOf(a, b))
+            .then(OneTimeWorkRequest.Builder(ConsumerWorker::class.java)
+                .setInputData(workDataOf("own" to "kept")).build())
+            .enqueue()
+        // The join must not reach the platform while branches are pending.
+        assertThat(gateway.enqueued.map { it.second.workId }).doesNotContain("br-a+br-b:join")
+        runParked()   // branches complete; the DAG wake dispatches the join
+        runParked()   // join runs
+        assertThat(BridgeWorkManager.getWorkInfoState("br-a+br-b:join"))
+            .isEqualTo(WorkInfoState.SUCCEEDED)
+        assertThat(ConsumerWorker.seen).isEqualTo("T-1")
+        assertThat(ConsumerWorker.seenKeys).containsExactly("token", "token2", "own")
     }
 }

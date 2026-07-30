@@ -39,6 +39,43 @@ class WorkRequestDslTest {
         }
     }
 
+    @Test fun `input, tags and after flow through the request`() {
+        val r = workRequest("join", "upload") {
+            input("photo" to 42, "album" to "trip")
+            tag("sync", "media")
+            after("branch-a", "branch-b")
+        }
+        assertThat(r.input.getInt("photo", 0)).isEqualTo(42)
+        assertThat(r.input.getString("album")).isEqualTo("trip")
+        assertThat(r.tags).containsExactly("sync", "media")
+        assertThat(r.prereqs).containsExactly("branch-a", "branch-b").inOrder()
+    }
+
+    @Test fun `input over 10KB is rejected at the builder`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            workRequest("big", "upload") { input("blob" to "x".repeat(BridgeData.MAX_BYTES + 1)) }
+        }
+    }
+
+    @Test fun `after rejects periodic and self-prerequisite`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            workRequest("a", "w") { after("x"); periodic(30 * 60_000L) }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            workRequest("b", "w") { after("b") }
+        }
+    }
+
+    @Test fun `BridgeData typed getters parse and fall back`() {
+        val d = bridgeDataOf("i" to 7, "b" to true, "s" to "hi", "skip" to null)
+        assertThat(d.getInt("i", 0)).isEqualTo(7)
+        assertThat(d.getBoolean("b", false)).isTrue()
+        assertThat(d.getString("s")).isEqualTo("hi")
+        assertThat(d.getString("skip")).isNull()
+        assertThat(d.getInt("s", -1)).isEqualTo(-1)   // parse failure falls back
+        assertThat((d + bridgeDataOf("i" to 9)).getInt("i", 0)).isEqualTo(9)   // overwrite merge
+    }
+
     @Test fun `backoff rejects deviceIdle and periodic in either order`() {
         assertThrows(IllegalArgumentException::class.java) {
             workRequest("a", "w") { backoff(30_000L); deviceIdle() }

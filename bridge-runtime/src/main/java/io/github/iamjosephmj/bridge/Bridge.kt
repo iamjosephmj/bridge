@@ -23,6 +23,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 class BridgeConfigBuilder internal constructor() {
     internal val registry = WorkerRegistry()
@@ -62,6 +68,10 @@ object Bridge {
     /** Completed at the end of a successful [initialize]; recreated by [reset]. */
     @Volatile
     private var ready = CompletableDeferred<Unit>()
+
+    /** Journal listener that wakes DAG dependents on terminal events; closed by [reset]. */
+    @Volatile
+    private var dagWake: AutoCloseable? = null
 
     internal val isInitialized: Boolean get() = runtime != null
 
@@ -115,6 +125,11 @@ object Bridge {
             journal = j, dispatcher = d, clock = b.clock, registry = b.registry,
             durableDeps = deps, gateway = gw, signalHub = hub, signalLog = log,
             conformance = conf)
+        // DAG wake: any terminal event may unblock dependents (or doom them) — re-evaluate.
+        // Monitor locks are reentrant, so propagation cascading inside dispatchAll is safe.
+        dagWake = j.addListener { e ->
+            if (e is WorkEvent.Finished || e is WorkEvent.Cancelled) d.dispatchAll()
+        }
         Reconciler(j, d,
             DeathAttributor(j, b.deathSource ?: SystemProcessDeathSource(appContext), b.clock),
             ForceStopDetector(appContext), gw, b.clock).reconcile()
@@ -182,7 +197,8 @@ object Bridge {
         val enqueuedAt = events.filterIsInstance<WorkEvent.Enqueued>()
             .lastOrNull { it.generation == state.generation }?.at ?: 0L
         val slice = try { rt.signalLog.slice(enqueuedAt, rt.clock.now()) } catch (e: Exception) { null }
-        return Diagnoser.diagnose(state, events, snapshot, slice)
+        val prereqsPending = state.prereqs.filter { j.state(it)?.runState != RunState.SUCCEEDED }
+        return Diagnoser.diagnose(state, events, snapshot, slice, prereqsPending)
             ?: unknownVerdict(name, "no work named '$name'")
     }
 
@@ -253,11 +269,49 @@ object Bridge {
         try { rt.gateway.cancel(name) } catch (_: Exception) { }   // ends a periodic series
     }
 
+    /** Names of all known work carrying [tag], regardless of state. */
+    fun namesByTag(tag: String): List<String> =
+        runtime?.journal?.allWork()?.filter { tag in it.tags }?.map { it.workId } ?: emptyList()
+
+    /** Cancels every live work item carrying [tag]. Terminal items are untouched. */
+    fun cancelAllByTag(tag: String) {
+        val rt = runtime ?: return
+        rt.journal.allWork()
+            .filter { tag in it.tags && it.runState in
+                setOf(RunState.ENQUEUED, RunState.DISPATCHED, RunState.RUNNING) }
+            .forEach { cancel(it.workId) }
+    }
+
+    /**
+     * Every journal event as it commits, app-wide. Cold flow: collection registers a journal
+     * listener; cancellation unregisters it. Events before collection are not replayed —
+     * pair with [events] for history.
+     */
+    fun eventsFlow(): Flow<WorkEvent> = callbackFlow {
+        awaitReady()
+        val handle = requireNotNull(runtime).journal.addListener { trySend(it) }
+        awaitClose { handle.close() }
+    }.buffer(Channel.UNLIMITED)
+
+    /**
+     * The folded [WorkState] of [name], re-emitted on every journal event for that work.
+     * Emits the current state (or null for unknown names) immediately on collection.
+     */
+    fun stateFlow(name: String): Flow<WorkState?> = callbackFlow {
+        awaitReady()
+        val j = requireNotNull(runtime).journal
+        trySend(j.state(name))
+        val handle = j.addListener { e -> if (e.workId == name) trySend(j.state(name)) }
+        awaitClose { handle.close() }
+    }.buffer(Channel.UNLIMITED).distinctUntilChanged()
+
     fun reconcileIfInitialized() { runtime?.dispatcher?.dispatchAll() }
 
     /** Test hook: tears the singleton down so a fresh initialize() can run. */
     @Synchronized
     fun reset() {
+        try { dagWake?.close() } catch (_: Exception) { }
+        dagWake = null
         runtime?.journal?.close()
         runtime = null
         BridgeServices.runner = null

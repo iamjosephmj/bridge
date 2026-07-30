@@ -23,7 +23,7 @@ class DurableTest {
     private fun enqueue(id: String = "w") =
         journal.append(WorkEvent.Enqueued(id, clock.now(), id, 1, importance = 2))
 
-    private fun runCtx(id: String = "w") = RunContext(id, 1) { false }
+    private fun runCtx(id: String = "w") = RunContext(id, 1, isStopped = { false })
 
     @Test fun `steps execute once and replay from journal`() = runTest {
         enqueue()

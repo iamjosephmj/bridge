@@ -45,6 +45,66 @@ Before dispatching, the policy engine reads the process's runnable-thread count 
 
 `mustCompleteBy(atMs)` walks urgency tiers as the deadline approaches: the base tier while more than half the window remains, then a promoted tier, then EXPEDITED (API 31+), and finally a while-idle alarm. Each escalation step is journaled.
 
+## Data payloads
+
+Attach input at enqueue; read it as `ctx.input`; produce output with `ctx.setOutput`:
+
+```kotlin
+Bridge.enqueue(workRequest("greet", "echo") { input("msg" to "hello", "count" to 3) })
+
+class EchoWorker : BridgeWorker {
+    override suspend fun run(ctx: RunContext): RunResult {
+        val msg = ctx.input.getString("msg")          // typed getters parse on read
+        ctx.setOutput(bridgeDataOf("echoed" to msg))
+        return RunResult.Success
+    }
+}
+```
+
+Input is journaled on the `Enqueued` event and output on `Finished` (or per
+`ChunkCompleted` for chunked workers — so a chain resumed after process death still sees
+its completed links' outputs). The ledger therefore shows what every attempt received and
+produced, not just the latest. Payloads cap at 10 KB — the journal is for coordinates,
+not cargo. Latest output: `Bridge.state(name)?.lastOutput`.
+
+## Tags
+
+```kotlin
+Bridge.enqueue(workRequest("telemetry-1", "sync") { tag("telemetry") })
+Bridge.namesByTag("telemetry")      // → [telemetry-1]
+Bridge.cancelAllByTag("telemetry")  // cancels every live item carrying the tag
+```
+
+## Multi-branch chains (prerequisite DAG)
+
+`after(names...)` gates dispatch until every named work has SUCCEEDED; branch outputs
+overwrite-merge into the dependent's `ctx.input` in declaration order:
+
+```kotlin
+Bridge.enqueue(workRequest("resize", "imageWorker") { input("src" to uri) })
+Bridge.enqueue(workRequest("caption", "mlWorker") { input("src" to uri) })
+Bridge.enqueue(workRequest("publish", "publishWorker") {
+    after("resize", "caption")    // dispatches only after both SUCCEED
+})
+```
+
+While gated, `whyPending()` answers `WaitingForPrerequisites(pending = [...])`. A FAILED
+or CANCELLED prerequisite fails the dependent with a journaled reason (`"prerequisite
+'resize' FAILED"`) without burning an attempt — WorkManager's propagation semantics,
+diagnosable. `after()` cannot combine with `periodic()`.
+
+## Flow observers
+
+```kotlin
+Bridge.stateFlow("publish")     // Flow<WorkState?>: current fold, re-emitted per event
+    .collect { render(it?.runState) }
+
+Bridge.eventsFlow()             // Flow<WorkEvent>: every journal commit, app-wide
+```
+
+Both are cold flows over the journal's listener hook — no polling, no invalidation
+machinery. For LiveData, apply `asLiveData()`.
+
 ## Retries and backoff
 
 A worker that returns `RunResult.Retry` is rescheduled by the platform, not by a Bridge timer: by default every compiled job declares `JobInfo.setBackoffCriteria(30s, EXPONENTIAL)`, so re-deliveries arrive at 30s, 60s, 120s, … up to the platform's ceiling. (Device-idle and periodic jobs don't declare backoff — the platform forbids it for both.)

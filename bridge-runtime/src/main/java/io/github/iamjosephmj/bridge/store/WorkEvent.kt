@@ -35,6 +35,10 @@ sealed interface WorkEvent {
         // Retry backoff (JobInfo.setBackoffCriteria); 0 = default 30s exponential.
         val backoffMs: Long = 0L,
         val backoffLinear: Boolean = false,
+        // WM-parity surface (defaults keep pre-parity journals decoding).
+        val input: Map<String, String> = emptyMap(),
+        val tags: List<String> = emptyList(),
+        val prereqs: List<String> = emptyList(),
     ) : WorkEvent {
         /** Factories live as extensions in `api/EnqueuedEvents.kt` — putting them here
          *  would give store (the bottom layer) a dependency on api's WorkRequest. */
@@ -56,6 +60,8 @@ sealed interface WorkEvent {
     @Serializable @SerialName("chunkCompleted")
     data class ChunkCompleted(
         override val workId: String, override val at: Long, val chunkIndex: Int,
+        /** Chunk-set output (RunContext.setOutput inside runChunk); survives death for resume. */
+        val output: Map<String, String> = emptyMap(),
     ) : WorkEvent
 
     @Serializable @SerialName("stopped")
@@ -76,6 +82,8 @@ sealed interface WorkEvent {
         val txBytes: Long = 0, val rxBytes: Long = 0,
         /** Why the work failed (exception class + message, or a structural reason); null on success or when unknown. */
         val failureMessage: String? = null,
+        /** Worker-set output (RunContext.setOutput); overwrite-merged into dependents' input. */
+        val output: Map<String, String> = emptyMap(),
     ) : WorkEvent
 
     @Serializable @SerialName("cancelled")

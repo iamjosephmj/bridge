@@ -22,6 +22,8 @@ object Diagnoser {
         events: List<WorkEvent>,
         snapshot: SignalSnapshot,
         slice: SignalSlice?,
+        /** Prerequisite names not yet SUCCEEDED, resolved by the caller (needs the journal). */
+        prereqsPending: List<String> = emptyList(),
     ): Verdict? {
         if (state == null) return null
 
@@ -44,6 +46,12 @@ object Diagnoser {
         }
 
         val matches = mutableListOf<Pair<Diagnosis, Basis>>()
+
+        // 0. DAG gate: undispatched work with pending prerequisites is waiting by design —
+        //    that IS the explanation, ahead of any device-condition inference.
+        if (state.runState == RunState.ENQUEUED && prereqsPending.isNotEmpty()) {
+            matches += Diagnosis.WaitingForPrerequisites(prereqsPending) to Basis.INFERRED
+        }
 
         // 1. Platform-reported reasons trump everything.
         val reported = snapshot.values[SignalKind.PENDING_REASONS]

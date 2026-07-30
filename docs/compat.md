@@ -47,9 +47,40 @@ If the process dies during `createPostRequest`, the next attempt starts at `crea
 | One-time work | `OneTimeWorkRequest`, `enqueueUniqueWork` (KEEP), `setInitialDelay` |
 | Periodic work | `PeriodicWorkRequest`, `enqueueUniquePeriodicWork` (KEEP / UPDATE) |
 | Constraints | Full `Constraints.Builder` surface: charging, network type, battery-not-low, storage-not-low, device-idle |
+| Data | `Data` / `workDataOf`, `setInputData`, `Worker.inputData`, `Result.success(data)`, `getOutputData` |
+| Tags | `addTag`, `cancelAllWorkByTag` |
+| Observers | `getWorkInfoStateFlow` (LiveData via `asLiveData()`) |
 | Chains | `beginUniqueWork(...).then(...).enqueue()` — resumes at the failed link |
+| Multi-branch chains | `WorkContinuation.combine(...)` |
 | Introspection and control | `getWorkInfoState`, `cancelUniqueWork` |
 
-Not covered (keep this work on WorkManager; both run side by side): `Data` payloads, tags, LiveData/Flow observers, multi-branch chains.
+## Data through chains
+
+Each link's `inputData` is its request's input overwritten by upstream outputs, and link
+outputs are journaled per chunk — so a chain that dies at link N and resumes still hands
+link N the outputs of links 0..N-1:
+
+```kotlin
+class UploadWorker : Worker() {
+    override fun doWork(): Result =
+        Result.success(workDataOf("remoteUrl" to api.upload(inputData.getString("file")!!)))
+}
+class CommitWorker : Worker() {
+    override fun doWork(): Result {
+        db.commit(inputData.getString("remoteUrl")!!)   // upstream output, post-death too
+        return Result.success()
+    }
+}
+```
+
+## Multi-branch chains
+
+```kotlin
+val resize = BridgeWorkManager.beginUniqueWork("resize", KEEP, resizeRequest)
+val caption = BridgeWorkManager.beginUniqueWork("caption", KEEP, captionRequest)
+WorkContinuation.combine(listOf(resize, caption))
+    .then(publishRequest)      // runs after both; inputs = merged branch outputs
+    .enqueue()                 // join item is named "resize+caption:join"
+```
 
 Full migration guide: [Migration](MIGRATION.html).

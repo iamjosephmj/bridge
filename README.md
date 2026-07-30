@@ -199,7 +199,11 @@ Covered surface:
 | One-time work | `OneTimeWorkRequest`, `enqueueUniqueWork` (KEEP), `setInitialDelay` |
 | Periodic work | `PeriodicWorkRequest`, `enqueueUniquePeriodicWork` (KEEP / UPDATE) |
 | Constraints | Full `Constraints.Builder` surface: charging, network type, battery-not-low, storage-not-low, device-idle |
+| Data | `Data` / `workDataOf`, `setInputData`, `Worker.inputData`, `Result.success(data)`, `getOutputData` — outputs relay link-to-link, surviving mid-chain death |
+| Tags | `addTag`, `cancelAllWorkByTag` |
+| Observers | `getWorkInfoStateFlow` (LiveData via `asLiveData()`) |
 | Chains | `beginUniqueWork(...).then(...).enqueue()` — resumes at the failed link |
+| Multi-branch chains | `WorkContinuation.combine(...)` — join waits for all branches, receives merged outputs |
 | Introspection and control | `getWorkInfoState`, `cancelUniqueWork` |
 
 Full guide: [`docs/MIGRATION.md`](docs/MIGRATION.md).
@@ -380,8 +384,10 @@ A direct capability comparison, including the rows WorkManager currently wins. R
 | Doze strategy | Maintenance-window burst-drain, doze-exit dispatch, rhythm prediction | Platform default | Simulated scenarios |
 | Constraints (charging, network, battery/storage-not-low, device-idle, content-URI triggers) | Full surface | Full surface | |
 | Periodic work and initial delay | Yes — journaled generations, exact-path latency | Yes | |
-| `Data` payloads, tags, work observers (LiveData/Flow) | Not yet | Yes | |
-| Multi-branch chains | Sequential only | Yes | |
+| `Data` payloads | Yes — journaled input and per-attempt output, visible in `ledger()` | Yes — latest output only | Device-verified (round trip) |
+| Tags (query and cancel by tag) | Yes | Yes | Device-verified |
+| Work observers | `Flow` (`stateFlow` / `eventsFlow`; LiveData via `asLiveData()`) | LiveData / Flow | Device-verified (flow-observed completion) |
+| Multi-branch chains | Yes — prerequisite DAG: `after(...)` / `WorkContinuation.combine`, branch outputs merged into the join | Yes | Device-verified (DAG join) |
 | Ecosystem (Hilt integration, documentation, community) | New | Extensive | |
 
 ## Measurements
@@ -421,7 +427,7 @@ Measured on physical hardware, API 36 (2026-07). Identical workloads were run ag
 
 ## Status
 
-Bridge is stable and device-verified end to end: the full constraint surface, `initialDelay`, `periodic`, durable coroutines, the compat façade, the policy engine, and the glass box — with the measurements above to show for it.
+Bridge is stable and device-verified end to end: the full constraint surface, `initialDelay`, `periodic`, `Data` payloads, tags, Flow observers, multi-branch chains (prerequisite DAG), durable coroutines, the compat façade, the policy engine, and the glass box — with the measurements above to show for it.
 
 ## Documentation
 

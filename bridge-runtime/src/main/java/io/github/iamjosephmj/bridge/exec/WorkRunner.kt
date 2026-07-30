@@ -47,7 +47,20 @@ class WorkRunner(
 
         journal.append(WorkEvent.Started(workId, clock.now(), deliveryCount, generation))
         val before = costMeter.snapshot()
-        val ctx = RunContext(workId, deliveryCount, isStopped)
+        // Input merge, overwrite semantics (WorkManager's OverwritingInputMerger):
+        // enqueue-time input, then DAG prerequisite outputs in declaration order, then —
+        // for chunked work resuming after death — outputs journaled by completed chunks
+        // of this generation, so a resumed chain still sees its earlier links' results.
+        val events = journal.events(workId)
+        val lastEnq = events.indexOfLast { it is WorkEvent.Enqueued }
+        val chunkCarry = events.drop(lastEnq + 1)
+            .filterIsInstance<WorkEvent.ChunkCompleted>()
+            .fold(emptyMap<String, String>()) { acc, e -> acc + e.output }
+        val mergedInput = state.prereqs.fold(state.input) { acc, prereq ->
+            acc + (journal.state(prereq)?.lastOutput ?: emptyMap())
+        } + chunkCarry
+        val ctx = RunContext(workId, deliveryCount, isStopped,
+            input = io.github.iamjosephmj.bridge.api.BridgeData(mergedInput))
         val worker = try { registry.create(state.workerName) } catch (e: IllegalArgumentException) {
             journal.append(WorkEvent.Finished(workId, clock.now(), success = false,
                 failureMessage = "${e.javaClass.simpleName}: ${e.message}"))
@@ -84,10 +97,10 @@ class WorkRunner(
                 worker.run(ctx)
             }
             return when (result) {
-                is RunResult.Success -> finish(workId, before, success = true)
-                    .let { RunOutcome.COMPLETED }
-                is RunResult.Failure -> finish(workId, before, success = false)
-                    .let { RunOutcome.FAILED }
+                is RunResult.Success -> finish(workId, before, success = true,
+                    output = ctx.output().asMap).let { RunOutcome.COMPLETED }
+                is RunResult.Failure -> finish(workId, before, success = false,
+                    output = ctx.output().asMap).let { RunOutcome.FAILED }
                 is RunResult.Retry -> retryOrFail(workId, deliveryCount, state.maxAttempts, before)
                 is RunResult.Parked -> {
                     journal.append(WorkEvent.Stopped(workId, clock.now(), StopReason.PARKED.code))
@@ -113,7 +126,8 @@ class WorkRunner(
             blackBox.stamp(workId, "chunk:$idx", ctx.attempt)
             when (val r = worker.runChunk(ctx, idx)) {
                 is RunResult.Success ->
-                    journal.append(WorkEvent.ChunkCompleted(workId, clock.now(), idx))
+                    journal.append(WorkEvent.ChunkCompleted(workId, clock.now(), idx,
+                        output = ctx.takeOutput().asMap))
                 else -> return ChunkRunResult.WorkerResult(r)
             }
         }
@@ -121,12 +135,13 @@ class WorkRunner(
     }
 
     private fun finish(workId: String, before: CostSnapshot, success: Boolean,
-                       failureMessage: String? = null) {
+                       failureMessage: String? = null,
+                       output: Map<String, String> = emptyMap()) {
         val cost = costMeter.snapshot() - before
         journal.append(WorkEvent.Finished(workId, clock.now(), success,
             cpuUserMs = cost.cpuUserMs, cpuSystemMs = cost.cpuSystemMs,
             txBytes = cost.txBytes, rxBytes = cost.rxBytes,
-            failureMessage = failureMessage))
+            failureMessage = failureMessage, output = output))
     }
 
     private fun retryOrFail(workId: String, deliveryCount: Int, maxAttempts: Int,

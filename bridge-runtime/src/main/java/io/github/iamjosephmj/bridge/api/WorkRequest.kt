@@ -25,6 +25,9 @@ class WorkRequest internal constructor(
     val maxPressure: PressureLevel? = null,   // null = importance-derived default
     val backoffMs: Long = 0L,                 // 0 = default (30s exponential)
     val backoffPolicy: BackoffPolicy = BackoffPolicy.EXPONENTIAL,
+    val input: BridgeData = BridgeData.EMPTY,
+    val tags: Set<String> = emptySet(),
+    val prereqs: List<String> = emptyList(),  // unique names that must SUCCEED first
 )
 
 class WorkRequestBuilder internal constructor(
@@ -49,6 +52,9 @@ class WorkRequestBuilder internal constructor(
     private var maxPressure: PressureLevel? = null
     private var backoffMs = 0L
     private var backoffPolicy = BackoffPolicy.EXPONENTIAL
+    private var input = BridgeData.EMPTY
+    private val tags = mutableSetOf<String>()
+    private val prereqs = mutableListOf<String>()
 
     fun importance(value: Importance) { importance = value }
     fun charging() { charging = true }
@@ -111,12 +117,34 @@ class WorkRequestBuilder internal constructor(
         require(initialMs >= 10_000L) { "backoff initialMs must be >= 10s (JobInfo.MIN_BACKOFF_MILLIS)" }
         backoffMs = initialMs; backoffPolicy = policy
     }
+    /** Input payload journaled with the work; the worker reads it as `ctx.input`. */
+    fun input(data: BridgeData) {
+        require(data.byteSize() <= BridgeData.MAX_BYTES) {
+            "input exceeds ${BridgeData.MAX_BYTES} bytes — the journal is for coordinates, not cargo" }
+        input = data
+    }
+    fun input(vararg pairs: Pair<String, Any?>) = input(bridgeDataOf(*pairs))
+    /** Free-form labels; query and cancel by tag via Bridge.cancelAllByTag / namesByTag. */
+    fun tag(vararg values: String) { tags += values }
+    /**
+     * Prerequisite unique names: this work dispatches only after every named work has
+     * SUCCEEDED. Prerequisite outputs overwrite-merge into this work's `ctx.input`
+     * (declaration order, later wins). A FAILED or CANCELLED prerequisite fails this
+     * work with a journaled reason. Cannot combine with [periodic].
+     */
+    fun after(vararg names: String) {
+        require(names.isNotEmpty()) { "after() needs at least one prerequisite name" }
+        prereqs += names
+    }
 
     internal fun build(): WorkRequest {
         require(backoffMs == 0L || !deviceIdle) {
             "backoff cannot combine with deviceIdle: the platform rejects backoff on idle-mode jobs" }
         require(backoffMs == 0L || periodicMs == 0L) {
             "backoff cannot combine with periodic: the period itself paces re-runs" }
+        require(prereqs.isEmpty() || periodicMs == 0L) {
+            "after() cannot combine with periodic: a repeating dependent has no defined join" }
+        require(name !in prereqs) { "work cannot be its own prerequisite" }
         return buildRequest()
     }
 
@@ -127,7 +155,8 @@ class WorkRequestBuilder internal constructor(
         initialDelayMs = initialDelayMs, periodicMs = periodicMs,
         contentUris = contentUris.toList(), contentDescendants = contentDescendants,
         contentUpdateDelayMs = contentUpdateDelayMs, contentMaxDelayMs = contentMaxDelayMs,
-        maxPressure = maxPressure, backoffMs = backoffMs, backoffPolicy = backoffPolicy)
+        maxPressure = maxPressure, backoffMs = backoffMs, backoffPolicy = backoffPolicy,
+        input = input, tags = tags.toSet(), prereqs = prereqs.toList())
 }
 
 fun workRequest(name: String, workerName: String,

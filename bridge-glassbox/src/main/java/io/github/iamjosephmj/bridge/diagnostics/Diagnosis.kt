@@ -10,6 +10,8 @@ sealed interface Diagnosis {
     object BackgroundRestricted : Diagnosis { override fun toString() = "BackgroundRestricted" }
     object DataSaverBlocked : Diagnosis { override fun toString() = "DataSaverBlocked" }
     data class AwaitingConstraint(val constraint: String) : Diagnosis
+    /** DAG work whose named prerequisites have not yet SUCCEEDED. */
+    data class WaitingForPrerequisites(val pending: List<String>) : Diagnosis
     object AwaitingConformanceFallback : Diagnosis { override fun toString() = "AwaitingConformanceFallback" }
     data class ThrottledAfterCrashes(val crashes: Int) : Diagnosis
     /** Bridge's own L4 judgment held/shed this work; `why` is the journaled arithmetic. */

@@ -17,7 +17,21 @@ class RunContext(
     val workId: String,
     val attempt: Int,
     val isStopped: () -> Boolean,
-)
+    /** Enqueue-time input, plus prerequisite outputs (overwrite-merged) for DAG work. */
+    val input: BridgeData = BridgeData.EMPTY,
+) {
+    @Volatile
+    private var output: BridgeData = BridgeData.EMPTY
+    /**
+     * Output journaled with the run: on the Finished event for plain workers, on each
+     * ChunkCompleted for chunked workers (call inside runChunk before returning Success).
+     * Visible in ledger() and overwrite-merged into DAG dependents' input.
+     */
+    fun setOutput(data: BridgeData) { output = data }
+    internal fun output(): BridgeData = output
+    /** Reads and clears — the chunk path journals per-chunk output exactly once. */
+    internal fun takeOutput(): BridgeData = output.also { output = BridgeData.EMPTY }
+}
 
 interface BridgeWorker {
     suspend fun run(ctx: RunContext): RunResult

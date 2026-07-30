@@ -32,6 +32,9 @@ class BridgeScopeJoinTest {
 
     @After fun tearDown() = Bridge.reset()
 
+    /** Listener count right after init — the DAG wake listener is a permanent resident. */
+    private fun baseListeners() = Bridge.journalListenerCount()
+
     private fun init() = Bridge.initialize(context) {
         clock = this@BridgeScopeJoinTest.clock
         gateway = this@BridgeScopeJoinTest.gateway
@@ -53,20 +56,22 @@ class BridgeScopeJoinTest {
 
     @Test fun `join suspends until completion and await returns the terminal state`() {
         init()
+        val base = baseListeners()
         val handle = Bridge.scope().launch("finish-line") { step("noop") { 1 } }
         runBlocking {
             val result = async(Dispatchers.Default) { handle.await() }
             // The waiter registers its journal listener; the work has not run yet.
-            withTimeout(5_000) { while (Bridge.journalListenerCount() == 0) yield() }
+            withTimeout(5_000) { while (Bridge.journalListenerCount() == base) yield() }
             assertThat(result.isCompleted).isFalse()
             runParked()                               // completes the work → Finished appended
             assertThat(result.await()).isEqualTo(RunState.SUCCEEDED)
         }
-        assertThat(Bridge.journalListenerCount()).isEqualTo(0)   // resume removed the listener
+        assertThat(Bridge.journalListenerCount()).isEqualTo(base)   // resume removed the listener
     }
 
     @Test fun `join on already-terminal work returns immediately`() {
         init()
+        val base = baseListeners()
         val handle = Bridge.scope().launch("already-done") { step("noop") { 1 } }
         runParked()
         assertThat(handle.state()!!.runState).isEqualTo(RunState.SUCCEEDED)
@@ -74,18 +79,19 @@ class BridgeScopeJoinTest {
             withTimeout(1_000) { handle.join() }
             assertThat(withTimeout(1_000) { handle.await() }).isEqualTo(RunState.SUCCEEDED)
         }
-        assertThat(Bridge.journalListenerCount()).isEqualTo(0)   // fast path never registered one
+        assertThat(Bridge.journalListenerCount()).isEqualTo(base)   // fast path never registered one
     }
 
     @Test fun `cancelling a join removes the journal listener`() {
         init()
+        val base = baseListeners()
         val handle = Bridge.scope().launch("never-runs") { step("noop") { 1 } }
         runBlocking {
             val waiter = launch(Dispatchers.Default) { handle.join() }
-            withTimeout(5_000) { while (Bridge.journalListenerCount() == 0) yield() }
+            withTimeout(5_000) { while (Bridge.journalListenerCount() == base) yield() }
             waiter.cancelAndJoin()
         }
-        assertThat(Bridge.journalListenerCount()).isEqualTo(0)
+        assertThat(Bridge.journalListenerCount()).isEqualTo(base)
     }
 
     @Test fun `cancelAll cancels a live durable and the scope's in-memory job`() {

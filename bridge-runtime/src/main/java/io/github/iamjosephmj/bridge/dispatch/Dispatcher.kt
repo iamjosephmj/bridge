@@ -38,6 +38,20 @@ class Dispatcher(
     }
 
     private fun dispatchState(state: WorkState) {
+        // DAG gate: dispatch only after every prerequisite SUCCEEDED. A terminally
+        // failed/cancelled prerequisite fails this work with a journaled reason
+        // (WorkManager's propagation semantics); anything else just isn't ready yet.
+        if (state.runState == RunState.ENQUEUED && state.prereqs.isNotEmpty()) {
+            val prereqStates = state.prereqs.associateWith { journal.state(it)?.runState }
+            val dead = prereqStates.entries.firstOrNull {
+                it.value == RunState.FAILED || it.value == RunState.CANCELLED }
+            if (dead != null) {
+                journal.append(WorkEvent.Finished(state.workId, clock.now(), success = false,
+                    failureMessage = "prerequisite '${dead.key}' ${dead.value}"))
+                return
+            }
+            if (prereqStates.values.any { it != RunState.SUCCEEDED }) return
+        }
         val decision = decide(state)
         if (state.runState == RunState.DISPATCHED) {
             // Already with the scheduler: only act on an escalation to a *different* tier —

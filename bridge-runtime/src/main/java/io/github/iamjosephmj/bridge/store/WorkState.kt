@@ -25,6 +25,10 @@ data class WorkState(
     val maxPressure: Int = -1,
     val backoffMs: Long = 0L,
     val backoffLinear: Boolean = false,
+    val input: Map<String, String> = emptyMap(),
+    val tags: List<String> = emptyList(),
+    val prereqs: List<String> = emptyList(),
+    val lastOutput: Map<String, String> = emptyMap(),
 )
 
 fun foldWorkState(events: List<WorkEvent>): WorkState? {
@@ -53,14 +57,19 @@ fun foldWorkState(events: List<WorkEvent>): WorkState? {
                 maxPressure = e.maxPressure,
                 backoffMs = e.backoffMs,
                 backoffLinear = e.backoffLinear,
+                input = e.input,
+                tags = e.tags,
+                prereqs = e.prereqs,
             )
             is WorkEvent.Dispatched -> s?.copy(runState = RunState.DISPATCHED)
             is WorkEvent.Started -> s?.copy(runState = RunState.RUNNING, attempt = e.attempt)
-            is WorkEvent.ChunkCompleted -> s?.copy(nextChunk = maxOf(s.nextChunk, e.chunkIndex + 1))
+            is WorkEvent.ChunkCompleted -> s?.copy(nextChunk = maxOf(s.nextChunk, e.chunkIndex + 1),
+                lastOutput = if (e.output.isNotEmpty()) e.output else s.lastOutput)
             is WorkEvent.Stopped -> s?.copy(runState = RunState.ENQUEUED, lastStopReason = e.stopReason)
             is WorkEvent.Died -> s?.copy(runState = RunState.ENQUEUED, lastDeath = e)
             is WorkEvent.Finished -> s?.copy(
-                runState = if (e.success) RunState.SUCCEEDED else RunState.FAILED)
+                runState = if (e.success) RunState.SUCCEEDED else RunState.FAILED,
+                lastOutput = if (e.output.isNotEmpty()) e.output else s.lastOutput)
             is WorkEvent.Cancelled -> s?.copy(runState = RunState.CANCELLED)
             is WorkEvent.PolicyDecision -> s   // judgment records don't change run state
             is WorkEvent.StepCompleted -> s    // durable replay records don't either

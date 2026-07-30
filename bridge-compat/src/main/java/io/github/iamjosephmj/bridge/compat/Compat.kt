@@ -2,22 +2,61 @@ package io.github.iamjosephmj.bridge.compat
 
 /**
  * androidx.work-shaped façade over Bridge (parent design §4.6 tier 1). Migration is an
- * import change for the covered surface: Worker/Result, OneTimeWorkRequest + Constraints
- * (charging / unmetered network), enqueueUniqueWork (KEEP|REPLACE), work state queries,
- * cancel, and sequential chains. Out of v0.4 scope (see M4 spec §1): periodic work,
- * Data payloads, tags, LiveData/Flow observers, multi-branch chains.
+ * import change for the covered surface: Worker/Result (with Data input/output), Data,
+ * tags, OneTimeWorkRequest + Constraints, enqueueUniqueWork (KEEP|REPLACE), periodic
+ * work, work state queries + Flow observers, cancel (by name and by tag), sequential
+ * chains, and multi-branch chains via WorkContinuation.combine.
  */
+
+/** androidx.work.Data shape: string-keyed payload with typed getters (parse-on-read). */
+class Data internal constructor(internal val map: Map<String, String>) {
+    fun getString(key: String): String? = map[key]
+    fun getInt(key: String, defaultValue: Int): Int = map[key]?.toIntOrNull() ?: defaultValue
+    fun getLong(key: String, defaultValue: Long): Long = map[key]?.toLongOrNull() ?: defaultValue
+    fun getDouble(key: String, defaultValue: Double): Double =
+        map[key]?.toDoubleOrNull() ?: defaultValue
+    fun getBoolean(key: String, defaultValue: Boolean): Boolean =
+        map[key]?.toBooleanStrictOrNull() ?: defaultValue
+
+    override fun equals(other: Any?) = other is Data && other.map == map
+    override fun hashCode() = map.hashCode()
+    override fun toString() = "Data$map"
+
+    class Builder {
+        private val map = mutableMapOf<String, String>()
+        fun putString(key: String, value: String?) = apply {
+            if (value == null) map.remove(key) else map[key] = value }
+        fun putInt(key: String, value: Int) = apply { map[key] = value.toString() }
+        fun putLong(key: String, value: Long) = apply { map[key] = value.toString() }
+        fun putDouble(key: String, value: Double) = apply { map[key] = value.toString() }
+        fun putBoolean(key: String, value: Boolean) = apply { map[key] = value.toString() }
+        fun putAll(data: Data) = apply { map += data.map }
+        fun build() = Data(map.toMap())
+    }
+
+    companion object { @JvmField val EMPTY = Data(emptyMap()) }
+}
+
+fun workDataOf(vararg pairs: Pair<String, Any?>): Data =
+    Data(buildMap { for ((k, v) in pairs) if (v != null) put(k, v.toString()) })
+
 abstract class Worker {
+    /** Set by the runner before doWork(): request input merged with upstream outputs. */
+    var inputData: Data = Data.EMPTY
+        internal set
+
     abstract fun doWork(): Result
 
     sealed class Result {
-        object Success : Result()
+        class Success internal constructor(val outputData: Data) : Result()
         object Retry : Result()
-        object Failure : Result()
+        class Failure internal constructor(val outputData: Data) : Result()
         companion object {
-            @JvmStatic fun success(): Result = Success
+            @JvmStatic fun success(): Result = Success(Data.EMPTY)
+            @JvmStatic fun success(outputData: Data): Result = Success(outputData)
             @JvmStatic fun retry(): Result = Retry
-            @JvmStatic fun failure(): Result = Failure
+            @JvmStatic fun failure(): Result = Failure(Data.EMPTY)
+            @JvmStatic fun failure(outputData: Data): Result = Failure(outputData)
         }
     }
 }
@@ -65,13 +104,20 @@ class OneTimeWorkRequest private constructor(
     val workerClass: Class<out Worker>,
     val constraints: Constraints,
     val initialDelayMs: Long,
+    val inputData: Data = Data.EMPTY,
+    val tags: Set<String> = emptySet(),
 ) {
     class Builder(private val workerClass: Class<out Worker>) {
         private var constraints = Constraints.NONE
         private var initialDelayMs = 0L
+        private var inputData = Data.EMPTY
+        private val tags = mutableSetOf<String>()
         fun setConstraints(value: Constraints) = apply { constraints = value }
         fun setInitialDelay(ms: Long) = apply { require(ms > 0); initialDelayMs = ms }
-        fun build() = OneTimeWorkRequest(workerClass, constraints, initialDelayMs)
+        fun setInputData(value: Data) = apply { inputData = value }
+        fun addTag(tag: String) = apply { tags += tag }
+        fun build() = OneTimeWorkRequest(workerClass, constraints, initialDelayMs,
+            inputData, tags.toSet())
     }
 }
 
@@ -79,11 +125,18 @@ class PeriodicWorkRequest private constructor(
     val workerClass: Class<out Worker>,
     val constraints: Constraints,
     val intervalMs: Long,
+    val inputData: Data = Data.EMPTY,
+    val tags: Set<String> = emptySet(),
 ) {
     class Builder(private val workerClass: Class<out Worker>, private val intervalMs: Long) {
         private var constraints = Constraints.NONE
+        private var inputData = Data.EMPTY
+        private val tags = mutableSetOf<String>()
         fun setConstraints(value: Constraints) = apply { constraints = value }
-        fun build() = PeriodicWorkRequest(workerClass, constraints, intervalMs)
+        fun setInputData(value: Data) = apply { inputData = value }
+        fun addTag(tag: String) = apply { tags += tag }
+        fun build() = PeriodicWorkRequest(workerClass, constraints, intervalMs,
+            inputData, tags.toSet())
     }
 }
 
