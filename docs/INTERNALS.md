@@ -1,3 +1,8 @@
+---
+title: Internals
+nav_order: 11
+---
+
 # Bridge internals
 
 How `bridge-runtime` is built. Nothing here is needed to *use* Bridge — the [README](../README.md) covers usage; this is the implementation reference.

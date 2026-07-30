@@ -1,3 +1,8 @@
+---
+title: Migration
+nav_order: 10
+---
+
 # Migrating from WorkManager to Bridge
 
 Three stages, each independently shippable and reversible.

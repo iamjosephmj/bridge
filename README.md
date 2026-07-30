@@ -11,8 +11,41 @@
 
 Bridge is an Android background-work runtime built directly on the platform's own primitives: an append-only event journal, JobWorkItem-multiplexed dispatch, death forensics via `ApplicationExitInfo`, and measured cost via `HealthStats`. Work interrupted by process death resumes where it stopped, and every deferred or held job can explain why, backed by the platform's own reporting.
 
+Full documentation, organized as a book: **[iamjosephmj.github.io/bridge](https://iamjosephmj.github.io/bridge/)**
+
+## Usage
+
+Register worker factories at every process start, enqueue by unique name, and ask questions any time:
+
+```kotlin
+// Application.onCreate
+Bridge.initializeAsync(this) {
+    worker("sync") { SyncWorker() }
+}
+
+class SyncWorker : BridgeWorker {
+    override suspend fun run(ctx: RunContext): RunResult {
+        api.sync()
+        return RunResult.Success
+    }
+}
+
+// Anywhere: KEEP semantics per unique name, so unconditional enqueue is safe
+Bridge.enqueue(workRequest("nightly-sync", "sync") {
+    network()
+    charging()
+})
+
+// Why isn't it running? Always answerable:
+Log.i(TAG, Bridge.whyPending("nightly-sync").render(now))
+// ENQUEUED 2h 10m — DeferredByDoze(deep) [REPORTED]
+```
+
+The full surface — constraints, chunked resumption, periodic work, durable coroutines, diagnostics — is covered per tier below and in the [book](https://iamjosephmj.github.io/bridge/).
+
 ## Contents
 
+- [Usage](#usage)
 - [Adoption tiers](#adoption-tiers)
   - [Tier 0 — Glassbox: diagnostics for any app](#tier-0--glassbox-diagnostics-for-any-app)
   - [Tier 1 — Compat: an androidx.work façade](#tier-1--compat-an-androidxwork-façade)

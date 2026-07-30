@@ -1,0 +1,12 @@
+title: Bridge
+description: Android background work that survives process death, and explains itself.
+remote_theme: just-the-docs/just-the-docs
+plugins:
+  - jekyll-remote-theme
+color_scheme: light
+heading_anchors: true
+exclude:
+  - superpowers/
+aux_links:
+  "Bridge on GitHub":
+    - "https://github.com/iamjosephmj/bridge"
