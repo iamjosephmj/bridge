@@ -282,10 +282,6 @@ A direct capability comparison, including the rows WorkManager currently wins. R
 | Multi-branch chains | Sequential only — on the roadmap | Yes | |
 | Ecosystem (Hilt integration, documentation, community) | New | Extensive | |
 
-![Bridge vs WorkManager scorecard: Bridge leads on resumption, explanation, durable coroutines, chains, forensics, cost, deadlines, quota and doze strategy; WorkManager wins on Data payloads, tags, observers, multi-branch chains and ecosystem.](docs/assets/scorecard.svg)
-
-*The same comparison as a visual scorecard. [Raw table](docs/RESULTS.md#bridge-vs-workmanager).*
-
 ## Measurements
 
 Measured on physical hardware, API 36 (2026-07). Identical workloads were run against both backends. Raw markdown tables, citable: [`docs/RESULTS.md`](docs/RESULTS.md); raw reports: [`bench/scripts/reports/`](bench/scripts/reports/).
