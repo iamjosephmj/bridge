@@ -409,4 +409,4 @@ Bridge is stable and device-verified end to end: the full constraint surface, `i
 
 ## License
 
-License: TBD — not yet chosen. Until a license file lands, all rights reserved; open an issue if you want to use Bridge in the meantime.
+[MIT](LICENSE)
