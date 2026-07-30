@@ -45,6 +45,15 @@ Before dispatching, the policy engine reads the process's runnable-thread count 
 
 `mustCompleteBy(atMs)` walks urgency tiers as the deadline approaches: the base tier while more than half the window remains, then a promoted tier, then EXPEDITED (API 31+), and finally a while-idle alarm. Each escalation step is journaled.
 
+## Retries and backoff
+
+A worker that returns `RunResult.Retry` is rescheduled by the platform, not by a Bridge timer: every compiled job declares `JobInfo.setBackoffCriteria(30s, EXPONENTIAL)`, so re-deliveries arrive at 30s, 60s, 120s, … up to the platform's ceiling. (Device-idle and periodic jobs don't declare backoff — the platform forbids it for both.)
+
+On top of that ride two Bridge behaviors:
+
+- **`maxAttempts` is the cap.** The attempt that exceeds it is journaled as terminal `FAILED` — the ledger shows which attempt died and why.
+- **Crashes are not retries.** A process crash triggers the platform's own ~30-minute crash backoff; diagnostics surface it as `ThrottledAfterCrashes(n)` rather than leaving the gap unexplained. And parks (`RunResult.Parked`, durable timers/awaits) never burn attempts and never enter the backoff ladder at all.
+
 ## Periodic work
 
 ```kotlin

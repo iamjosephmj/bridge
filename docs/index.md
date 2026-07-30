@@ -55,7 +55,12 @@ Bridge.enqueue(workRequest("nightly-sync", "sync") {
     importance(Importance.LOW)
     maxThreadPressure(PressureLevel.MEDIUM)
 
-    /* Scheduling shape. */
+    /*
+     * Scheduling shape. Retries ride the platform's exponential backoff
+     * (JobInfo.setBackoffCriteria: 30s initial, doubling, platform-capped) —
+     * maxAttempts is Bridge's cap on top: the attempt that exceeds it is
+     * journaled as terminal FAILED, visible in ledger().
+     */
     initialDelay(10 * 60_000L)     // exact-path setMinimumLatency
     maxAttempts(5)
     mustCompleteBy(tomorrow6amMs)  // escalates as the deadline nears:
