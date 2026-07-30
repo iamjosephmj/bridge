@@ -10,7 +10,7 @@ import android.os.Build
 import android.os.PowerManager
 
 /**
- * The nine platform signal sources. Every source returns [SignalValue.Unknown] below its
+ * The platform signal sources. Every source returns [SignalValue.Unknown] below its
  * API floor; exceptions are caught by [SignalHub], not here.
  */
 object AndroidSignalSources {
@@ -23,7 +23,7 @@ object AndroidSignalSources {
             PendingReasonsSource(app, jobNamespaces), StandbyBucketSource(app), BgRestrictedSource(app),
             DataSaverSource(app), DozeSource(app), MaintenanceWindowSource(),
             NetworkValidatedSource(app), BattOptExemptSource(app), ExitInfoSignalSource(app),
-            ThermalSource(app), ChargeTimeSource(app),
+            ThermalSource(app), ChargeTimeSource(app), ThreadPressureSource(),
         )
     }
 }
@@ -132,6 +132,37 @@ internal class ChargeTimeSource(private val context: Context) : SignalSource {
             ?: return SignalValue.Unknown
         val ms = bm.computeChargeTimeRemaining()
         return if (ms < 0) SignalValue.Unknown else SignalValue.Count((ms / 60_000L).toInt())
+    }
+}
+
+internal class ThreadPressureSource(
+    private val taskDir: java.io.File = java.io.File("/proc/self/task"),
+) : SignalSource {
+    override val kind = SignalKind.THREAD_PRESSURE
+    override fun read(): SignalValue = parseRunnableThreads(taskDir)
+
+    companion object {
+        /**
+         * Counts this process's threads in state R (running/runnable) — actual CPU
+         * contention, not total thread count (a process can idle at 80 threads with 2
+         * runnable). Own-process /proc/self/task is readable on all supported APIs.
+         */
+        fun parseRunnableThreads(taskDir: java.io.File): SignalValue {
+            val tasks = taskDir.listFiles() ?: return SignalValue.Unknown
+            var runnable = 0
+            var parsedAny = false
+            for (task in tasks) {
+                val stat = try { java.io.File(task, "stat").readText() }
+                catch (_: Exception) { continue }
+                // /proc/<tid>/stat: "pid (comm) S ..." — comm may itself contain spaces
+                // and parens, so the state field is 2 chars past the LAST ')'.
+                val close = stat.lastIndexOf(')')
+                if (close < 0 || close + 2 >= stat.length) continue
+                parsedAny = true
+                if (stat[close + 2] == 'R') runnable++
+            }
+            return if (parsedAny) SignalValue.Count(runnable) else SignalValue.Unknown
+        }
     }
 }
 

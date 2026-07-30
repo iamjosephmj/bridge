@@ -20,7 +20,10 @@ sealed interface Decision {
  * No android imports — the simulator runs this class verbatim. Failures fail open
  * to Admit(default): the policy layer must never lose work.
  */
-class PolicyEngine(private val apiLevel: Int) {
+class PolicyEngine(
+    private val apiLevel: Int,
+    private val cpuCores: Int = Runtime.getRuntime().availableProcessors(),
+) {
 
     fun decide(state: WorkState, events: List<WorkEvent>,
                snapshot: SignalSnapshot, now: Long,
@@ -42,7 +45,18 @@ class PolicyEngine(private val apiLevel: Int) {
                 "thermal status ${thermal.value} >= SEVERE($THERMAL_SEVERE)")
         }
 
-        // 2. Quota admission (labeled heuristic — see M3 spec §1): demoted buckets get
+        // 2. Thread-pressure admission: when this process has more runnable threads than
+        //    cores × factor, MIN/LOW work yields briefly. Deadline work is exempt, like
+        //    thermal. Pressure is transient, so the recheck is short and there is no Shed.
+        val pressure = snapshot.values[SignalKind.THREAD_PRESSURE]
+        if (pressure is SignalValue.Count && pressure.value > cpuCores * PRESSURE_FACTOR &&
+            state.importance <= IMPORTANCE_LOW && state.deadlineMs == 0L) {
+            return Decision.Hold(now + PRESSURE_RECHECK_MS,
+                "runnable ${pressure.value} > $cpuCores cores × $PRESSURE_FACTOR — " +
+                    "deferring importance ${state.importance} work")
+        }
+
+        // 3. Quota admission (labeled heuristic — see M3 spec §1): demoted buckets get
         //    ~10min windows; un-chunked work estimated longer than a window is held.
         val bucket = (snapshot.values[SignalKind.STANDBY_BUCKET] as? SignalValue.Bucket)?.bucket ?: 10
         if (bucket >= BUCKET_WORKING_SET && state.chunkCount == 0) {
@@ -54,14 +68,14 @@ class PolicyEngine(private val apiLevel: Int) {
             }
         }
 
-        // 3. Quota budgeting: in FREQUENT or worse, spend quota on higher-value work first.
+        // 4. Quota budgeting: in FREQUENT or worse, spend quota on higher-value work first.
         if (bucket >= BUCKET_FREQUENT && state.importance <= IMPORTANCE_LOW) {
             return Decision.Shed(
                 "bucket $bucket >= FREQUENT, importance ${state.importance} <= LOW — " +
                     "quota reserved for higher-value work")
         }
 
-        // 4. Deadline escalation.
+        // 5. Deadline escalation.
         if (state.deadlineMs > 0L) {
             val enqueuedAt = events.filterIsInstance<WorkEvent.Enqueued>()
                 .lastOrNull { it.generation == state.generation }?.at ?: now
@@ -104,6 +118,8 @@ class PolicyEngine(private val apiLevel: Int) {
     companion object {
         const val THERMAL_SEVERE = 3
         const val THERMAL_RECHECK_MS = 15 * 60_000L
+        const val PRESSURE_FACTOR = 2
+        const val PRESSURE_RECHECK_MS = 60_000L
         const val QUOTA_WINDOW_MS = 10 * 60_000L
         const val QUOTA_RECHECK_MS = 30 * 60_000L
         const val BUCKET_WORKING_SET = 20

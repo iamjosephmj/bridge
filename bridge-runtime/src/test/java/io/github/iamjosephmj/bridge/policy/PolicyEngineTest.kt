@@ -12,7 +12,7 @@ import org.junit.Test
 
 class PolicyEngineTest {
 
-    private val engine = PolicyEngine(apiLevel = 34)
+    private val engine = PolicyEngine(apiLevel = 34, cpuCores = 8)
 
     private fun snapshot(vararg values: Pair<SignalKind, SignalValue>) =
         SignalSnapshot(1000L, values.toMap())
@@ -94,6 +94,33 @@ class PolicyEngineTest {
     @Test fun `deadline work ignores thermal hold`() {
         val d = decide(events(deadlineMs = 10_000L),
             snapshot(SignalKind.THERMAL to SignalValue.Count(4)), now = 2_000L)
+        assertTrue(d is Decision.Admit)
+    }
+
+    @Test fun `thread pressure holds MIN-LOW work with short recheck`() {
+        val pressured = snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(17))  // > 8×2
+        val hold = decide(events(importance = 1), pressured)
+        assertTrue("expected Hold, got $hold", hold is Decision.Hold)
+        assertTrue((hold as Decision.Hold).why.contains("runnable 17"))
+        assertEquals(1000L + PolicyEngine.PRESSURE_RECHECK_MS, hold.untilMs)
+        assertTrue(decide(events(importance = 0), pressured) is Decision.Hold)
+    }
+
+    @Test fun `thread pressure never delays DEFAULT or HIGH work`() {
+        val pressured = snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(50))
+        assertTrue(decide(events(importance = 2), pressured) is Decision.Admit)
+        assertTrue(decide(events(importance = 3), pressured) is Decision.Admit)
+    }
+
+    @Test fun `thread pressure at threshold or unknown admits LOW work`() {
+        val atThreshold = snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(16))  // == 8×2
+        assertTrue(decide(events(importance = 1), atThreshold) is Decision.Admit)
+        assertTrue(decide(events(importance = 1), snapshot()) is Decision.Admit)
+    }
+
+    @Test fun `deadline work ignores thread pressure`() {
+        val d = decide(events(importance = 1, deadlineMs = 10_000L),
+            snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(50)), now = 2_000L)
         assertTrue(d is Decision.Admit)
     }
 

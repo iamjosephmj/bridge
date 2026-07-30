@@ -254,7 +254,7 @@ adb shell am broadcast -a io.github.iamjosephmj.bridge.REPORT \
 **Under the hood**
 
 Inside `bridge-runtime`, layers stack strictly — each depends only on those below it:
-**durable** (DurableScope: step / delay / await, deterministic replay) → **diagnostics** (Diagnoser · Verdict · Ledger · BridgeReport) → **policy** (PolicyEngine: admission, quota, deadline escalation, doze strategy, rhythm) → **signals** (SignalHub: 9 platform signals, budgeted transition log) → **dispatch** (Dispatcher · JobGateway, multiplexed / 1:1 · AlarmGateway · Reconciler) → **journal** (append-only WorkEvent log · SQLite · KvStore).
+**durable** (DurableScope: step / delay / await, deterministic replay) → **diagnostics** (Diagnoser · Verdict · Ledger · BridgeReport) → **policy** (PolicyEngine: admission, quota, deadline escalation, doze strategy, rhythm) → **signals** (SignalHub: 12 platform signals, budgeted transition log) → **dispatch** (Dispatcher · JobGateway, multiplexed / 1:1 · AlarmGateway · Reconciler) → **journal** (append-only WorkEvent log · SQLite · KvStore).
 
 **Event-sourced journal** — every state change is an appended `WorkEvent` (`Enqueued`, `ChunkCompleted`, `StepCompleted`, `PolicyDecision`, …); current state is a fold over events. Nothing is ever updated in place, so "what happened" is always answerable. → [`bridge-runtime/.../store/`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/store/)
 
@@ -262,7 +262,7 @@ Inside `bridge-runtime`, layers stack strictly — each depends only on those be
 
 **Policy engine** — pure functions from (journal, signals, request) to decisions: thermal holds, bucket-quota admission, deadline escalation, doze burst-drain. Every decision is journaled and surfaced by `whyPending()` as `HeldByPolicy(why)` — nothing is ever silently deferred. → [`policy/`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/policy/)
 
-**Signal hub** — nine platform signals (standby bucket, Doze, background restriction, Data Saver, pending-job reasons, network validation, battery-opt exemption, maintenance windows, process deaths) read into snapshots and persisted transitions; the diagnoser folds them into verdicts. → [`bridge-glassbox/.../signals/`](bridge-glassbox/src/main/java/io/github/iamjosephmj/bridge/signals/)
+**Signal hub** — twelve platform signals (standby bucket, Doze, background restriction, Data Saver, pending-job reasons, network validation, battery-opt exemption, maintenance windows, process deaths, thermal status, charge time, thread pressure) read into snapshots and persisted transitions; the diagnoser folds them into verdicts. → [`bridge-glassbox/.../signals/`](bridge-glassbox/src/main/java/io/github/iamjosephmj/bridge/signals/)
 
 
 ### <b><kbd>TIER 3</kbd>&nbsp; Durable coroutines — suspend blocks that survive process death</b>
