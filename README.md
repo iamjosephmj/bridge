@@ -13,7 +13,6 @@ Bridge is an Android background-work runtime built directly on the platform's ow
 
 ## Contents
 
-- [Key results](#key-results)
 - [Adoption tiers](#adoption-tiers)
   - [Tier 0 — Glassbox: diagnostics for any app](#tier-0--glassbox-diagnostics-for-any-app)
   - [Tier 1 — Compat: an androidx.work façade](#tier-1--compat-an-androidxwork-façade)
@@ -25,27 +24,6 @@ Bridge is an Android background-work runtime built directly on the platform's ow
 - [Performance](#performance)
 - [Status and roadmap](#status-and-roadmap)
 - [Documentation](#documentation)
-
-## Key results
-
-Measured on physical hardware, API 36 (2026-07). Identical workloads were run against both backends. Raw reports: [`bench/scripts/reports/`](bench/scripts/reports/).
-
-| Scenario | Bridge | WorkManager |
-|---|---|---|
-| Force-stop mid-upload (20 chunks) | Resumed at the in-flight chunk — **1** chunk replayed | Restarted from chunk 0 — **20** chunks replayed |
-| Time to complete after kill | **61,350 ms** | 72,346 ms |
-| Stall diagnosis under forced idle | `DeferredByDoze(deep)` `[REPORTED]` | `RUNNING` — stale; the job had already been stopped |
-| Durable coroutine force-stopped mid-`delay(20s)` | **SUCCEEDED**, each step exactly once | Not supported |
-
-![Animated force-stop demo: both schedulers are killed at chunk 6. Bridge resumes at chunk 6; WorkManager starts over from chunk 0.](docs/assets/killdemo.svg)
-
-*Force-stop behavior, measured on device: Bridge replayed 1 chunk; WorkManager replayed 20 — rescheduled, not resumed.*
-
-![Animated whyPending terminal: WorkManager answers RUNNING (stale); Bridge answers DeferredByDoze(deep) with basis REPORTED.](docs/assets/whyPending.svg)
-
-*The same stall, queried through both APIs. Bridge returns the platform-reported cause; WorkManager reports a stale RUNNING state.*
-
-The durable-coroutine result — force-stopped mid-`delay(20s)`, timer elapsing while the process was dead, completing with each step executed exactly once — is covered in [Tier 3](#tier-3--durable-coroutines). Full measurement panels: [Measurements](#measurements).
 
 ## Adoption tiers
 
@@ -128,7 +106,7 @@ Full guide: [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
 ![Constraint chips light up one by one — charging, unmetered, batteryNotLow, deviceIdle — then the work dispatches as a multiplexed JobWorkItem.](docs/assets/tier2-runtime.svg)
 
-The complete engine — the layer every result above runs on.
+The complete engine — the layer every result in [Measurements](#measurements) runs on.
 
 #### Enqueue with the constraint DSL
 
@@ -183,7 +161,7 @@ Bridge.enqueue(workRequest("backup", "photo-backup") {
 })
 ```
 
-Every completed chunk is journaled. After a stop, crash, or force-stop mid-run, the next attempt starts at `WorkState.nextChunk`, not chunk 0. This is the exact configuration behind the 1-vs-20 result above.
+Every completed chunk is journaled. After a stop, crash, or force-stop mid-run, the next attempt starts at `WorkState.nextChunk`, not chunk 0. This is the exact configuration behind the 1-vs-20 result in [Measurements](#measurements).
 
 #### Diagnostics
 
@@ -292,7 +270,22 @@ A direct capability comparison, including the rows WorkManager currently wins.
 
 ## Measurements
 
-Raw markdown tables, citable: [`docs/RESULTS.md`](docs/RESULTS.md).
+Measured on physical hardware, API 36 (2026-07). Identical workloads were run against both backends. Raw markdown tables, citable: [`docs/RESULTS.md`](docs/RESULTS.md); raw reports: [`bench/scripts/reports/`](bench/scripts/reports/).
+
+| Scenario | Bridge | WorkManager |
+|---|---|---|
+| Force-stop mid-upload (20 chunks) | Resumed at the in-flight chunk — **1** chunk replayed | Restarted from chunk 0 — **20** chunks replayed |
+| Time to complete after kill | **61,350 ms** | 72,346 ms |
+| Stall diagnosis under forced idle | `DeferredByDoze(deep)` `[REPORTED]` | `RUNNING` — stale; the job had already been stopped |
+| Durable coroutine force-stopped mid-`delay(20s)` | **SUCCEEDED**, each step exactly once | Not supported |
+
+![Animated force-stop demo: both schedulers are killed at chunk 6. Bridge resumes at chunk 6; WorkManager starts over from chunk 0.](docs/assets/killdemo.svg)
+
+*Force-stop behavior, measured on device: Bridge replayed 1 chunk; WorkManager replayed 20 — rescheduled, not resumed.*
+
+![Animated whyPending terminal: WorkManager answers RUNNING (stale); Bridge answers DeferredByDoze(deep) with basis REPORTED.](docs/assets/whyPending.svg)
+
+*The same stall, queried through both APIs. Bridge returns the platform-reported cause; WorkManager reports a stale RUNNING state.*
 
 ![Force-stop replay, measured: attempts 2 vs 2; chunks replayed 1 vs 20; time to complete 61,350 ms vs 72,346 ms (Bridge vs WorkManager).](docs/assets/panel-forcestop.svg)
 
