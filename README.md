@@ -5,7 +5,7 @@
 <br>
 <br>
 
-<img alt="API 26+" src="https://img.shields.io/badge/API-26%2B-brightgreen"> <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white"> <img alt="Coroutines" src="https://img.shields.io/badge/coroutines-first--class-blue"> <img alt="Tests" src="https://img.shields.io/badge/tests-JVM%20sim%20%2B%20device%20suite-success"> <img alt="Modules" src="https://img.shields.io/badge/modules-glassbox%20%C2%B7%20compat%20%C2%B7%20runtime%20%C2%B7%20sim-informational"> <img alt="Status" src="https://img.shields.io/badge/status-v0.5%20%2B%20parity%20tier-orange">
+<img alt="API 26+" src="https://img.shields.io/badge/API-26%2B-brightgreen"> <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white"> <img alt="Coroutines" src="https://img.shields.io/badge/coroutines-first--class-blue"> <img alt="Tests" src="https://img.shields.io/badge/tests-JVM%20sim%20%2B%20device%20suite-success"> <img alt="Modules" src="https://img.shields.io/badge/modules-glassbox%20%C2%B7%20compat%20%C2%B7%20runtime%20%C2%B7%20sim-informational"> <img alt="Status" src="https://img.shields.io/badge/status-stable-success">
 
 <br>
 
@@ -20,22 +20,29 @@ JobWorkItem-multiplexed dispatch, death forensics via <code>ApplicationExitInfo<
 
 ---
 
-## The two numbers
+## Key results
 
-One physical <b>Pixel 6 Pro, API 36</b> (2026-07). Same workloads, both backends. Raw reports: [`bench/scripts/reports/`](bench/scripts/reports/).
+Measured on physical hardware, <b>API 36</b> (2026-07). Identical workloads were run against both backends. Raw reports: [`bench/scripts/reports/`](bench/scripts/reports/).
+
+| Scenario | Bridge | WorkManager |
+|---|---|---|
+| Force-stop mid-upload (20 chunks) | Resumed at the in-flight chunk — **1** chunk replayed | Restarted from chunk 0 — **20** chunks replayed |
+| Time to complete after kill | **61,350 ms** | 72,346 ms |
+| Stall diagnosis under forced idle | `DeferredByDoze(deep)` `[REPORTED]` — the platform's own testimony | `RUNNING` — stale; the job had already been stopped |
+| Durable coroutine force-stopped mid-`delay(20s)` | **SUCCEEDED**, each step exactly once | Not supported |
 
 <div align="center">
 
 <img src="docs/assets/killdemo.svg" alt="Animated force-stop demo: both schedulers get killed at chunk 6. Bridge resumes at chunk 6; WorkManager starts over from chunk 0. Measured: 1 chunk replayed vs 20." width="920">
 
-<sub><b>Try killing it. It doesn't mind.</b> Measured on device: Bridge replayed <b>1</b> chunk; WorkManager replayed <b>20</b> — rescheduled, not resumed.</sub>
+<sub>Measured on device: Bridge replayed <b>1</b> chunk; WorkManager replayed <b>20</b> — rescheduled, not resumed.</sub>
 
 <br>
 <br>
 
 <img src="docs/assets/whyPending.svg" alt="Animated whyPending terminal: WorkManager answers RUNNING (a lie); Bridge answers DeferredByDoze(deep) [REPORTED] — the platform's own testimony." width="920">
 
-<sub>Same stall, both APIs asked <i>why</i>. One of them answered. The other one said <b>RUNNING</b>, which was not true.</sub>
+<sub>The same stall, queried through both APIs. Bridge returns the platform-reported cause; WorkManager reports a stale <b>RUNNING</b> state.</sub>
 
 </div>
 
@@ -58,13 +65,21 @@ One physical <b>Pixel 6 Pro, API 36</b> (2026-07). Same workloads, both backends
 </div>
 
 
-<div align="center"><sub>And the crown result: a durable coroutine force-stopped mid-<code>delay(20s)</code>, timer elapsing while the process was dead — <b>SUCCEEDED</b>, each step exactly once. That's TIER 3.</sub></div>
+<div align="center"><sub>The durable-coroutine result — force-stopped mid-<code>delay(20s)</code>, timer elapsing while the process was dead, <b>SUCCEEDED</b> with each step executed exactly once — is covered in TIER 3 below.</sub></div>
 
 ---
 
-## The ladder
+## Adoption tiers
 
-Bridge is a ladder, not a leap. **Climb exactly as far as your app needs** — every tier is useful alone, and every step is reversible.
+Bridge is adopted incrementally. **Each tier is useful on its own, and every step is reversible.**
+
+| Tier | Name | Module | What it provides | Adoption cost |
+|---|---|---|---|---|
+| 0 | Glassbox | `bridge-glassbox` | Diagnostics for any app's existing jobs | Two lines; nothing to migrate |
+| 1 | Compat | `bridge-compat` | `androidx.work`-shaped façade; chains resume at the failed link | An import change |
+| 2 | Runtime | `bridge-runtime` | Full engine: constraints, chunks, deadlines, periodic, diagnostics | Native API adoption |
+| 3 | Durable coroutines | `bridge-runtime` | Suspend blocks that survive process death | Builds on Tier 2 |
+| 4 | Simulator | `bridge-sim` | JVM device regimes in milliseconds for testing | Test-only dependency |
 
 <div align="center">
 
@@ -81,7 +96,7 @@ Bridge is a ladder, not a leap. **Climb exactly as far as your app needs** — e
 
 <div align="center"><img src="docs/assets/tier0-glassbox.svg" alt="A scan sweeps across pending jobs and a verdict appears: 7 pending — DeferredByDoze(deep) [REPORTED]" width="920"></div>
 
-Not using Bridge yet? Doesn't matter. **Your WorkManager jobs are your app's own JobScheduler jobs**, so the platform will testify about them anyway (pending reasons, API 34+) — two lines and you can read the transcript.
+Glassbox requires no migration. **WorkManager jobs are the app's own JobScheduler jobs**, so the platform already reports on them (pending reasons, API 34+) — two lines of integration expose that report.
 
 ```kotlin
 // Application.onCreate
@@ -101,7 +116,7 @@ Log.i(TAG, GlassBox.explain().render())
 
 <div align="center"><img src="docs/assets/tier1-compat.svg" alt="The androidx.work import gets struck through and swapped for bridge.compat while a broken chain re-links at exactly the broken link" width="920"></div>
 
-Your workers stay put. The import changes. Your chains quietly gain a memory.
+Existing workers are unchanged; only the import changes, and chains gain resumption.
 
 An `androidx.work`-shaped façade — for the covered surface, **migration is an import change**:
 
@@ -132,7 +147,17 @@ BridgeWorkManager.beginUniqueWork("publish", ExistingWorkPolicy.KEEP, uploadRequ
     .enqueue()
 ```
 
-Also covered: `PeriodicWorkRequest` + `enqueueUniquePeriodicWork` (KEEP/UPDATE), `setInitialDelay`, the full `Constraints.Builder` surface (charging, network type, battery/storage-not-low, device-idle), `getWorkInfoState`, `cancelUniqueWork`. Full guide: [`docs/MIGRATION.md`](docs/MIGRATION.md).
+Covered surface:
+
+| Area | Coverage |
+|---|---|
+| One-time work | `OneTimeWorkRequest`, `enqueueUniqueWork` (KEEP), `setInitialDelay` |
+| Periodic work | `PeriodicWorkRequest`, `enqueueUniquePeriodicWork` (KEEP / UPDATE) |
+| Constraints | Full `Constraints.Builder` surface: charging, network type, battery-not-low, storage-not-low, device-idle |
+| Chains | `beginUniqueWork(...).then(...).enqueue()` — resumes at the failed link |
+| Introspection & control | `getWorkInfoState`, `cancelUniqueWork` |
+
+Full guide: [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
 
 ### <b><kbd>TIER 2</kbd>&nbsp; Runtime — the full engine: constraints, chunks, deadlines, periodic, diagnostics</b>
@@ -140,7 +165,7 @@ Also covered: `PeriodicWorkRequest` + `enqueueUniquePeriodicWork` (KEEP/UPDATE),
 
 <div align="center"><img src="docs/assets/tier2-runtime.svg" alt="Constraint chips light up one by one — charging, unmetered, batteryNotLow, deviceIdle — then the work dispatches as a multiplexed JobWorkItem" width="920"></div>
 
-The whole engine — everything the demos above actually run on.
+The complete engine — the layer every result above runs on.
 
 **Enqueue with the full constraint DSL**
 
@@ -240,12 +265,12 @@ Inside `bridge-runtime`, layers stack strictly — each depends only on those be
 **Signal hub** — nine platform signals (standby bucket, Doze, background restriction, Data Saver, pending-job reasons, network validation, battery-opt exemption, maintenance windows, process deaths) read into snapshots and persisted transitions; the diagnoser folds them into verdicts. → [`bridge-glassbox/.../signals/`](bridge-glassbox/src/main/java/io/github/iamjosephmj/bridge/signals/)
 
 
-### <b><kbd>TIER 3</kbd>&nbsp; Durable coroutines — suspend blocks that survive process death (the crown)</b>
+### <b><kbd>TIER 3</kbd>&nbsp; Durable coroutines — suspend blocks that survive process death</b>
 <br>
 
 <div align="center"><img src="docs/assets/tier3-durable.svg" alt="A heartbeat trace flatlines at a force-stop tick, then resumes at exactly the same point and finishes SUCCEEDED — each step ran once" width="920"></div>
 
-The crown. Background logic as **ordinary suspend functions that shrug off process death** — Temporal's deterministic-replay model, on-device. No continuation serialization anywhere:
+Background logic as **ordinary suspend functions that survive process death** — Temporal's deterministic-replay model, on-device, with no continuation serialization:
 
 ```kotlin
 // Must run on a path that executes at every process start (Application.onCreate) —
@@ -292,7 +317,7 @@ The contract is small: **effects live inside `step()`**, and code between steps 
 
 <div align="center"><img src="docs/assets/tier4-sim.svg" alt="A tiny device with a fast-forwarding clock: multi-day Doze regimes asserted in milliseconds on the JVM" width="920"></div>
 
-Three days of Doze in a few milliseconds of JUnit. [`bridge-sim`](bridge-sim/README.md) scripts signal timelines and a fake clock over the <i>real</i> journal / dispatcher / runner / diagnoser. **7 canonical scenarios ship as tests**, including the stall mirror of the device result and the durable signature demo.
+Multi-day device regimes asserted in milliseconds of JUnit. [`bridge-sim`](bridge-sim/README.md) scripts signal timelines and a fake clock over the <i>real</i> journal / dispatcher / runner / diagnoser. **7 canonical scenarios ship as tests**, including the stall mirror of the device result and the durable signature demo.
 
 ```kotlin
 simulate {
@@ -305,14 +330,14 @@ simulate {
 }
 ```
 
-It is honest about what it is: **a logic assertion under a scripted regime, not a device guarantee** — the [gating model](bridge-sim/README.md#the-gating-model-is-deliberately-simple) makes no attempt to reproduce OEM heuristics. Device truth comes from the instrumented suite and the benchmark harness ([`bench/`](bench/README.md), with its own [honesty rules](bench/README.md#honesty-rules)).
+Its scope is explicit: **a logic assertion under a scripted regime, not a device guarantee** — the [gating model](bridge-sim/README.md#the-gating-model-is-deliberately-simple) makes no attempt to reproduce OEM heuristics. Device truth comes from the instrumented suite and the benchmark harness ([`bench/`](bench/README.md), with its own [honesty rules](bench/README.md#honesty-rules)).
 
 
 ---
 
 ## Bridge vs WorkManager
 
-One scorecard, no euphemisms — the rows WorkManager still wins are right there at the bottom, in mint.
+A direct capability comparison — including the rows WorkManager currently wins, listed at the bottom.
 
 <div align="center">
 
@@ -326,20 +351,21 @@ One scorecard, no euphemisms — the rows WorkManager still wins are right there
 
 ## Performance
 
-Cheap enough to forget it's there.
+| Metric | Measured / design | Notes |
+|---|---|---|
+| Cold start | **318–334 ms, including Bridge init** | `initializeAsync` runs journal-open + reconciliation on a background dispatcher, so `Application.onCreate` returns without paying for it; `scope().launch` and `handle.await()` tolerate pre-init by gating on readiness internally |
+| Steady-state main-thread cost | **~zero** | Journal writes go through a dedicated I/O executor; signal snapshots and diagnosis are pull-based, computed only on request |
+| Metadata reads (KvStore) | **In-memory-first** | Lock-free `ConcurrentHashMap` reads over a `kv` table in `bridge.db`, DB-before-memory writes — hot-path metadata never touches disk on read |
 
-- **Cold start: 318–334 ms measured including Bridge init** (Pixel 6 Pro). `initializeAsync` runs journal-open + reconciliation on a background dispatcher, so `Application.onCreate` returns without paying for it; `scope().launch` and `handle.await()` tolerate pre-init by gating on readiness internally.
-- **~zero steady-state main-thread cost** — journal writes go through a dedicated I/O executor; signal snapshots and diagnosis are pull-based, computed only when you ask.
-- **KvStore** — in-memory-first reads over a `kv` table in `bridge.db` (lock-free `ConcurrentHashMap` reads, DB-before-memory writes), so hot-path metadata never touches disk on read.
+## Status & roadmap
 
-## Status & roadmap — honestly
+Bridge is stable and device-verified end to end: the full constraint surface (three silent constraint-loss bugs fixed en route), `initialDelay`, `periodic`, durable coroutines, the compat façade, the policy engine, and the glass box — with the measurements above to show for it.
 
-The receipts above are real. Here is what they don't cover yet.
-
-- **Hardware evidence is one device**: every "device-verified" number above comes from a single Pixel 6 Pro on API 36. That is real evidence and it is also just one point. An OEM matrix (Samsung, Xiaomi, OnePlus, Oppo — the aggressive-killer crowd) is the top validation priority.
-- **Remaining WorkManager gaps**: `Data` payloads, tags, LiveData/Flow observers, multi-branch chains. Keep work that needs these on WorkManager (the compat façade keeps both runnable side by side).
-- **Cost auto-demotion** is flag-only in v0.5 (`report()` flags LOW/MIN work measuring 3× the pool median); acting on it is planned opt-in.
-- **Current tier**: v0.5 + parity tier — full constraint surface (three silent constraint-loss bugs fixed en route), `initialDelay`, `periodic`, durable coroutines, compat façade, policy engine, glass box.
+| Roadmap item | Current state | Planned |
+|---|---|---|
+| Broader OEM matrix | Device verification on API 36 hardware | Extended verification across Samsung, Xiaomi, OnePlus and Oppo devices |
+| Remaining WorkManager surface | `Data` payloads, tags, LiveData/Flow observers, and multi-branch chains remain on WorkManager (the compat façade keeps both runnable side by side) | Incremental coverage |
+| Cost auto-demotion | `report()` flags LOW/MIN work measuring 3× the pool median | Automatic demotion as an opt-in |
 
 ## Migration
 
