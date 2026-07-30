@@ -262,11 +262,29 @@ Its scope is explicit: a logic assertion under a scripted regime, not a device g
 
 ## Bridge vs WorkManager
 
-A direct capability comparison, including the rows WorkManager currently wins.
+A direct capability comparison, including the rows WorkManager currently wins. Rows marked *device-verified* correspond to the measurements below.
+
+| Capability | Bridge | WorkManager | Verification |
+|---|---|---|---|
+| Resume interrupted work at the exact chunk | Yes — journaled chunk ledger | No — restarts from zero | Device-verified (1 vs 20 chunks replayed) |
+| Explain stalled work | Typed verdict with platform evidence (`[REPORTED]`) | State query only; can report a stale `RUNNING` | Device-verified (stall scenario) |
+| Durable coroutines surviving process death | Yes — deterministic replay; journaled steps, timers, awaits | No | Device-verified (force-stop mid-`delay`) |
+| Chains resume at the failed link | Yes — links compile to chunks | No — the chain restarts | Instrumented suite |
+| Per-run history with death forensics | Yes — `ledger()` with `ApplicationExitInfo`, device context, cost | No run history kept | |
+| Measured per-run cost | HealthStats deltas; flags expensive work declared unimportant | No | |
+| Deadline escalation | `mustCompleteBy`: DEFAULT → EXPEDITED → while-idle alarm, each step journaled | Expedited flag only | |
+| Importance-aware quota budgeting | Explicit, journaled shed/hold decisions in demoted buckets | Silent platform deferral | |
+| Thread-pressure admission | Runnable threads vs cores classify LOW / MEDIUM / HIGH; per-request `maxThreadPressure` | No | Device-verified (Pixel hardware) |
+| Doze strategy | Maintenance-window burst-drain, doze-exit dispatch, rhythm prediction | Platform default | Simulated scenarios |
+| Constraints (charging, network, battery/storage-not-low, device-idle, content-URI triggers) | Full surface | Full surface | |
+| Periodic work and initial delay | Yes — journaled generations, exact-path latency | Yes | |
+| `Data` payloads, tags, work observers (LiveData/Flow) | Not yet — on the roadmap | Yes | |
+| Multi-branch chains | Sequential only — on the roadmap | Yes | |
+| Ecosystem (Hilt integration, documentation, community) | New | Extensive | |
 
 ![Bridge vs WorkManager scorecard: Bridge leads on resumption, explanation, durable coroutines, chains, forensics, cost, deadlines, quota and doze strategy; WorkManager wins on Data payloads, tags, observers, multi-branch chains and ecosystem.](docs/assets/scorecard.svg)
 
-*A filled dot means the row is supported; the highlight goes to whichever library wins the row — including the four rows WorkManager still does. [Raw table](docs/RESULTS.md#bridge-vs-workmanager).*
+*The same comparison as a visual scorecard. [Raw table](docs/RESULTS.md#bridge-vs-workmanager).*
 
 ## Measurements
 
