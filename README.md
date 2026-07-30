@@ -46,26 +46,7 @@ Measured on physical hardware, <b>API 36</b> (2026-07). Identical workloads were
 
 </div>
 
-### <b>The measurements</b> <sub>(raw markdown tables, citable: [`docs/RESULTS.md`](docs/RESULTS.md))</sub>
-<br>
-
-<div align="center">
-
-<img src="docs/assets/panel-forcestop.svg" alt="Force-stop replay, measured: attempts 2 vs 2; chunks replayed 1 vs 20; time to complete 61,350 ms vs 72,346 ms (bridge vs workmanager)" width="920">
-
-<sub>Bridge re-executed only the chunk in flight at the kill; every completed chunk's result survived. WorkManager, with no resume primitive, restarted from chunk 0. <a href="docs/RESULTS.md#1-vs-20--force-stop-replay">raw numbers →</a></sub>
-
-<br>
-<br>
-
-<img src="docs/assets/panel-stall.svg" alt="Stall verdicts: for ping, medium_sync, large_chunked and large_chunked-uc, workmanager says RUNNING or SUCCEEDED while bridge says DeferredByDoze(deep) [REPORTED]" width="920">
-
-<sub>The bold <b>RUNNING</b>s are stale — the forced idle had already stopped those jobs. Bridge's verdicts carry <code>basis=REPORTED</code>: <code>getPendingJobReasons</code>, the platform's own explanation, not inference. <a href="docs/RESULTS.md#the-stall-verdict">raw numbers →</a></sub>
-
-</div>
-
-
-<div align="center"><sub>The durable-coroutine result — force-stopped mid-<code>delay(20s)</code>, timer elapsing while the process was dead, <b>SUCCEEDED</b> with each step executed exactly once — is covered in TIER 3 below.</sub></div>
+<div align="center"><sub>The durable-coroutine result — force-stopped mid-<code>delay(20s)</code>, timer elapsing while the process was dead, <b>SUCCEEDED</b> with each step executed exactly once — is covered in TIER 3 below. Full measurement panels: <a href="#the-measurements">The measurements</a>.</sub></div>
 
 ---
 
@@ -256,18 +237,7 @@ adb shell am broadcast -a io.github.iamjosephmj.bridge.REPORT \
     -n <pkg>/io.github.iamjosephmj.bridge.diagnostics.ReportReceiver
 ```
 
-**Under the hood**
-
-Inside `bridge-runtime`, layers stack strictly — each depends only on those below it:
-**durable** (DurableScope: step / delay / await, deterministic replay) → **diagnostics** (Diagnoser · Verdict · Ledger · BridgeReport) → **policy** (PolicyEngine: admission, quota, thread pressure, deadline escalation, doze strategy, rhythm) → **signals** (SignalHub: 12 platform signals, budgeted transition log) → **dispatch** (Dispatcher · JobGateway, multiplexed / 1:1 · AlarmGateway · Reconciler) → **journal** (append-only WorkEvent log · SQLite · KvStore).
-
-**Event-sourced journal** — every state change is an appended `WorkEvent` (`Enqueued`, `ChunkCompleted`, `StepCompleted`, `PolicyDecision`, …); current state is a fold over events. Nothing is ever updated in place, so "what happened" is always answerable. → [`bridge-runtime/.../store/`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/store/)
-
-**Deterministic replay** — after death, a chunked worker resumes at `nextChunk`; a durable block re-executes from the top with completed `step()`s returning journaled results instantly, reattaching at the first live step, timer, or await. → [`api/Durable.kt`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/api/Durable.kt)
-
-**Policy engine** — pure functions from (journal, signals, request) to decisions: thermal holds, bucket-quota admission, thread-pressure admission (runnable threads vs cores classify LOW / MEDIUM / HIGH; MEDIUM defers MIN/LOW-importance work, HIGH also defers DEFAULT — `Importance.HIGH` and deadline work never wait, and `maxThreadPressure(level)` overrides the mapping per request), deadline escalation, doze burst-drain. Every decision is journaled and surfaced by `whyPending()` as `HeldByPolicy(why)` — nothing is ever silently deferred. → [`policy/`](bridge-runtime/src/main/java/io/github/iamjosephmj/bridge/policy/)
-
-**Signal hub** — twelve platform signals (standby bucket, Doze, background restriction, Data Saver, pending-job reasons, network validation, battery-opt exemption, maintenance windows, process deaths, thermal status, charge time, thread pressure) read into snapshots and persisted transitions; the diagnoser folds them into verdicts. → [`bridge-glassbox/.../signals/`](bridge-glassbox/src/main/java/io/github/iamjosephmj/bridge/signals/)
+**How it's built** — the layer stack, event-sourced journal, deterministic replay, policy engine, and signal hub are documented separately in [`docs/INTERNALS.md`](docs/INTERNALS.md). Nothing there is required to use Bridge.
 
 
 ### <b><kbd>TIER 3</kbd>&nbsp; Durable coroutines — suspend blocks that survive process death</b>
@@ -350,6 +320,27 @@ A direct capability comparison — including the rows WorkManager currently wins
 <img src="docs/assets/scorecard.svg" alt="Bridge vs WorkManager scorecard: bridge leads on resumption, explanation, durable coroutines, chains, forensics, cost, deadlines, quota and doze strategy; WorkManager still wins on Data payloads/tags/observers, multi-branch chains and ecosystem" width="1000">
 
 <sub>Filled mint dot = has it; hollow dot = does not. The mint goes to whoever actually wins the row — including the four rows WorkManager still does. <a href="docs/RESULTS.md#bridge-vs-workmanager">raw table →</a></sub>
+
+</div>
+
+---
+
+## The measurements
+
+Raw markdown tables, citable: [`docs/RESULTS.md`](docs/RESULTS.md).
+
+<div align="center">
+
+<img src="docs/assets/panel-forcestop.svg" alt="Force-stop replay, measured: attempts 2 vs 2; chunks replayed 1 vs 20; time to complete 61,350 ms vs 72,346 ms (bridge vs workmanager)" width="920">
+
+<sub>Bridge re-executed only the chunk in flight at the kill; every completed chunk's result survived. WorkManager, with no resume primitive, restarted from chunk 0. <a href="docs/RESULTS.md#1-vs-20--force-stop-replay">raw numbers →</a></sub>
+
+<br>
+<br>
+
+<img src="docs/assets/panel-stall.svg" alt="Stall verdicts: for ping, medium_sync, large_chunked and large_chunked-uc, workmanager says RUNNING or SUCCEEDED while bridge says DeferredByDoze(deep) [REPORTED]" width="920">
+
+<sub>The bold <b>RUNNING</b>s are stale — the forced idle had already stopped those jobs. Bridge's verdicts carry <code>basis=REPORTED</code>: <code>getPendingJobReasons</code>, the platform's own explanation, not inference. <a href="docs/RESULTS.md#the-stall-verdict">raw numbers →</a></sub>
 
 </div>
 
