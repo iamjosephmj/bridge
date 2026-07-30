@@ -13,6 +13,30 @@ Bridge is an Android background-work runtime built directly on the platform's ow
 
 Full documentation, organized as a book: **[iamjosephmj.github.io/bridge](https://iamjosephmj.github.io/bridge/)**
 
+## Installation
+
+Two dependencies: the core runtime (which brings the glass box transitively) and, for tests, the JVM simulator. Served via [JitPack](https://jitpack.io/#iamjosephmj/bridge):
+
+```kotlin
+// settings.gradle.kts
+dependencyResolutionManagement {
+    repositories {
+        maven(url = "https://jitpack.io")
+    }
+}
+
+// module build.gradle.kts
+dependencies {
+    // Core: runtime engine + diagnostics (bridge-glassbox comes transitively)
+    implementation("com.github.iamjosephmj.bridge:bridge-runtime:v0.5.0-rc.3")
+
+    // Test: JVM simulator — device regimes in milliseconds
+    testImplementation("com.github.iamjosephmj.bridge:bridge-sim:v0.5.0-rc.3")
+}
+```
+
+Optional additions: `bridge-compat` (the `androidx.work`-shaped façade for Tier 1 migration) and `bridge-glassbox` alone (Tier 0 diagnostics without the runtime).
+
 ## Usage
 
 Register worker factories at every process start, then enqueue with the constraint DSL. Enqueue has KEEP semantics per unique name, so unconditional enqueue-on-startup is safe:
@@ -88,6 +112,7 @@ The full surface — chunked resumption, durable coroutines, diagnostics, the si
 
 ## Contents
 
+- [Installation](#installation)
 - [Usage](#usage)
 - [Adoption tiers](#adoption-tiers)
   - [Tier 0 — Glassbox: diagnostics for any app](#tier-0--glassbox-diagnostics-for-any-app)

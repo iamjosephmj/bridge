@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
+    `maven-publish`
 }
 
 android {
@@ -11,6 +12,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     testOptions.unitTests.isIncludeAndroidResources = true
+    publishing { singleVariant("release") { withSourcesJar() } }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            register<MavenPublication>("release") {
+                groupId = "com.github.iamjosephmj.bridge"
+                artifactId = "bridge-runtime"
+                version = "0.5.0-rc.3"
+                from(components["release"])
+            }
+        }
+    }
 }
 
 dependencies {

@@ -14,7 +14,29 @@ nav_order: 2
 | `bridge-runtime` | The native API: constraint DSL, chunked workers, durable coroutines, diagnostics |
 | `bridge-sim` | JVM tests that script device regimes (Doze, buckets, thermal, thread pressure) |
 
-Artifacts are not yet published to Maven Central; consume the modules as included builds from the [repository](https://github.com/iamjosephmj/bridge).
+## Installation
+
+Two dependencies: the core runtime (which brings `bridge-glassbox` transitively) and, for tests, the JVM simulator. Served via [JitPack](https://jitpack.io/#iamjosephmj/bridge):
+
+```kotlin
+// settings.gradle.kts
+dependencyResolutionManagement {
+    repositories {
+        maven(url = "https://jitpack.io")
+    }
+}
+
+// module build.gradle.kts
+dependencies {
+    // Core: runtime engine + diagnostics
+    implementation("com.github.iamjosephmj.bridge:bridge-runtime:v0.5.0-rc.3")
+
+    // Test: JVM simulator — device regimes in milliseconds
+    testImplementation("com.github.iamjosephmj.bridge:bridge-sim:v0.5.0-rc.3")
+}
+```
+
+`bridge-compat` and standalone `bridge-glassbox` are published under the same group for Tier 1 and Tier 0 adoption respectively.
 
 ## Initialize
 

@@ -1,11 +1,26 @@
 plugins {
     alias(libs.plugins.android.library)
+    `maven-publish`
 }
 
 android {
     namespace = "io.github.iamjosephmj.bridge.sim"
     compileSdk = 36
     defaultConfig { minSdk = 26 }
+    publishing { singleVariant("release") { withSourcesJar() } }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            register<MavenPublication>("release") {
+                groupId = "com.github.iamjosephmj.bridge"
+                artifactId = "bridge-sim"
+                version = "0.5.0-rc.3"
+                from(components["release"])
+            }
+        }
+    }
 }
 
 dependencies {
