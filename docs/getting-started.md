@@ -29,10 +29,10 @@ dependencyResolutionManagement {
 // module build.gradle.kts
 dependencies {
     // Core: runtime engine + diagnostics
-    implementation("com.github.iamjosephmj.bridge:bridge-runtime:v0.5.0-rc.3")
+    implementation("com.github.iamjosephmj.bridge:bridge-runtime:v0.5.0-rc.4")
 
     // Test: JVM simulator — device regimes in milliseconds
-    testImplementation("com.github.iamjosephmj.bridge:bridge-sim:v0.5.0-rc.3")
+    testImplementation("com.github.iamjosephmj.bridge:bridge-sim:v0.5.0-rc.4")
 }
 ```
 
