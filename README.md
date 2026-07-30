@@ -18,33 +18,63 @@ Full documentation, organized as a book: **[iamjosephmj.github.io/bridge](https:
 Register worker factories at every process start, then enqueue with the constraint DSL. Enqueue has KEEP semantics per unique name, so unconditional enqueue-on-startup is safe:
 
 ```kotlin
-// Application.onCreate — register worker factories at every process start
+/*
+ * Application.onCreate — register worker factories at every process start.
+ * Relaunching IS the recovery path: after a force-stop, this registration is
+ * what lets journaled work find its code again. initializeAsync keeps
+ * journal-open and reconciliation off the main thread; early callers
+ * suspend on Bridge.awaitReady().
+ */
 Bridge.initializeAsync(this) {
-    worker("sync") { SyncWorker() }          // BridgeWorker: suspend fun run(ctx): RunResult
+    worker("sync") { SyncWorker() }   // BridgeWorker: suspend fun run(ctx): RunResult
 }
 
+/*
+ * One enqueue, the whole surface. KEEP semantics per unique name:
+ * re-enqueueing a live name is a no-op, so unconditional
+ * enqueue-on-startup is safe.
+ */
 Bridge.enqueue(workRequest("nightly-sync", "sync") {
-    network()                    // any connected network (unmetered() for Wi-Fi-class)
+
+    /* Platform constraints — compiled to real JobInfo, never emulated. */
+    network()          // any connected network; unmetered() for Wi-Fi-class
     charging()
     batteryNotLow()
     storageNotLow()
-    deviceIdle()                 // JobInfo.setRequiresDeviceIdle
-    contentTrigger("content://media/photos", descendants = true)  // JobInfo.TriggerContentUri
-    importance(Importance.LOW)   // feeds the policy engine, not just the platform:
-                                 // LOW yields under quota and thread pressure; HIGH never waits
-    maxThreadPressure(PressureLevel.MEDIUM)  // dispatch only while runnable threads <= cores x 2;
-                                 // overrides the importance-derived pressure default
-    initialDelay(10 * 60_000L)   // exact-path setMinimumLatency
+    deviceIdle()       // JobInfo.setRequiresDeviceIdle
+    contentTrigger("content://media/photos", descendants = true)
+                       // JobInfo.TriggerContentUri — runs when content changes
+
+    /*
+     * Policy inputs — these feed Bridge's own engine, not just the platform.
+     * importance: LOW yields under bucket quota and thread pressure; HIGH
+     * never waits. maxThreadPressure: dispatch only while runnable threads
+     * stay at or below the level (MEDIUM = cores x 2), overriding the
+     * importance-derived default in either direction. Every policy hold is
+     * journaled and visible in whyPending() — nothing is silently deferred.
+     */
+    importance(Importance.LOW)
+    maxThreadPressure(PressureLevel.MEDIUM)
+
+    /* Scheduling shape. */
+    initialDelay(10 * 60_000L)     // exact-path setMinimumLatency
     maxAttempts(5)
-    mustCompleteBy(tomorrow6amMs)  // deadline escalation: DEFAULT -> EXPEDITED -> while-idle alarm
+    mustCompleteBy(tomorrow6amMs)  // escalates as the deadline nears:
+                                   // DEFAULT -> EXPEDITED -> while-idle alarm
 })
 
-// Repeating work — each cycle is a journaled generation; cancel ends the series:
+/*
+ * Repeating work — each cycle is a journaled generation; cancelling the
+ * name ends the series. The 15-minute floor is the platform's, not Bridge's.
+ */
 Bridge.enqueue(workRequest("heartbeat", "sync") {
-    periodic(30 * 60_000L)       // >= 15 min, the platform floor
+    periodic(30 * 60_000L)
 })
 
-// Why isn't it running? Always answerable:
+/*
+ * Why isn't it running? Always answerable — a typed verdict backed by the
+ * platform's own reporting, never a stale RUNNING.
+ */
 Log.i(TAG, Bridge.whyPending("nightly-sync").render(now))
 // ENQUEUED 2h 10m — DeferredByDoze(deep) [REPORTED]
 ```
