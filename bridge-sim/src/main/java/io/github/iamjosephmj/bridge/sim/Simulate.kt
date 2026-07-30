@@ -58,7 +58,8 @@ class SimScope internal constructor(internal val device: SimulatedDevice) {
     fun thermal(status: Int, fromMs: Long = 0L) =
         timeline.set(SignalKind.THERMAL, SignalValue.Count(status), fromMs)
 
-    /** Runnable threads of the process; the sim device pins 8 cores, threshold 8×2. */
+    /** Runnable threads of the process. The sim device pins 8 cores, so levels are
+     *  LOW ≤ 8 < MEDIUM ≤ 16 < HIGH. */
     fun threadPressure(runnable: Int, fromMs: Long = 0L) =
         timeline.set(SignalKind.THREAD_PRESSURE, SignalValue.Count(runnable), fromMs)
 

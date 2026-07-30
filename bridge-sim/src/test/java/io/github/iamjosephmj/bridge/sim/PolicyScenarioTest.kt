@@ -90,16 +90,29 @@ class PolicyScenarioTest {
         assertThat(work.completedWithin(2.h + 5.min)).isTrue()
     }
 
-    @Test fun `(g) thread pressure defers LOW work, spares DEFAULT, releases when it clears`() = simulate {
+    @Test fun `(g) MEDIUM pressure defers LOW work, spares DEFAULT, releases when it clears`() = simulate {
         worker("upload") { OkWorker() }
-        threadPressure(runnable = 20)            // > 8 cores × 2
+        threadPressure(runnable = 12)            // MEDIUM: 8 cores < 12 ≤ 16
         threadPressure(runnable = 2, fromMs = 1.h)
         val low = enqueue(workRequest("backup", "upload") { importance(Importance.LOW) })
         val normal = enqueue(workRequest("sync", "upload"))
         val verdict = low.verdictAt(5.min)
         assertThat(verdict.diagnosis).isInstanceOf(Diagnosis.HeldByPolicy::class.java)
-        assertThat((verdict.diagnosis as Diagnosis.HeldByPolicy).why).contains("runnable 20")
-        assertThat(normal.completedWithin(30.min)).isTrue()   // DEFAULT never waits on pressure
+        assertThat((verdict.diagnosis as Diagnosis.HeldByPolicy).why).contains("MEDIUM")
+        assertThat(normal.completedWithin(30.min)).isTrue()   // DEFAULT unaffected at MEDIUM
         assertThat(low.completedWithin(1.h + 10.min)).isTrue()
+    }
+
+    @Test fun `(g2) HIGH pressure also defers DEFAULT work but not HIGH importance`() = simulate {
+        worker("upload") { OkWorker() }
+        threadPressure(runnable = 20)            // HIGH: > 8 cores × 2
+        threadPressure(runnable = 2, fromMs = 1.h)
+        val normal = enqueue(workRequest("sync", "upload"))
+        val urgent = enqueue(workRequest("send-message", "upload") { importance(Importance.HIGH) })
+        val verdict = normal.verdictAt(5.min)
+        assertThat(verdict.diagnosis).isInstanceOf(Diagnosis.HeldByPolicy::class.java)
+        assertThat((verdict.diagnosis as Diagnosis.HeldByPolicy).why).contains("HIGH")
+        assertThat(urgent.completedWithin(30.min)).isTrue()   // HIGH importance never waits
+        assertThat(normal.completedWithin(1.h + 10.min)).isTrue()
     }
 }

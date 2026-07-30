@@ -8,6 +8,9 @@ import io.github.iamjosephmj.bridge.signals.SignalValue
 import io.github.iamjosephmj.bridge.store.WorkEvent
 import io.github.iamjosephmj.bridge.store.WorkState
 
+/** Process thread pressure, classified from runnable threads relative to cores. */
+enum class PressureLevel { LOW, MEDIUM, HIGH }
+
 sealed interface Decision {
     /** Dispatch now with this tier. `why` is non-null only when the tier is non-default. */
     data class Admit(val tier: HostJobClass, val why: String? = null) : Decision
@@ -45,14 +48,19 @@ class PolicyEngine(
                 "thermal status ${thermal.value} >= SEVERE($THERMAL_SEVERE)")
         }
 
-        // 2. Thread-pressure admission: when this process has more runnable threads than
-        //    cores × factor, MIN/LOW work yields briefly. Deadline work is exempt, like
-        //    thermal. Pressure is transient, so the recheck is short and there is no Shed.
+        // 2. Thread-pressure admission, tiered: MEDIUM defers MIN/LOW work, HIGH also
+        //    defers DEFAULT; Importance.HIGH and deadline work always run. Pressure is
+        //    transient, so the recheck is short and there is no Shed.
         val pressure = snapshot.values[SignalKind.THREAD_PRESSURE]
-        if (pressure is SignalValue.Count && pressure.value > cpuCores * PRESSURE_FACTOR &&
-            state.importance <= IMPORTANCE_LOW && state.deadlineMs == 0L) {
-            return Decision.Hold(now + PRESSURE_RECHECK_MS,
-                "runnable ${pressure.value} > $cpuCores cores × $PRESSURE_FACTOR — " +
+        if (pressure is SignalValue.Count && state.deadlineMs == 0L) {
+            val level = pressureLevel(pressure.value, cpuCores)
+            val defers = when (level) {
+                PressureLevel.LOW -> false
+                PressureLevel.MEDIUM -> state.importance <= IMPORTANCE_LOW
+                PressureLevel.HIGH -> state.importance <= IMPORTANCE_DEFAULT
+            }
+            if (defers) return Decision.Hold(now + PRESSURE_RECHECK_MS,
+                "thread pressure $level (runnable ${pressure.value} / $cpuCores cores) — " +
                     "deferring importance ${state.importance} work")
         }
 
@@ -118,13 +126,21 @@ class PolicyEngine(
     companion object {
         const val THERMAL_SEVERE = 3
         const val THERMAL_RECHECK_MS = 15 * 60_000L
-        const val PRESSURE_FACTOR = 2
+        const val PRESSURE_HIGH_FACTOR = 2       // runnable > cores × 2 → HIGH
         const val PRESSURE_RECHECK_MS = 60_000L
+
+        /** LOW: runnable ≤ cores (normal parallelism). MEDIUM: ≤ cores × 2. HIGH: beyond. */
+        fun pressureLevel(runnable: Int, cores: Int): PressureLevel = when {
+            runnable <= cores -> PressureLevel.LOW
+            runnable <= cores * PRESSURE_HIGH_FACTOR -> PressureLevel.MEDIUM
+            else -> PressureLevel.HIGH
+        }
         const val QUOTA_WINDOW_MS = 10 * 60_000L
         const val QUOTA_RECHECK_MS = 30 * 60_000L
         const val BUCKET_WORKING_SET = 20
         const val BUCKET_FREQUENT = 30
         const val IMPORTANCE_LOW = 1
+        const val IMPORTANCE_DEFAULT = 2
         const val BYTES_PER_MS = 1_000L                       // ~1MB/s
         /** Marker why-string: dispatcher also schedules the alarm tier when it sees this. */
         const val ESCALATE_ALARM_WHY = "deadline < 10% remaining; escalate:ALARM"

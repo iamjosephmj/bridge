@@ -97,28 +97,40 @@ class PolicyEngineTest {
         assertTrue(d is Decision.Admit)
     }
 
-    @Test fun `thread pressure holds MIN-LOW work with short recheck`() {
-        val pressured = snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(17))  // > 8×2
-        val hold = decide(events(importance = 1), pressured)
+    @Test fun `pressure levels classify runnable count against cores`() {
+        assertEquals(PressureLevel.LOW, PolicyEngine.pressureLevel(runnable = 8, cores = 8))
+        assertEquals(PressureLevel.MEDIUM, PolicyEngine.pressureLevel(runnable = 9, cores = 8))
+        assertEquals(PressureLevel.MEDIUM, PolicyEngine.pressureLevel(runnable = 16, cores = 8))
+        assertEquals(PressureLevel.HIGH, PolicyEngine.pressureLevel(runnable = 17, cores = 8))
+    }
+
+    @Test fun `MEDIUM pressure holds MIN-LOW work with short recheck, spares DEFAULT`() {
+        val medium = snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(12))  // 8 < 12 ≤ 16
+        val hold = decide(events(importance = 1), medium)
         assertTrue("expected Hold, got $hold", hold is Decision.Hold)
-        assertTrue((hold as Decision.Hold).why.contains("runnable 17"))
+        assertTrue((hold as Decision.Hold).why.contains("MEDIUM"))
+        assertTrue(hold.why.contains("runnable 12"))
         assertEquals(1000L + PolicyEngine.PRESSURE_RECHECK_MS, hold.untilMs)
-        assertTrue(decide(events(importance = 0), pressured) is Decision.Hold)
+        assertTrue(decide(events(importance = 0), medium) is Decision.Hold)
+        assertTrue(decide(events(importance = 2), medium) is Decision.Admit)
     }
 
-    @Test fun `thread pressure never delays DEFAULT or HIGH work`() {
-        val pressured = snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(50))
-        assertTrue(decide(events(importance = 2), pressured) is Decision.Admit)
-        assertTrue(decide(events(importance = 3), pressured) is Decision.Admit)
+    @Test fun `HIGH pressure also holds DEFAULT work but never HIGH importance`() {
+        val high = snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(20))    // > 16
+        val hold = decide(events(importance = 2), high)
+        assertTrue("expected Hold, got $hold", hold is Decision.Hold)
+        assertTrue((hold as Decision.Hold).why.contains("HIGH"))
+        assertTrue(decide(events(importance = 1), high) is Decision.Hold)
+        assertTrue(decide(events(importance = 3), high) is Decision.Admit)
     }
 
-    @Test fun `thread pressure at threshold or unknown admits LOW work`() {
-        val atThreshold = snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(16))  // == 8×2
-        assertTrue(decide(events(importance = 1), atThreshold) is Decision.Admit)
+    @Test fun `LOW pressure or unknown admits everything`() {
+        val low = snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(8))      // == cores
+        assertTrue(decide(events(importance = 0), low) is Decision.Admit)
         assertTrue(decide(events(importance = 1), snapshot()) is Decision.Admit)
     }
 
-    @Test fun `deadline work ignores thread pressure`() {
+    @Test fun `deadline work ignores thread pressure even at HIGH`() {
         val d = decide(events(importance = 1, deadlineMs = 10_000L),
             snapshot(SignalKind.THREAD_PRESSURE to SignalValue.Count(50)), now = 2_000L)
         assertTrue(d is Decision.Admit)

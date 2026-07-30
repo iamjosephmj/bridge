@@ -26,17 +26,25 @@ A new platform signal plus a policy admission rule — **not** a per-request con
 - Any parse/IO failure → `SignalValue.Unknown` → the rule does not fire (fail-open, the
   policy layer must never lose work).
 
-### 2. Policy rule (PolicyEngine, before the quota rules)
+### 2. Policy rule (PolicyEngine, before the quota rules) — tiered
 
-Hold when **all** of:
-- `THREAD_PRESSURE` is a `Count` and `runnable > cpuCores * PRESSURE_FACTOR` (factor = 2)
-- `state.importance <= IMPORTANCE_LOW` (MIN/LOW; DEFAULT and HIGH never wait)
-- `state.deadlineMs == 0` (deadline work is exempt, same as the thermal rule)
+The raw count classifies into a `PressureLevel` relative to cores (Joseph's direction,
+2026-07-30: levels, not a single cliff):
+
+| Level | Condition | Defers |
+|---|---|---|
+| LOW | `runnable ≤ cores` (normal parallelism) | nothing |
+| MEDIUM | `runnable ≤ cores × 2` | MIN / LOW importance |
+| HIGH | `runnable > cores × 2` | MIN / LOW / DEFAULT |
+
+`Importance.HIGH` and deadline work (`state.deadlineMs > 0`) never wait — same exemption
+shape as the thermal rule. Classification lives in the policy layer (judgment), the signal
+stays the raw count (evidence).
 
 Hold is short — `PRESSURE_RECHECK_MS = 60s` — because thread pressure is transient,
-unlike thermal (15 m) or quota (30 m). The why-string journals the arithmetic:
-`"runnable 14 > 8 cores × 2 — deferring LOW work"`, surfaced by `whyPending()` as
-`HeldByPolicy(...)` like every other policy decision. No Shed: pressure passes; work waits.
+unlike thermal (15 m) or quota (30 m). The why-string journals level and arithmetic:
+`"thread pressure MEDIUM (runnable 12 / 8 cores) — deferring importance 1 work"`,
+surfaced by `whyPending()` as `HeldByPolicy(...)`. No Shed: pressure passes; work waits.
 
 `cpuCores` becomes a `PolicyEngine` constructor parameter
 (default `Runtime.getRuntime().availableProcessors()`); the simulator pins it (8) for
@@ -56,8 +64,9 @@ deterministic tests. No Android imports enter PolicyEngine.
 
 ## Testing
 
-- `PolicyEngineTest`: holds LOW under pressure; admits DEFAULT/HIGH under pressure; admits
-  LOW when signal Unknown or below threshold; deadline work exempt; hold is 60 s recheck.
+- `PolicyEngineTest`: level classification boundaries; MEDIUM holds MIN/LOW and spares
+  DEFAULT; HIGH holds DEFAULT and spares Importance.HIGH; LOW/Unknown admits; deadline
+  work exempt; hold is 60 s recheck.
 - Source parser extracted as `parseRunnableThreads(taskDir: File)` and unit-tested against
   a fake `/proc` tree (including malformed stat lines → Unknown).
 - Sim scenario: LOW work under scripted pressure defers, completes after pressure clears;
