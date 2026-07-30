@@ -15,25 +15,33 @@ Full documentation, organized as a book: **[iamjosephmj.github.io/bridge](https:
 
 ## Usage
 
-Register worker factories at every process start, enqueue by unique name, and ask questions any time:
+Register worker factories at every process start, then enqueue with the constraint DSL. Enqueue has KEEP semantics per unique name, so unconditional enqueue-on-startup is safe:
 
 ```kotlin
-// Application.onCreate
+// Application.onCreate — register worker factories at every process start
 Bridge.initializeAsync(this) {
-    worker("sync") { SyncWorker() }
+    worker("sync") { SyncWorker() }          // BridgeWorker: suspend fun run(ctx): RunResult
 }
 
-class SyncWorker : BridgeWorker {
-    override suspend fun run(ctx: RunContext): RunResult {
-        api.sync()
-        return RunResult.Success
-    }
-}
-
-// Anywhere: KEEP semantics per unique name, so unconditional enqueue is safe
 Bridge.enqueue(workRequest("nightly-sync", "sync") {
-    network()
+    network()                    // any connected network (unmetered() for Wi-Fi-class)
     charging()
+    batteryNotLow()
+    storageNotLow()
+    deviceIdle()                 // JobInfo.setRequiresDeviceIdle
+    contentTrigger("content://media/photos", descendants = true)  // JobInfo.TriggerContentUri
+    importance(Importance.LOW)   // feeds the policy engine, not just the platform:
+                                 // LOW yields under quota and thread pressure; HIGH never waits
+    maxThreadPressure(PressureLevel.MEDIUM)  // dispatch only while runnable threads <= cores x 2;
+                                 // overrides the importance-derived pressure default
+    initialDelay(10 * 60_000L)   // exact-path setMinimumLatency
+    maxAttempts(5)
+    mustCompleteBy(tomorrow6amMs)  // deadline escalation: DEFAULT -> EXPEDITED -> while-idle alarm
+})
+
+// Repeating work — each cycle is a journaled generation; cancel ends the series:
+Bridge.enqueue(workRequest("heartbeat", "sync") {
+    periodic(30 * 60_000L)       // >= 15 min, the platform floor
 })
 
 // Why isn't it running? Always answerable:
@@ -41,7 +49,7 @@ Log.i(TAG, Bridge.whyPending("nightly-sync").render(now))
 // ENQUEUED 2h 10m — DeferredByDoze(deep) [REPORTED]
 ```
 
-The full surface — constraints, chunked resumption, periodic work, durable coroutines, diagnostics — is covered per tier below and in the [book](https://iamjosephmj.github.io/bridge/).
+The full surface — chunked resumption, durable coroutines, diagnostics, the simulator — is covered per tier below and in the [book](https://iamjosephmj.github.io/bridge/).
 
 ## Contents
 

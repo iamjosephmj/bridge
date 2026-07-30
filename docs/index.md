@@ -14,6 +14,38 @@ Two properties define it:
 
 ![Force-stop demo: both schedulers are killed at chunk 6. Bridge resumes at chunk 6; WorkManager starts over from chunk 0.](assets/killdemo.svg)
 
+## The API in one screen
+
+```kotlin
+// Application.onCreate — register worker factories at every process start
+Bridge.initializeAsync(this) {
+    worker("sync") { SyncWorker() }          // BridgeWorker: suspend fun run(ctx): RunResult
+}
+
+Bridge.enqueue(workRequest("nightly-sync", "sync") {
+    network()                    // any connected network (unmetered() for Wi-Fi-class)
+    charging()
+    batteryNotLow()
+    storageNotLow()
+    deviceIdle()                 // JobInfo.setRequiresDeviceIdle
+    contentTrigger("content://media/photos", descendants = true)  // JobInfo.TriggerContentUri
+    importance(Importance.LOW)   // feeds the policy engine, not just the platform:
+                                 // LOW yields under quota and thread pressure; HIGH never waits
+    maxThreadPressure(PressureLevel.MEDIUM)  // dispatch only while runnable threads <= cores x 2;
+                                 // overrides the importance-derived pressure default
+    initialDelay(10 * 60_000L)   // exact-path setMinimumLatency
+    maxAttempts(5)
+    mustCompleteBy(tomorrow6amMs)  // deadline escalation: DEFAULT -> EXPEDITED -> while-idle alarm
+})
+
+// Repeating work — each cycle is a journaled generation; cancel ends the series:
+Bridge.enqueue(workRequest("heartbeat", "sync") {
+    periodic(30 * 60_000L)       // >= 15 min, the platform floor
+})
+```
+
+Every line above is covered in depth in [Tier 2 — Runtime](runtime.html).
+
 ## How this book is organized
 
 | Chapter | Covers |
