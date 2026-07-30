@@ -46,6 +46,9 @@ class ThreadPressureDeviceTest {
             val loaded = source.read()
             assertThat(loaded).isInstanceOf(SignalValue.Count::class.java)
             val runnable = (loaded as SignalValue.Count).value
+            android.util.Log.i("ThreadPressure",
+                "under load: runnable=$runnable cores=$cores level=" +
+                    PolicyEngine.pressureLevel(runnable, cores))
             assertThat(runnable).isGreaterThan(cores * 2)
             assertThat(PolicyEngine.pressureLevel(runnable, cores)).isEqualTo(PressureLevel.HIGH)
         } finally {
@@ -54,6 +57,8 @@ class ThreadPressureDeviceTest {
         }
         Thread.sleep(200)
         val settled = (source.read() as SignalValue.Count).value
+        android.util.Log.i("ThreadPressure",
+            "settled: runnable=$settled level=" + PolicyEngine.pressureLevel(settled, cores))
         assertThat(PolicyEngine.pressureLevel(settled, cores)).isNotEqualTo(PressureLevel.HIGH)
     }
 }
