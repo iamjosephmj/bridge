@@ -30,7 +30,9 @@ fun WorkEvent.Enqueued.Companion.of(
     contentDescendants = request.contentDescendants,
     contentUpdateDelayMs = request.contentUpdateDelayMs,
     contentMaxDelayMs = request.contentMaxDelayMs,
-    maxPressure = request.maxPressure?.ordinal ?: -1)
+    maxPressure = request.maxPressure?.ordinal ?: -1,
+    backoffMs = request.backoffMs,
+    backoffLinear = request.backoffPolicy == BackoffPolicy.LINEAR)
 
 /**
  * Journal record rolling periodic work from a terminal cycle into the next generation.

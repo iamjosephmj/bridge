@@ -21,8 +21,13 @@ object JobPlanCompiler {
         val b = JobInfo.Builder(jobId, serviceComponent)
             .setPersisted(false)   // reconciler reschedules; WorkManager-proven pattern
         // Platform rules: idle-mode jobs reject backoff; periodic jobs reject latency.
+        // A request's backoff(initialMs, policy) overrides the 30s-exponential default;
+        // the builder already forbids combining it with deviceIdle or periodic.
         if (itemConstraints?.deviceIdle != true && (itemConstraints?.periodicMs ?: 0L) <= 0L) {
-            b.setBackoffCriteria(30_000L, JobInfo.BACKOFF_POLICY_EXPONENTIAL)
+            val initialMs = itemConstraints?.backoffMs?.takeIf { it > 0 } ?: 30_000L
+            val policy = if (itemConstraints?.backoffLinear == true)
+                JobInfo.BACKOFF_POLICY_LINEAR else JobInfo.BACKOFF_POLICY_EXPONENTIAL
+            b.setBackoffCriteria(initialMs, policy)
         }
         if (extras != null) b.setExtras(extras)
         if (itemConstraints != null) {

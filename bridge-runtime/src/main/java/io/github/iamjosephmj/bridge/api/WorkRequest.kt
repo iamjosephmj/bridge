@@ -4,6 +4,9 @@ import io.github.iamjosephmj.bridge.policy.PressureLevel
 
 enum class Importance { MIN, LOW, DEFAULT, HIGH }
 
+/** Retry pacing between attempts, mapped to JobInfo.BACKOFF_POLICY_*. */
+enum class BackoffPolicy { LINEAR, EXPONENTIAL }
+
 class WorkRequest internal constructor(
     val name: String, val workerName: String, val importance: Importance,
     val requiresCharging: Boolean, val requiresUnmetered: Boolean,
@@ -20,6 +23,8 @@ class WorkRequest internal constructor(
     val contentUpdateDelayMs: Long = 0L,
     val contentMaxDelayMs: Long = 0L,
     val maxPressure: PressureLevel? = null,   // null = importance-derived default
+    val backoffMs: Long = 0L,                 // 0 = default (30s exponential)
+    val backoffPolicy: BackoffPolicy = BackoffPolicy.EXPONENTIAL,
 )
 
 class WorkRequestBuilder internal constructor(
@@ -42,6 +47,8 @@ class WorkRequestBuilder internal constructor(
     private var maxAttempts = 3
     private var deadlineMs = 0L
     private var maxPressure: PressureLevel? = null
+    private var backoffMs = 0L
+    private var backoffPolicy = BackoffPolicy.EXPONENTIAL
 
     fun importance(value: Importance) { importance = value }
     fun charging() { charging = true }
@@ -94,15 +101,33 @@ class WorkRequestBuilder internal constructor(
     fun maxThreadPressure(level: PressureLevel) { maxPressure = level }
     /** Deadline for L4 escalation: the policy engine walks urgency tiers as this nears. */
     fun mustCompleteBy(atMs: Long) { require(atMs > 0); deadlineMs = atMs }
+    /**
+     * Retry pacing between attempts (JobInfo.setBackoffCriteria), replacing the default
+     * 30s exponential. [initialMs] must be >= 10s (JobInfo.MIN_BACKOFF_MILLIS). Cannot
+     * combine with [deviceIdle] (the platform rejects backoff on idle-mode jobs) or
+     * [periodic] (the period itself paces re-runs) — build() enforces both.
+     */
+    fun backoff(initialMs: Long, policy: BackoffPolicy = BackoffPolicy.EXPONENTIAL) {
+        require(initialMs >= 10_000L) { "backoff initialMs must be >= 10s (JobInfo.MIN_BACKOFF_MILLIS)" }
+        backoffMs = initialMs; backoffPolicy = policy
+    }
 
-    internal fun build() = WorkRequest(name, workerName, importance,
+    internal fun build(): WorkRequest {
+        require(backoffMs == 0L || !deviceIdle) {
+            "backoff cannot combine with deviceIdle: the platform rejects backoff on idle-mode jobs" }
+        require(backoffMs == 0L || periodicMs == 0L) {
+            "backoff cannot combine with periodic: the period itself paces re-runs" }
+        return buildRequest()
+    }
+
+    private fun buildRequest() = WorkRequest(name, workerName, importance,
         charging, unmetered, chunkCount, estimatedUpBytes, maxAttempts, deadlineMs,
         requiresNetwork = network, requiresBatteryNotLow = batteryNotLow,
         requiresStorageNotLow = storageNotLow, requiresDeviceIdle = deviceIdle,
         initialDelayMs = initialDelayMs, periodicMs = periodicMs,
         contentUris = contentUris.toList(), contentDescendants = contentDescendants,
         contentUpdateDelayMs = contentUpdateDelayMs, contentMaxDelayMs = contentMaxDelayMs,
-        maxPressure = maxPressure)
+        maxPressure = maxPressure, backoffMs = backoffMs, backoffPolicy = backoffPolicy)
 }
 
 fun workRequest(name: String, workerName: String,

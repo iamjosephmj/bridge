@@ -32,6 +32,9 @@ sealed interface WorkEvent {
         val contentMaxDelayMs: Long = 0L,
         // PressureLevel ordinal this work tolerates; -1 = importance-derived default.
         val maxPressure: Int = -1,
+        // Retry backoff (JobInfo.setBackoffCriteria); 0 = default 30s exponential.
+        val backoffMs: Long = 0L,
+        val backoffLinear: Boolean = false,
     ) : WorkEvent {
         /** Factories live as extensions in `api/EnqueuedEvents.kt` — putting them here
          *  would give store (the bottom layer) a dependency on api's WorkRequest. */

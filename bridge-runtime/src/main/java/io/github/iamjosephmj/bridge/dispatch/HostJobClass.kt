@@ -46,4 +46,6 @@ val WorkState.needsExactConstraints: Boolean
         // Timing shapes are illegal for enqueue()-style jobs; both ride exact JobInfos.
         initialDelayMs > 0 || periodicMs > 0 ||
         // Content triggers are per-item by nature — one TriggerContentUri set per JobInfo.
-        contentUris.isNotEmpty()
+        contentUris.isNotEmpty() ||
+        // Custom backoff criteria live on the JobInfo, so they need a per-item one.
+        backoffMs > 0

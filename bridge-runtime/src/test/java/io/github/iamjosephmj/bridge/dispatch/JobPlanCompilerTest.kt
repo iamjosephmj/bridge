@@ -54,4 +54,24 @@ class JobPlanCompilerTest {
             assertThat(JobPlanCompiler.jobInfo(context, hc, component).isPersisted).isFalse()
         }
     }
+
+    @Test fun `host JobInfos default to 30s exponential backoff`() {
+        val info = JobPlanCompiler.jobInfo(context, HostJobClass.DEFAULT, component)
+        assertThat(info.initialBackoffMillis).isEqualTo(30_000L)
+        assertThat(info.backoffPolicy).isEqualTo(JobInfo.BACKOFF_POLICY_EXPONENTIAL)
+    }
+
+    @Test fun `custom backoff criteria reach the exact JobInfo`() {
+        val info = JobPlanCompiler.jobInfo(context, HostJobClass.DEFAULT, component, jobId = 1,
+            itemConstraints = ItemConstraints(NetworkNeed.ANY, charging = false,
+                batteryNotLow = false, storageNotLow = false, deviceIdle = false,
+                backoffMs = 120_000L, backoffLinear = true))
+        assertThat(info.initialBackoffMillis).isEqualTo(120_000L)
+        assertThat(info.backoffPolicy).isEqualTo(JobInfo.BACKOFF_POLICY_LINEAR)
+    }
+
+    @Test fun `custom backoff routes to the exact path`() {
+        assertThat(state().copy(backoffMs = 60_000L).needsExactConstraints).isTrue()
+        assertThat(state().copy(requiresNetwork = true).needsExactConstraints).isFalse()
+    }
 }

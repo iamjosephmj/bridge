@@ -47,7 +47,18 @@ Before dispatching, the policy engine reads the process's runnable-thread count 
 
 ## Retries and backoff
 
-A worker that returns `RunResult.Retry` is rescheduled by the platform, not by a Bridge timer: every compiled job declares `JobInfo.setBackoffCriteria(30s, EXPONENTIAL)`, so re-deliveries arrive at 30s, 60s, 120s, … up to the platform's ceiling. (Device-idle and periodic jobs don't declare backoff — the platform forbids it for both.)
+A worker that returns `RunResult.Retry` is rescheduled by the platform, not by a Bridge timer: by default every compiled job declares `JobInfo.setBackoffCriteria(30s, EXPONENTIAL)`, so re-deliveries arrive at 30s, 60s, 120s, … up to the platform's ceiling. (Device-idle and periodic jobs don't declare backoff — the platform forbids it for both.)
+
+The default is overridable per request:
+
+```kotlin
+Bridge.enqueue(workRequest("poll-orders", "sync") {
+    network()
+    backoff(60_000L, BackoffPolicy.LINEAR)   // 60s, 120s, 180s, ...
+})
+```
+
+`backoff(initialMs, policy)` maps directly to `JobInfo.setBackoffCriteria`; `initialMs` floors at 10 s (`JobInfo.MIN_BACKOFF_MILLIS`), and the builder rejects combining it with `deviceIdle()` (platform rule) or `periodic()` (the period itself paces re-runs) at enqueue time.
 
 On top of that ride two Bridge behaviors:
 

@@ -25,6 +25,8 @@ data class ItemConstraints(
     val contentDescendants: Boolean = false,      // FLAG_NOTIFY_FOR_DESCENDANTS on every uri
     val contentUpdateDelayMs: Long = 0L,          // setTriggerContentUpdateDelay when > 0
     val contentMaxDelayMs: Long = 0L,             // setTriggerContentMaxDelay when > 0
+    val backoffMs: Long = 0L,                     // custom setBackoffCriteria when > 0
+    val backoffLinear: Boolean = false,           // LINEAR vs EXPONENTIAL (default)
 )
 
 data class WorkItemPayload(

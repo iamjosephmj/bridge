@@ -83,6 +83,8 @@ class Dispatcher(
                     contentDescendants = state.contentDescendants,
                     contentUpdateDelayMs = state.contentUpdateDelayMs,
                     contentMaxDelayMs = state.contentMaxDelayMs,
+                    backoffMs = state.backoffMs,
+                    backoffLinear = state.backoffLinear,
                 ) else null
                 if (state.runState == RunState.DISPATCHED) {
                     // Escalation of an already-dispatched item: withdraw it from the old

@@ -25,6 +25,32 @@ class WorkRequestDslTest {
         assertThat(plain.maxAttempts).isEqualTo(3)
     }
 
+    @Test fun `backoff sets pacing, defaults exponential, floors at 10s`() {
+        val r = workRequest("sync", "upload") { backoff(60_000L, BackoffPolicy.LINEAR) }
+        assertThat(r.backoffMs).isEqualTo(60_000L)
+        assertThat(r.backoffPolicy).isEqualTo(BackoffPolicy.LINEAR)
+
+        val exp = workRequest("sync2", "upload") { backoff(15_000L) }
+        assertThat(exp.backoffPolicy).isEqualTo(BackoffPolicy.EXPONENTIAL)
+
+        assertThat(workRequest("plain", "upload").backoffMs).isEqualTo(0L)
+        assertThrows(IllegalArgumentException::class.java) {
+            workRequest("bad", "upload") { backoff(5_000L) }
+        }
+    }
+
+    @Test fun `backoff rejects deviceIdle and periodic in either order`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            workRequest("a", "w") { backoff(30_000L); deviceIdle() }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            workRequest("b", "w") { deviceIdle(); backoff(30_000L) }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            workRequest("c", "w") { backoff(30_000L); periodic(30 * 60_000L) }
+        }
+    }
+
     @Test fun `contentTrigger accumulates uris, flags, and delays`() {
         val r = workRequest("photos", "upload") {
             contentTrigger("content://media/photos", descendants = true,
