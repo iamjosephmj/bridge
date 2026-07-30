@@ -29,7 +29,8 @@ fun WorkEvent.Enqueued.Companion.of(
     contentUris = request.contentUris,
     contentDescendants = request.contentDescendants,
     contentUpdateDelayMs = request.contentUpdateDelayMs,
-    contentMaxDelayMs = request.contentMaxDelayMs)
+    contentMaxDelayMs = request.contentMaxDelayMs,
+    maxPressure = request.maxPressure?.ordinal ?: -1)
 
 /**
  * Journal record rolling periodic work from a terminal cycle into the next generation.
@@ -54,4 +55,5 @@ fun WorkEvent.Enqueued.Companion.nextCycle(state: WorkState, at: Long): WorkEven
         requiresBatteryNotLow = state.requiresBatteryNotLow,
         requiresStorageNotLow = state.requiresStorageNotLow,
         requiresDeviceIdle = state.requiresDeviceIdle,
-        periodicMs = state.periodicMs)
+        periodicMs = state.periodicMs,
+        maxPressure = state.maxPressure)

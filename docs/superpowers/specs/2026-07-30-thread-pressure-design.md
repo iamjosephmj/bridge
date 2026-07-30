@@ -55,10 +55,18 @@ deterministic tests. No Android imports enter PolicyEngine.
 - `Timeline.defaultFor`: `THREAD_PRESSURE → Unknown` (rule off unless scripted).
 - DSL: `threadPressure(runnable: Int, fromMs)` alongside `thermal(...)`.
 
+### 3. Per-request override (added 2026-07-30, Joseph's direction)
+
+`maxThreadPressure(level)` in the `workRequest {}` DSL: dispatch only while pressure is
+at or below the given level, overriding the importance mapping in either direction
+(loosen: LOW work tolerating HIGH; tighten: DEFAULT work tolerating only LOW). Levels,
+not raw numbers, keep the knob reasoned. Journaled as `maxPressure` ordinal on
+`Enqueued` (`-1` = unset, keeps old journals decoding); carried across periodic
+generations like importance. Deadline exemption still wins.
+
 ## Not doing (YAGNI)
 
-- Per-request `threadPressure(max=…)` DSL knob — arbitrary numbers users can't reason
-  about; importance already expresses the intent.
+- Raw-number thresholds in the DSL — levels only.
 - Load-average / CPU-percent signals — overlaps THERMAL, restricted `/proc` surface.
 - Polling or broadcast wiring — pull-only.
 

@@ -49,19 +49,23 @@ class PolicyEngine(
         }
 
         // 2. Thread-pressure admission, tiered: MEDIUM defers MIN/LOW work, HIGH also
-        //    defers DEFAULT; Importance.HIGH and deadline work always run. Pressure is
-        //    transient, so the recheck is short and there is no Shed.
+        //    defers DEFAULT; Importance.HIGH and deadline work always run. A request's
+        //    maxThreadPressure(tolerance) overrides the importance mapping in either
+        //    direction. Pressure is transient, so the recheck is short and there is no Shed.
         val pressure = snapshot.values[SignalKind.THREAD_PRESSURE]
         if (pressure is SignalValue.Count && state.deadlineMs == 0L) {
             val level = pressureLevel(pressure.value, cpuCores)
-            val defers = when (level) {
+            val defers = if (state.maxPressure >= 0) level.ordinal > state.maxPressure
+            else when (level) {
                 PressureLevel.LOW -> false
                 PressureLevel.MEDIUM -> state.importance <= IMPORTANCE_LOW
                 PressureLevel.HIGH -> state.importance <= IMPORTANCE_DEFAULT
             }
             if (defers) return Decision.Hold(now + PRESSURE_RECHECK_MS,
                 "thread pressure $level (runnable ${pressure.value} / $cpuCores cores) — " +
-                    "deferring importance ${state.importance} work")
+                    if (state.maxPressure >= 0)
+                        "request tolerates <= ${PressureLevel.entries[state.maxPressure]}"
+                    else "deferring importance ${state.importance} work")
         }
 
         // 3. Quota admission (labeled heuristic — see M3 spec §1): demoted buckets get

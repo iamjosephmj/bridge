@@ -7,6 +7,7 @@ import io.github.iamjosephmj.bridge.api.RunContext
 import io.github.iamjosephmj.bridge.api.RunResult
 import io.github.iamjosephmj.bridge.api.workRequest
 import io.github.iamjosephmj.bridge.diagnostics.Diagnosis
+import io.github.iamjosephmj.bridge.policy.PressureLevel
 import io.github.iamjosephmj.bridge.store.WorkEvent
 import org.junit.Test
 
@@ -114,5 +115,24 @@ class PolicyScenarioTest {
         assertThat((verdict.diagnosis as Diagnosis.HeldByPolicy).why).contains("HIGH")
         assertThat(urgent.completedWithin(30.min)).isTrue()   // HIGH importance never waits
         assertThat(normal.completedWithin(1.h + 10.min)).isTrue()
+    }
+
+    @Test fun `(g3) maxThreadPressure overrides the importance default`() = simulate {
+        worker("upload") { OkWorker() }
+        threadPressure(runnable = 20)            // HIGH: > 8 cores × 2
+        threadPressure(runnable = 2, fromMs = 1.h)
+        // LOW importance would defer at MEDIUM — but this request tolerates HIGH.
+        val tolerant = enqueue(workRequest("logs", "upload") {
+            importance(Importance.LOW); maxThreadPressure(PressureLevel.HIGH)
+        })
+        // DEFAULT importance would run until HIGH — but this request tolerates only LOW.
+        val strict = enqueue(workRequest("index", "upload") {
+            maxThreadPressure(PressureLevel.LOW)
+        })
+        assertThat(tolerant.completedWithin(30.min)).isTrue()
+        val verdict = strict.verdictAt(5.min)
+        assertThat(verdict.diagnosis).isInstanceOf(Diagnosis.HeldByPolicy::class.java)
+        assertThat((verdict.diagnosis as Diagnosis.HeldByPolicy).why).contains("request tolerates")
+        assertThat(strict.completedWithin(1.h + 10.min)).isTrue()
     }
 }

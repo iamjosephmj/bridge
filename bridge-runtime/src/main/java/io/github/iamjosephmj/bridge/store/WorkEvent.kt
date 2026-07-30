@@ -30,6 +30,8 @@ sealed interface WorkEvent {
         val contentDescendants: Boolean = false,
         val contentUpdateDelayMs: Long = 0L,
         val contentMaxDelayMs: Long = 0L,
+        // PressureLevel ordinal this work tolerates; -1 = importance-derived default.
+        val maxPressure: Int = -1,
     ) : WorkEvent {
         /** Factories live as extensions in `api/EnqueuedEvents.kt` — putting them here
          *  would give store (the bottom layer) a dependency on api's WorkRequest. */

@@ -184,6 +184,8 @@ Bridge.enqueue(workRequest("nightly-sync", "sync") {
     contentTrigger("content://media/photos", descendants = true)  // JobInfo.TriggerContentUri
     importance(Importance.LOW)   // feeds the policy engine, not just the platform:
                                  // LOW yields under quota and thread pressure; HIGH never waits
+    maxThreadPressure(PressureLevel.MEDIUM)  // dispatch only while runnable threads ≤ cores×2;
+                                 // overrides the importance-derived pressure default
     initialDelay(10 * 60_000L)   // exact-path setMinimumLatency
     maxAttempts(5)
     mustCompleteBy(tomorrow6amMs)  // L4 escalation: DEFAULT → EXPEDITED → while-idle alarm
