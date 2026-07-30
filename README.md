@@ -182,7 +182,8 @@ Bridge.enqueue(workRequest("nightly-sync", "sync") {
     storageNotLow()
     deviceIdle()                 // JobInfo.setRequiresDeviceIdle
     contentTrigger("content://media/photos", descendants = true)  // JobInfo.TriggerContentUri
-    importance(Importance.LOW)   // feeds the policy engine, not just the platform
+    importance(Importance.LOW)   // feeds the policy engine, not just the platform:
+                                 // LOW yields under quota and thread pressure; HIGH never waits
     initialDelay(10 * 60_000L)   // exact-path setMinimumLatency
     maxAttempts(5)
     mustCompleteBy(tomorrow6amMs)  // L4 escalation: DEFAULT → EXPEDITED → while-idle alarm
@@ -240,6 +241,8 @@ Bridge.ledger("photo-backup")
 Bridge.report().render(now)
 // backup              ENQUEUED   DeferredByDoze(deep)
 // nightly-sync        SUCCEEDED
+// telemetry           ENQUEUED   HeldByPolicy(thread pressure MEDIUM (runnable 12 / 8 cores)
+//                                — deferring importance 1 work)
 // publish-post        ENQUEUED   DurableParked(delay until 14:02)
 // conformance: MULTIPLEXED · signal log: 412 transitions / oldest 3d
 ```
@@ -324,6 +327,7 @@ simulate {
     worker("upload") { UploadWorker() }
     bucket(Buckets.RARE)
     doze(fromMs = 1.h, untilMs = 5.h, maintenanceEveryMs = 2.h)
+    threadPressure(runnable = 12, fromMs = 2.h)   // MEDIUM on the sim's 8 cores
     val work = enqueue(workRequest("sync", "upload"))
     assertThat(work.verdictAt(3.h).diagnosis).isInstanceOf(Diagnosis.DeferredByDoze::class.java)
     assertThat(work.completedWithin(26.h)).isTrue()
