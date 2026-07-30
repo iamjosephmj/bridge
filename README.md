@@ -22,7 +22,7 @@ Bridge is an Android background-work runtime built directly on the platform's ow
 - [Bridge vs WorkManager](#bridge-vs-workmanager)
 - [Measurements](#measurements)
 - [Performance](#performance)
-- [Status and roadmap](#status-and-roadmap)
+- [Status](#status)
 - [Documentation](#documentation)
 
 ## Adoption tiers
@@ -278,8 +278,8 @@ A direct capability comparison, including the rows WorkManager currently wins. R
 | Doze strategy | Maintenance-window burst-drain, doze-exit dispatch, rhythm prediction | Platform default | Simulated scenarios |
 | Constraints (charging, network, battery/storage-not-low, device-idle, content-URI triggers) | Full surface | Full surface | |
 | Periodic work and initial delay | Yes — journaled generations, exact-path latency | Yes | |
-| `Data` payloads, tags, work observers (LiveData/Flow) | Not yet — on the roadmap | Yes | |
-| Multi-branch chains | Sequential only — on the roadmap | Yes | |
+| `Data` payloads, tags, work observers (LiveData/Flow) | Not yet | Yes | |
+| Multi-branch chains | Sequential only | Yes | |
 | Ecosystem (Hilt integration, documentation, community) | New | Extensive | |
 
 ## Measurements
@@ -317,15 +317,9 @@ Measured on physical hardware, API 36 (2026-07). Identical workloads were run ag
 | Steady-state main-thread cost | **~zero** | Journal writes go through a dedicated I/O executor; signal snapshots and diagnosis are pull-based, computed only on request |
 | Metadata reads (KvStore) | **In-memory-first** | Lock-free `ConcurrentHashMap` reads over a `kv` table in `bridge.db`, DB-before-memory writes — hot-path metadata never touches disk on read |
 
-## Status and roadmap
+## Status
 
 Bridge is stable and device-verified end to end: the full constraint surface, `initialDelay`, `periodic`, durable coroutines, the compat façade, the policy engine, and the glass box — with the measurements above to show for it.
-
-| Roadmap item | Current state | Planned |
-|---|---|---|
-| Broader OEM matrix | Device verification on API 36 hardware | Extended verification across Samsung, Xiaomi, OnePlus and Oppo devices |
-| Remaining WorkManager surface | `Data` payloads, tags, LiveData/Flow observers, and multi-branch chains remain on WorkManager (the compat façade keeps both runnable side by side) | Incremental coverage |
-| Cost auto-demotion | `report()` flags LOW/MIN work measuring 3× the pool median | Automatic demotion as an opt-in |
 
 ## Documentation
 
