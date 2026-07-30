@@ -45,6 +45,7 @@ class Timeline {
         SignalKind.NETWORK_VALIDATED -> SignalValue.Flag(true)
         SignalKind.BATT_OPT_EXEMPT -> SignalValue.Flag(false)
         SignalKind.PENDING_REASONS, SignalKind.PROCESS_DEATH,
-        SignalKind.THERMAL, SignalKind.CHARGE_TIME -> SignalValue.Unknown
+        SignalKind.THERMAL, SignalKind.CHARGE_TIME,
+        SignalKind.THREAD_PRESSURE -> SignalValue.Unknown
     }
 }

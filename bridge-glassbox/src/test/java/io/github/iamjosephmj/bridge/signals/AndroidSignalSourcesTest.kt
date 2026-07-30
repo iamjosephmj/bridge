@@ -62,8 +62,33 @@ class AndroidSignalSourcesTest {
 
     @Test
     @Config(sdk = [31])
-    fun `all() returns the nine sources`() {
+    fun `all() covers every signal kind`() {
         assertEquals(SignalKind.entries.toSet(),
             AndroidSignalSources.all(app).map { it.kind }.toSet())
+    }
+
+    @Test
+    @Config(sdk = [31])
+    fun `thread pressure counts runnable threads only`() {
+        val taskDir = java.nio.file.Files.createTempDirectory("task").toFile()
+        fun stat(tid: Int, content: String) {
+            java.io.File(taskDir, "$tid").mkdir()
+            java.io.File(taskDir, "$tid/stat").writeText(content)
+        }
+        stat(1, "1 (main) R 0 1 1 0")
+        stat(2, "2 (RenderThread) S 0 1 1 0")
+        stat(3, "3 (weird (comm) name) R 0 1 1 0")   // parens+spaces in comm
+        stat(4, "4 (truncated)")                      // malformed: skipped, not fatal
+        assertEquals(SignalValue.Count(2),
+            ThreadPressureSource.parseRunnableThreads(taskDir))
+    }
+
+    @Test
+    @Config(sdk = [31])
+    fun `thread pressure is Unknown when proc is unreadable`() {
+        assertEquals(SignalValue.Unknown,
+            ThreadPressureSource.parseRunnableThreads(java.io.File("/nonexistent-proc")))
+        val empty = java.nio.file.Files.createTempDirectory("task").toFile()
+        assertEquals(SignalValue.Unknown, ThreadPressureSource.parseRunnableThreads(empty))
     }
 }

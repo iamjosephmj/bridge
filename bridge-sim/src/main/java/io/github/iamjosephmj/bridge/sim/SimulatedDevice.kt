@@ -50,7 +50,7 @@ class SimulatedDevice internal constructor() {
     internal val gateway = SimulatedGateway(timeline, journal)
     internal val alarms = io.github.iamjosephmj.bridge.dispatch.FakeAlarmGateway()
     private val dispatcher = Dispatcher(journal, gateway, clock,
-        policy = io.github.iamjosephmj.bridge.policy.PolicyEngine(apiLevel = 34),
+        policy = io.github.iamjosephmj.bridge.policy.PolicyEngine(apiLevel = 34, cpuCores = 8),
         alarmGateway = alarms,
         snapshotProvider = { hub.snapshot(Trigger.SCHEDULING_DECISION) },
         historyProvider = {

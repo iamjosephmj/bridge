@@ -8,6 +8,7 @@ enum class SignalKind {
     DOZE, MAINTENANCE_WINDOW, NETWORK_VALIDATED, BATT_OPT_EXEMPT, PROCESS_DEATH,
     THERMAL,        // M3: PowerManager thermal status (29+)
     CHARGE_TIME,    // M3: BatteryManager.computeChargeTimeRemaining minutes (28+)
+    THREAD_PRESSURE, // runnable threads of this process, from /proc/self/task (all APIs)
 }
 
 enum class DozeMode { NONE, LIGHT, DEEP }

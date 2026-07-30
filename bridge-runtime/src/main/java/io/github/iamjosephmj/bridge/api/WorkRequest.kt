@@ -1,5 +1,7 @@
 package io.github.iamjosephmj.bridge.api
 
+import io.github.iamjosephmj.bridge.policy.PressureLevel
+
 enum class Importance { MIN, LOW, DEFAULT, HIGH }
 
 class WorkRequest internal constructor(
@@ -17,6 +19,7 @@ class WorkRequest internal constructor(
     val contentDescendants: Boolean = false,
     val contentUpdateDelayMs: Long = 0L,
     val contentMaxDelayMs: Long = 0L,
+    val maxPressure: PressureLevel? = null,   // null = importance-derived default
 )
 
 class WorkRequestBuilder internal constructor(
@@ -38,6 +41,7 @@ class WorkRequestBuilder internal constructor(
     private var estimatedUpBytes = 0L
     private var maxAttempts = 3
     private var deadlineMs = 0L
+    private var maxPressure: PressureLevel? = null
 
     fun importance(value: Importance) { importance = value }
     fun charging() { charging = true }
@@ -81,6 +85,13 @@ class WorkRequestBuilder internal constructor(
     /** Size hint for un-chunked work; feeds L4 quota admission (~1MB/s heuristic). */
     fun estimatedBytes(bytes: Long) { require(bytes > 0); estimatedUpBytes = bytes }
     fun maxAttempts(value: Int) { require(value > 0); maxAttempts = value }
+    /**
+     * Dispatch only while process thread pressure is at or below [level] (runnable
+     * threads vs cores: LOW ≤ cores < MEDIUM ≤ cores×2 < HIGH). Overrides the
+     * importance-derived default (MIN/LOW yield at MEDIUM, DEFAULT yields at HIGH,
+     * HIGH importance never yields). Deadline work always dispatches regardless.
+     */
+    fun maxThreadPressure(level: PressureLevel) { maxPressure = level }
     /** Deadline for L4 escalation: the policy engine walks urgency tiers as this nears. */
     fun mustCompleteBy(atMs: Long) { require(atMs > 0); deadlineMs = atMs }
 
@@ -90,7 +101,8 @@ class WorkRequestBuilder internal constructor(
         requiresStorageNotLow = storageNotLow, requiresDeviceIdle = deviceIdle,
         initialDelayMs = initialDelayMs, periodicMs = periodicMs,
         contentUris = contentUris.toList(), contentDescendants = contentDescendants,
-        contentUpdateDelayMs = contentUpdateDelayMs, contentMaxDelayMs = contentMaxDelayMs)
+        contentUpdateDelayMs = contentUpdateDelayMs, contentMaxDelayMs = contentMaxDelayMs,
+        maxPressure = maxPressure)
 }
 
 fun workRequest(name: String, workerName: String,
