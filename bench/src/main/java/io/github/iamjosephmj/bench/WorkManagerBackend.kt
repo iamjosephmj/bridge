@@ -1,12 +1,14 @@
 package io.github.iamjosephmj.bench
 
 import android.content.Context
+import androidx.core.content.edit
 import androidx.work.*
 
 /** WorkManager keeps no run history, so the bench self-instruments timestamps.
  *  Recorded in-process + flushed to SharedPreferences to survive process death.
- *  Writes use .commit() (synchronous), not .apply(): a process kill immediately after a
- *  mark must not lose it, or the recorder fails at its one job of surviving process death.
+ *  Writes use edit(commit = true) (synchronous), never apply(): a process kill immediately
+ *  after a mark must not lose it, or the recorder fails at its one job of surviving
+ *  process death.
  *
  *  Every method takes a [Context] (like [ChunkExecutionRecorder]) instead of a shared
  *  lateinit: a retried worker can be the FIRST bench code to run in a freshly relaunched
@@ -20,23 +22,21 @@ object WmRecorder {
     fun mark(context: Context, itemId: String, key: String, onlyFirst: Boolean = false) {
         val p = prefs(context)
         val k = "$itemId:$key"
-        if (onlyFirst && p.contains(k)) {
-            if (key == "start") bumpAttempts(context, itemId)
-            return
+        if (!(onlyFirst && p.contains(k))) {
+            p.edit(commit = true) { putLong(k, System.currentTimeMillis()) }
         }
-        p.edit().putLong(k, System.currentTimeMillis()).commit()
         if (key == "start") bumpAttempts(context, itemId)
     }
+
     private fun bumpAttempts(context: Context, itemId: String) {
         val p = prefs(context)
-        p.edit().putInt("$itemId:attempts",
-            p.getInt("$itemId:attempts", 0) + 1).commit()
+        p.edit(commit = true) { putInt("$itemId:attempts", p.getInt("$itemId:attempts", 0) + 1) }
     }
 
     /** Clears all marks before a fresh ENQUEUE_WM run so stale timestamps/attempts from a
      *  prior run (static [CORPUS] ids) don't pollute this run's [record] results. */
     fun reset(context: Context) {
-        prefs(context).edit().clear().commit()
+        prefs(context).edit(commit = true) { clear() }
     }
 
     fun record(context: Context, itemId: String): RunRecord {

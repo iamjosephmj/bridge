@@ -16,6 +16,7 @@ android {
 
 dependencies {
     implementation(project(":bridge-runtime"))
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime)
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.junit)
