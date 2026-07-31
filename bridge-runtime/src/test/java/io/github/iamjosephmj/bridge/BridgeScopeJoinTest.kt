@@ -46,7 +46,8 @@ class BridgeScopeJoinTest {
 
     private fun runParked() = runBlocking {
         for ((_, payload) in gateway.enqueued.toList()) {
-            val state = Bridge.state(payload.workId) ?: continue
+            val state = Bridge.state(payload.workId)
+            if (state.runState == RunState.UNKNOWN) continue
             val attempts = Bridge.events(payload.workId)
                 .count { it is WorkEvent.Started && it.generation == state.generation } + 1
             io.github.iamjosephmj.bridge.dispatch.BridgeServices.runner!!

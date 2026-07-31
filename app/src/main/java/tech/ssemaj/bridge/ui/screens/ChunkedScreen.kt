@@ -11,13 +11,22 @@ import tech.ssemaj.bridge.ui.FeatureScreen
 import tech.ssemaj.bridge.ui.rememberDemoConsole
 
 private val SNIPPET = """
+    // ONE task, ten checkpointed steps — not ten tasks.
     Bridge.enqueue(
         workRequest("demo-chunked", "demo-chunked-worker") {
-            chunks(10)   // Bridge drives runChunk(0..9),
-        }                // journaling each completion
+            chunks(10)   // Bridge drives runChunk(0..9)
+        }
     )
 
-    Bridge.state("demo-chunked")?.nextChunk   // resume point
+    class DemoChunkedWorker : ChunkedWorker {
+        override suspend fun runChunk(ctx, chunkIndex): RunResult {
+            upload(slice = chunkIndex)        // uncheckpointed: re-runs if we die here
+            ctx.setOutput(...)                // journaled state, survives death
+            return RunResult.Success          // <- the checkpoint commits HERE
+        }
+    }
+
+    Bridge.state("demo-chunked").nextChunk    // resume point, from the journal
 """.trimIndent()
 
 /**
@@ -30,12 +39,16 @@ fun ChunkedScreen(onBack: () -> Unit) {
     val console = rememberDemoConsole(Names.CHUNKED)
     FeatureScreen(
         title = "Chunked resumption",
-        explainer = "chunks(10) turns one work item into ten journaled units of progress. " +
-            "After each chunk, Bridge appends a ChunkCompleted event to its on-disk journal. " +
-            "Kill the app mid-transfer — Doze, a timeout, swipe-away, force-stop — and the " +
-            "next attempt resumes at the chunk it reached, not from zero. WorkManager would " +
-            "restart the whole doWork() from the top. Proven on hardware: force-stopped " +
-            "mid-run, the run continued at its recorded chunk.",
+        explainer = "chunks(10) turns one work item into ten journaled units of progress — " +
+            "still ONE task with one retry budget, not ten. There is no checkpoint API: " +
+            "returning Success from runChunk IS the checkpoint — Bridge appends a durable " +
+            "ChunkCompleted event at that moment, and nothing inside a chunk is saved until " +
+            "it returns (so keep each chunk idempotent; a chunk interrupted mid-flight " +
+            "re-runs from its start). Kill the app mid-transfer — Doze, a timeout, " +
+            "swipe-away, force-stop — and the next attempt resumes at nextChunk, not zero, " +
+            "with every completed chunk's setOutput() data merged back into ctx.input. " +
+            "WorkManager would restart the whole doWork() from the top. Proven on hardware: " +
+            "force-stopped mid-run, the run continued at its recorded chunk.",
         snippet = SNIPPET,
         onBack = onBack,
     ) {

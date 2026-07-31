@@ -65,7 +65,7 @@ Input is journaled on the `Enqueued` event and output on `Finished` (or per
 `ChunkCompleted` for chunked workers — so a chain resumed after process death still sees
 its completed links' outputs). The ledger therefore shows what every attempt received and
 produced, not just the latest. Payloads cap at 10 KB — the journal is for coordinates,
-not cargo. Latest output: `Bridge.state(name)?.lastOutput`.
+not cargo. Latest output: `Bridge.state(name).lastOutput`.
 
 ## Tags
 
@@ -96,14 +96,19 @@ diagnosable. `after()` cannot combine with `periodic()`.
 ## Flow observers
 
 ```kotlin
-Bridge.stateFlow("publish")     // Flow<WorkState?>: current fold, re-emitted per event
-    .collect { render(it?.runState) }
+Bridge.stateFlow("publish")     // Flow<WorkState>: current fold, re-emitted per event
+    .collect { render(it.runState) }
 
 Bridge.eventsFlow()             // Flow<WorkEvent>: every journal commit, app-wide
 ```
 
 Both are cold flows over the journal's listener hook — no polling, no invalidation
 machinery. For LiveData, apply `asLiveData()`.
+
+Like `whyPending()` and `ledger()`, `state()`/`stateFlow()` are **total reads** — no
+nulls anywhere. An unknown name yields a query-only fold with
+`runState == RunState.UNKNOWN` (never journaled), so
+`Bridge.state(name).nextChunk` reads clean and honestly returns 0.
 
 ## Retries and backoff
 
@@ -141,7 +146,7 @@ Each cycle is a journaled generation; cancelling ends the series. Periodic work 
 class PhotoBackupWorker : ChunkedWorker {
     override suspend fun runChunk(ctx: RunContext, chunkIndex: Int): RunResult {
         uploader.upload(part = chunkIndex)   // small, independently-committed unit
-        return RunResult.Success
+        return RunResult.Success             // <- the checkpoint commits HERE
     }
 }
 
@@ -153,5 +158,74 @@ Bridge.enqueue(workRequest("backup", "photo-backup") {
 ```
 
 Every completed chunk is journaled. After a stop, crash, or force-stop mid-run, the next attempt starts at `WorkState.nextChunk`, not chunk 0. This is the configuration behind the measured 1-vs-20 replay result — see [Results](RESULTS.html).
+
+### `chunks(n)` is one task, not n tasks
+
+`chunks(40)` does **not** enqueue 40 work items. It is still one task — one name, one
+`WorkState`, one platform job, one set of constraints, one retry budget. The number
+tells Bridge how *your* work divides ("my upload has 40 slices"), and Bridge drives one
+worker instance through `runChunk(ctx, 0) … runChunk(ctx, 39)` in a loop, in the same
+process, back-to-back. Bridge never splits the work itself — it can't know how to cut
+your file. It supplies the loop, the per-chunk checkpoint, and the resume index; the
+`chunkIndex` argument is how each call knows which slice to do.
+
+If you instead want independently scheduled units with their own constraints and retry
+counters, that's a prerequisite DAG (`after(...)`), not chunks.
+
+### The checkpoint contract
+
+You never write checkpoint code — **returning `RunResult.Success` from `runChunk` *is*
+the checkpoint.** At that moment Bridge appends a durable `ChunkCompleted(chunkIndex,
+output)` event to the on-disk journal; the resume index is derived by folding those
+events, never tracked by your worker. Three consequences:
+
+1. **You choose the boundaries by how you slice.** Chunk = checkpoint interval. Each
+   `runChunk(ctx, i)` should be a unit that is complete in itself and cheap to not
+   repeat. Finer checkpoints → more chunks; coarser → fewer.
+2. **Nothing inside a chunk is checkpointed.** If the process dies mid-chunk, that
+   whole chunk re-runs from its start on the next attempt. Bridge guarantees
+   **at-least-once per chunk, exactly-once per *completed* chunk** — so keep each
+   chunk's side effects idempotent (an upload the server dedupes, a DB write keyed so
+   a repeat is harmless).
+3. **Any other return breaks the loop.** `Retry` reschedules the whole item (completed
+   chunks stay completed — the retry resumes at `nextChunk`); `Failure` is terminal;
+   a system stop between chunks journals `Stopped` and resumes the same way.
+
+### Checkpointing state, not just position
+
+Call `ctx.setOutput(...)` *before* returning `Success` and the data is journaled inside
+that chunk's `ChunkCompleted` event. On resume — even in a brand-new process — all
+completed chunks' outputs come back overwrite-merged into `ctx.input`. That's how a
+chunk hands a cursor, session id, or running total to its successors across death:
+
+```kotlin
+class PagedSyncWorker : ChunkedWorker {
+    override suspend fun runChunk(ctx: RunContext, chunkIndex: Int): RunResult {
+        val cursor = ctx.input.getString("cursor")        // previous chunk's checkpoint
+        val page = api.fetchPage(cursor)
+        db.save(page.items)
+        ctx.setOutput(bridgeDataOf("cursor" to page.nextCursor))  // part of this checkpoint
+        return RunResult.Success
+    }
+}
+```
+
+### Rules the runtime enforces
+
+- The worker must implement `ChunkedWorker` **iff** the request declares `chunks(n)`.
+  A mismatch in either direction hard-fails with a journaled `structure mismatch`
+  reason instead of silently running chunked work un-chunked.
+- `chunks(n)` also feeds admission: restrictive standby buckets grant ~10-minute
+  execution windows, and un-chunked work estimated longer than a window is held —
+  chunked work passes, because it can make journaled progress across several short
+  windows.
+
+### Watching progress
+
+```kotlin
+Bridge.state("backup").nextChunk         // resume point / chunks completed so far
+Bridge.stateFlow("backup")               // re-emits on every ChunkCompleted
+Bridge.ledger("backup")                  // per-attempt chunk ranges: attempt 1 ran 0..5, attempt 2 ran 6..39
+```
 
 Continue to [Diagnostics](diagnostics.html) for `whyPending`, `ledger`, and `report`, or [Tier 3](durable.html) for durable coroutines.

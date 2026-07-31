@@ -124,5 +124,5 @@ class DurableHandle internal constructor(val name: String) {
     }
 
     private fun terminalOrNull(): RunState? =
-        Bridge.state(name)?.runState?.takeIf { it in TERMINAL }
+        Bridge.state(name).runState.takeIf { it in TERMINAL }
 }

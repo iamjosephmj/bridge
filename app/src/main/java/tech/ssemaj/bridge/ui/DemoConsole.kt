@@ -52,18 +52,16 @@ class DemoConsole(private val scope: CoroutineScope) {
         var last: String? = null
         while (System.currentTimeMillis() < deadline) {
             val st = Bridge.state(name)
-            val line = st?.let {
-                buildString {
-                    append(it.runState.name).append("  gen=").append(it.generation)
-                    append(" attempt=").append(it.attempt)
-                    if (it.chunkCount > 0) append("  chunk ${it.nextChunk}/${it.chunkCount}")
-                }
-            } ?: "no such work"
+            val line = if (st.runState == RunState.UNKNOWN) "no such work" else buildString {
+                append(st.runState.name).append("  gen=").append(st.generation)
+                append(" attempt=").append(st.attempt)
+                if (st.chunkCount > 0) append("  chunk ${st.nextChunk}/${st.chunkCount}")
+            }
             if (line != last) { log(line); last = line }
-            if (st != null && st.runState in terminal) return
+            if (st.runState in terminal) return
             delay(everyMs)
         }
-        log("(still ${Bridge.state(name)?.runState} after ${timeoutMs / 1000}s — " +
+        log("(still ${Bridge.state(name).runState} after ${timeoutMs / 1000}s — " +
             "the OS decides exactly when constrained work runs)")
     }
 
@@ -83,7 +81,8 @@ class DemoConsole(private val scope: CoroutineScope) {
 
     /** Logs what the journal remembers about [name]; returns true if the run is live. */
     private fun seedFromJournal(name: String): Boolean {
-        val st = Bridge.state(name) ?: return false
+        val st = Bridge.state(name)
+        if (st.runState == RunState.UNKNOWN) return false
         log(buildString {
             append("[journal] '").append(name).append("': ").append(st.runState.name)
             append("  gen=").append(st.generation)

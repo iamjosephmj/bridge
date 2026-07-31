@@ -38,7 +38,7 @@ class BenchReceiver : BroadcastReceiver() {
                 val events = io.github.iamjosephmj.bridge.Bridge.events("durable-fs")
                 val json = """{"scenario": "durable-force-stop",
  "device": {"model": "${Build.MODEL}", "sdk": ${Build.VERSION.SDK_INT}},
- "state": "${io.github.iamjosephmj.bridge.Bridge.state("durable-fs")?.runState}",
+ "state": "${io.github.iamjosephmj.bridge.Bridge.state("durable-fs").runState}",
  "firstStepExecutions": ${prefs.getInt("first", 0)},
  "secondStepExecutions": ${prefs.getInt("second", 0)},
  "stepEventsJournaled": ${events.count { it is io.github.iamjosephmj.bridge.store.WorkEvent.StepCompleted && !it.name.startsWith("${'$'}sys") }},

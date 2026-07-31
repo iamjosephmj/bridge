@@ -36,7 +36,8 @@ class BridgeScopeTest {
 
     private fun runParked() = runBlocking {
         for ((_, payload) in gateway.enqueued.toList()) {
-            val state = Bridge.state(payload.workId) ?: continue
+            val state = Bridge.state(payload.workId)
+            if (state.runState == RunState.UNKNOWN) continue
             val attempts = Bridge.events(payload.workId)
                 .count { it is WorkEvent.Started && it.generation == state.generation } + 1
             io.github.iamjosephmj.bridge.dispatch.BridgeServices.runner!!
@@ -74,7 +75,7 @@ class BridgeScopeTest {
         val handle = Bridge.scope().launch("sync", constraints = { charging() }) {
             step("noop") { 1 }
         }
-        assertThat(Bridge.state("sync")!!.requiresCharging).isTrue()
+        assertThat(Bridge.state("sync").requiresCharging).isTrue()
         handle.cancel()
         assertThat(handle.state()!!.runState).isEqualTo(RunState.CANCELLED)
     }

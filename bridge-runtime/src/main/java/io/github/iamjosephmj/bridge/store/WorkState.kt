@@ -31,6 +31,18 @@ data class WorkState(
     val lastOutput: Map<String, String> = emptyMap(),
 )
 
+/**
+ * Query-result-only fold for names the journal doesn't know (never journaled) — the
+ * [WorkState] counterpart of the UnknownWork verdict, so reads stay total: every
+ * counter is at its zero and `runState == UNKNOWN`.
+ */
+fun unknownWorkState(workId: String): WorkState = WorkState(
+    workId = workId, workerName = "", generation = 0,
+    runState = RunState.UNKNOWN, attempt = 0,
+    nextChunk = 0, chunkCount = 0, maxAttempts = 0,
+    importance = 0, requiresCharging = false, requiresUnmetered = false,
+    estimatedUpBytes = 0L, lastStopReason = null, lastDeath = null)
+
 fun foldWorkState(events: List<WorkEvent>): WorkState? {
     var s: WorkState? = null
     for (e in events) {

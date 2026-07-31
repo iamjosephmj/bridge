@@ -59,9 +59,9 @@ class WmParityDeviceTest {
         Bridge.enqueue(workRequest(name, "echo") { input("msg" to "hello") })
         // The Flow observer is itself under test: it must see the real journal write.
         withTimeout(60_000) {
-            Bridge.stateFlow(name).first { it?.runState == RunState.SUCCEEDED }
+            Bridge.stateFlow(name).first { it.runState == RunState.SUCCEEDED }
         }
-        assertThat(Bridge.state(name)!!.lastOutput["out:$name"]).isEqualTo("hello")
+        assertThat(Bridge.state(name).lastOutput["out:$name"]).isEqualTo("hello")
     }
 
     @Test
@@ -74,9 +74,9 @@ class WmParityDeviceTest {
         Bridge.enqueue(workRequest(other, "echo") { deviceIdle() })
         assertThat(Bridge.namesByTag(batch)).containsExactly(a, b)
         Bridge.cancelAllByTag(batch)
-        assertThat(Bridge.state(a)!!.runState).isEqualTo(RunState.CANCELLED)
-        assertThat(Bridge.state(b)!!.runState).isEqualTo(RunState.CANCELLED)
-        assertThat(Bridge.state(other)!!.runState).isNotEqualTo(RunState.CANCELLED)
+        assertThat(Bridge.state(a).runState).isEqualTo(RunState.CANCELLED)
+        assertThat(Bridge.state(b).runState).isEqualTo(RunState.CANCELLED)
+        assertThat(Bridge.state(other).runState).isNotEqualTo(RunState.CANCELLED)
         Bridge.cancel(other)
     }
 
@@ -87,9 +87,9 @@ class WmParityDeviceTest {
         Bridge.enqueue(workRequest(b, "echo") { input("msg" to "B") })
         Bridge.enqueue(workRequest(join, "relay") { input("own" to "kept"); after(a, b) })
         withTimeout(120_000) {
-            Bridge.stateFlow(join).first { it?.runState == RunState.SUCCEEDED }
+            Bridge.stateFlow(join).first { it.runState == RunState.SUCCEEDED }
         }
-        val out = Bridge.state(join)!!.lastOutput
+        val out = Bridge.state(join).lastOutput
         assertThat(out["out:$a"]).isEqualTo("A")
         assertThat(out["out:$b"]).isEqualTo("B")
         assertThat(out["own"]).isEqualTo("kept")

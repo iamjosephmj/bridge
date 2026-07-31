@@ -39,13 +39,13 @@ class BridgeInitializeAsyncTest {
         Bridge.initializeAsync(context, config())
         withTimeout(10_000) { Bridge.awaitReady() }
         Bridge.enqueue(workRequest("sync", "ok"))
-        assertThat(Bridge.state("sync")!!.runState).isEqualTo(RunState.DISPATCHED)
+        assertThat(Bridge.state("sync").runState).isEqualTo(RunState.DISPATCHED)
         assertThat(gateway.enqueued.single().second.workId).isEqualTo("sync")
     }
 
     @Test fun `deferred completes and graceful reads are safe pre-ready`() = runBlocking {
         // Pre-init: the graceful facade must not throw.
-        assertThat(Bridge.state("nope")).isNull()
+        assertThat(Bridge.state("nope").runState).isEqualTo(RunState.UNKNOWN)
         assertThat(Bridge.report().conformanceMode).isEqualTo("UNKNOWN")
         val deferred = Bridge.initializeAsync(context, config())
         withTimeout(10_000) { deferred.await() }
@@ -58,7 +58,7 @@ class BridgeInitializeAsyncTest {
         withTimeout(10_000) { Bridge.awaitReady() }
         // The deferred register+enqueue runs on the scope's dispatcher; poll for arrival.
         withTimeout(10_000) {
-            while (Bridge.state("early") == null) delay(10)
+            while (Bridge.state("early").runState == RunState.UNKNOWN) delay(10)
         }
         assertThat(handle.state()!!.runState).isEqualTo(RunState.DISPATCHED)
         assertThat(gateway.enqueued.single().second.workId).isEqualTo("early")

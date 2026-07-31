@@ -6,6 +6,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.iamjosephmj.bridge.Bridge
 import io.github.iamjosephmj.bridge.FakeClock
 import io.github.iamjosephmj.bridge.dispatch.FakeJobGateway
+import io.github.iamjosephmj.bridge.store.RunState
 import io.github.iamjosephmj.bridge.store.WorkEvent
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -78,7 +79,8 @@ class CompatTest {
     /** Drives parked payloads through the real WorkRunner, as BridgeJobService would. */
     private fun runParked() = runBlocking {
         for ((_, payload) in gateway.enqueued.toList()) {
-            val state = Bridge.state(payload.workId) ?: continue
+            val state = Bridge.state(payload.workId)
+            if (state.runState == RunState.UNKNOWN) continue
             val attempts = Bridge.events(payload.workId)
                 .count { it is WorkEvent.Started && it.generation == state.generation } + 1
             io.github.iamjosephmj.bridge.dispatch.BridgeServices.runner!!
@@ -106,7 +108,7 @@ class CompatTest {
                 .setRequiresBatteryNotLow(true)
                 .setRequiresStorageNotLow(true)
                 .setRequiresDeviceIdle(true).build()))
-        val state = Bridge.state("constrained")!!
+        val state = Bridge.state("constrained")
         assertThat(state.requiresCharging).isTrue()
         assertThat(state.requiresUnmetered).isTrue()
         assertThat(state.requiresBatteryNotLow).isTrue()
@@ -123,7 +125,7 @@ class CompatTest {
                 .addContentUriTrigger("content://media/videos", false)
                 .setTriggerContentMaxDelay(5_000L).build()))
             .enqueue()
-        val state = Bridge.state("watch")!!
+        val state = Bridge.state("watch")
         assertThat(state.contentUris)
             .containsExactly("content://media/photos", "content://media/videos")
         assertThat(state.contentDescendants).isTrue()
@@ -135,10 +137,10 @@ class CompatTest {
         BridgeWorkManager.enqueueUniqueWork("net", ExistingWorkPolicy.KEEP,
             request(RecordingWorker::class.java, Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED).build()))
-        assertThat(Bridge.state("net")!!.requiresNetwork).isTrue()
+        assertThat(Bridge.state("net").requiresNetwork).isTrue()
         BridgeWorkManager.enqueueUniqueWork("offline", ExistingWorkPolicy.KEEP,
             request(RecordingWorker::class.java))
-        val offline = Bridge.state("offline")!!
+        val offline = Bridge.state("offline")
         assertThat(offline.requiresNetwork).isFalse()
         assertThat(offline.requiresUnmetered).isFalse()
     }
@@ -148,7 +150,7 @@ class CompatTest {
             request(RecordingWorker::class.java))
             .then(request(SecondWorker::class.java))
             .enqueue()
-        assertThat(Bridge.state("chain")!!.chunkCount).isEqualTo(2)
+        assertThat(Bridge.state("chain").chunkCount).isEqualTo(2)
         runParked()
         assertThat(RecordingWorker.order).containsExactly("A", "B").inOrder()
         assertThat(BridgeWorkManager.getWorkInfoState("chain")).isEqualTo(WorkInfoState.SUCCEEDED)
@@ -162,7 +164,7 @@ class CompatTest {
         runParked()   // A runs (chunk 0 complete), F retries → whole item Stopped for retry
         runParked()   // resume: chunk ledger says next=1 → F again, succeeds
         assertThat(RecordingWorker.order).containsExactly("A", "F", "F").inOrder()
-        assertThat(Bridge.state("flaky-chain")!!.nextChunk).isEqualTo(2)
+        assertThat(Bridge.state("flaky-chain").nextChunk).isEqualTo(2)
         assertThat(BridgeWorkManager.getWorkInfoState("flaky-chain"))
             .isEqualTo(WorkInfoState.SUCCEEDED)
     }
@@ -180,24 +182,24 @@ class CompatTest {
     @Test fun `REPLACE cancels and re-enqueues, KEEP keeps`() {
         BridgeWorkManager.enqueueUniqueWork("u", ExistingWorkPolicy.KEEP,
             request(RecordingWorker::class.java))
-        val gen1 = Bridge.state("u")!!.generation
+        val gen1 = Bridge.state("u").generation
         BridgeWorkManager.enqueueUniqueWork("u", ExistingWorkPolicy.KEEP,
             request(RecordingWorker::class.java))
-        assertThat(Bridge.state("u")!!.generation).isEqualTo(gen1)
+        assertThat(Bridge.state("u").generation).isEqualTo(gen1)
         BridgeWorkManager.enqueueUniqueWork("u", ExistingWorkPolicy.REPLACE,
             request(SecondWorker::class.java))
-        assertThat(Bridge.state("u")!!.generation).isEqualTo(gen1 + 1)
+        assertThat(Bridge.state("u").generation).isEqualTo(gen1 + 1)
     }
 
     @Test fun `periodic and initial delay map through`() {
         BridgeWorkManager.enqueueUniquePeriodicWork("beat", ExistingPeriodicWorkPolicy.KEEP,
             PeriodicWorkRequest.Builder(RecordingWorker::class.java, 30 * 60_000L).build())
-        assertThat(Bridge.state("beat")!!.periodicMs).isEqualTo(30 * 60_000L)
+        assertThat(Bridge.state("beat").periodicMs).isEqualTo(30 * 60_000L)
 
         BridgeWorkManager.enqueueUniqueWork("later", ExistingWorkPolicy.KEEP,
             OneTimeWorkRequest.Builder(RecordingWorker::class.java)
                 .setInitialDelay(60_000L).build())
-        assertThat(Bridge.state("later")!!.initialDelayMs).isEqualTo(60_000L)
+        assertThat(Bridge.state("later").initialDelayMs).isEqualTo(60_000L)
     }
 
     @Test fun `cancelUniqueWork maps to CANCELLED`() {

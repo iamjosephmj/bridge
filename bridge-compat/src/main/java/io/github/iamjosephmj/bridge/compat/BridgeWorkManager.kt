@@ -143,26 +143,26 @@ object BridgeWorkManager {
         }
     }
 
-    fun getWorkInfoState(name: String): WorkInfoState? = mapState(Bridge.state(name)?.runState)
+    fun getWorkInfoState(name: String): WorkInfoState? = mapState(Bridge.state(name).runState)
 
     /** The work's state as a Flow, re-emitted on every journal event (null = unknown name). */
     fun getWorkInfoStateFlow(name: String): Flow<WorkInfoState?> =
-        Bridge.stateFlow(name).map { mapState(it?.runState) }.distinctUntilChanged()
+        Bridge.stateFlow(name).map { mapState(it.runState) }.distinctUntilChanged()
 
     /** Latest worker output for the name (chains: the last completed link's output). */
     fun getOutputData(name: String): Data =
-        Data(Bridge.state(name)?.lastOutput ?: emptyMap())
+        Data(Bridge.state(name).lastOutput)
 
     fun cancelUniqueWork(name: String) = Bridge.cancel(name)
 
     fun cancelAllWorkByTag(tag: String) = Bridge.cancelAllByTag(tag)
 
-    private fun mapState(s: RunState?): WorkInfoState? = when (s) {
+    private fun mapState(s: RunState): WorkInfoState? = when (s) {
         RunState.ENQUEUED, RunState.DISPATCHED -> WorkInfoState.ENQUEUED
         RunState.RUNNING -> WorkInfoState.RUNNING
         RunState.SUCCEEDED -> WorkInfoState.SUCCEEDED
         RunState.FAILED -> WorkInfoState.FAILED
         RunState.CANCELLED -> WorkInfoState.CANCELLED
-        RunState.UNKNOWN, null -> null
+        RunState.UNKNOWN -> null
     }
 }

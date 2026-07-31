@@ -72,8 +72,8 @@ class EndToEndTest {
         assertThat(durableLatch.await(120, TimeUnit.SECONDS)).isTrue()
         val deadline = System.currentTimeMillis() + 10_000
         while (System.currentTimeMillis() < deadline &&
-               Bridge.state(name)?.runState != RunState.SUCCEEDED) Thread.sleep(200)
-        assertThat(Bridge.state(name)!!.runState).isEqualTo(RunState.SUCCEEDED)
+               Bridge.state(name).runState != RunState.SUCCEEDED) Thread.sleep(200)
+        assertThat(Bridge.state(name).runState).isEqualTo(RunState.SUCCEEDED)
         // Replay contract on real hardware: each step executed exactly once even though
         // the run was delivered at least twice (pre-park and post-park).
         assertThat(stepExecutions.get()).isEqualTo(2)
@@ -91,8 +91,8 @@ class EndToEndTest {
         // Poll briefly for the terminal state (Finished lands just after the last chunk).
         val deadline = System.currentTimeMillis() + 10_000
         while (System.currentTimeMillis() < deadline &&
-               Bridge.state(name)?.runState != RunState.SUCCEEDED) Thread.sleep(200)
-        assertThat(Bridge.state(name)!!.runState).isEqualTo(RunState.SUCCEEDED)
-        assertThat(Bridge.state(name)!!.nextChunk).isEqualTo(5)
+               Bridge.state(name).runState != RunState.SUCCEEDED) Thread.sleep(200)
+        assertThat(Bridge.state(name).runState).isEqualTo(RunState.SUCCEEDED)
+        assertThat(Bridge.state(name).nextChunk).isEqualTo(5)
     }
 }

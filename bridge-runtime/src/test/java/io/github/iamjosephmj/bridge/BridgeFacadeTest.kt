@@ -36,7 +36,7 @@ class BridgeFacadeTest {
     @Test fun `enqueue journals and dispatches immediately`() {
         init()
         Bridge.enqueue(workRequest("sync", "ok"))
-        assertThat(Bridge.state("sync")!!.runState).isEqualTo(RunState.DISPATCHED)
+        assertThat(Bridge.state("sync").runState).isEqualTo(RunState.DISPATCHED)
         assertThat(gateway.enqueued.single().second.workId).isEqualTo("sync")
     }
 
@@ -45,14 +45,14 @@ class BridgeFacadeTest {
         Bridge.enqueue(workRequest("sync", "ok"))
         Bridge.enqueue(workRequest("sync", "ok"))
         assertThat(gateway.enqueued).hasSize(1)
-        assertThat(Bridge.state("sync")!!.generation).isEqualTo(1)
+        assertThat(Bridge.state("sync").generation).isEqualTo(1)
     }
 
     @Test fun `cancel makes work CANCELLED`() {
         init()
         Bridge.enqueue(workRequest("sync", "ok"))
         Bridge.cancel("sync")
-        assertThat(Bridge.state("sync")!!.runState).isEqualTo(RunState.CANCELLED)
+        assertThat(Bridge.state("sync").runState).isEqualTo(RunState.CANCELLED)
     }
 
     @Test fun `initialize is idempotent`() {
@@ -68,16 +68,16 @@ class BridgeFacadeTest {
         Bridge.enqueue(workRequest("t3", "ok"))
         assertThat(Bridge.namesByTag("batch")).containsExactly("t1", "t2")
         Bridge.cancelAllByTag("batch")
-        assertThat(Bridge.state("t1")!!.runState).isEqualTo(RunState.CANCELLED)
-        assertThat(Bridge.state("t2")!!.runState).isEqualTo(RunState.CANCELLED)
-        assertThat(Bridge.state("t3")!!.runState).isEqualTo(RunState.DISPATCHED)
+        assertThat(Bridge.state("t1").runState).isEqualTo(RunState.CANCELLED)
+        assertThat(Bridge.state("t2").runState).isEqualTo(RunState.CANCELLED)
+        assertThat(Bridge.state("t3").runState).isEqualTo(RunState.DISPATCHED)
     }
 
     @Test fun `stateFlow emits initial state then follows journal events`() = runBlocking {
         init()
         val states = mutableListOf<RunState?>()
         val job = launch {
-            Bridge.stateFlow("sync").collect { states += it?.runState }
+            Bridge.stateFlow("sync").collect { states += it.runState }
         }
         yield(); yield()
         Bridge.enqueue(workRequest("sync", "ok"))
@@ -102,7 +102,7 @@ class BridgeFacadeTest {
             io.github.iamjosephmj.bridge.diagnostics.Diagnosis.WaitingForPrerequisites::class.java)
         // Cancelling the parent triggers the DAG wake listener → propagation → child FAILED.
         Bridge.cancel("parent")
-        assertThat(Bridge.state("child")!!.runState).isEqualTo(RunState.FAILED)
+        assertThat(Bridge.state("child").runState).isEqualTo(RunState.FAILED)
         assertThat(Bridge.events("child")
             .filterIsInstance<io.github.iamjosephmj.bridge.store.WorkEvent.Finished>()
             .single().failureMessage).contains("prerequisite 'parent'")

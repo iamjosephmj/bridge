@@ -260,7 +260,9 @@ object Bridge {
     internal fun journalListenerCount(): Int =
         (runtime?.journal as? Journal)?.listenerCount() ?: 0
 
-    fun state(name: String): WorkState? = runtime?.journal?.state(name)
+    /** The journal's fold of [name]. Total: unknown names get a query-only UNKNOWN state. */
+    fun state(name: String): WorkState =
+        runtime?.journal?.state(name) ?: unknownWorkState(name)
     fun events(name: String): List<WorkEvent> = runtime?.journal?.events(name) ?: emptyList()
 
     fun cancel(name: String) {
@@ -295,13 +297,16 @@ object Bridge {
 
     /**
      * The folded [WorkState] of [name], re-emitted on every journal event for that work.
-     * Emits the current state (or null for unknown names) immediately on collection.
+     * Emits the current state immediately on collection; unknown names emit the
+     * query-only UNKNOWN state (total, like [state]).
      */
-    fun stateFlow(name: String): Flow<WorkState?> = callbackFlow {
+    fun stateFlow(name: String): Flow<WorkState> = callbackFlow {
         awaitReady()
         val j = requireNotNull(runtime).journal
-        trySend(j.state(name))
-        val handle = j.addListener { e -> if (e.workId == name) trySend(j.state(name)) }
+        trySend(j.state(name) ?: unknownWorkState(name))
+        val handle = j.addListener { e ->
+            if (e.workId == name) trySend(j.state(name) ?: unknownWorkState(name))
+        }
         awaitClose { handle.close() }
     }.buffer(Channel.UNLIMITED).distinctUntilChanged()
 

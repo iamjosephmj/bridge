@@ -56,7 +56,7 @@ fun PeriodicScreen(onBack: () -> Unit) {
                 console.run {
                     Bridge.cancel(Names.PERIODIC)
                     log("cancelled '${Names.PERIODIC}'")
-                    log("state now: ${Bridge.state(Names.PERIODIC)?.runState ?: "unknown"}")
+                    log("state now: ${Bridge.state(Names.PERIODIC).runState}")
                 }
             }) { Text("Cancel") }
         }
