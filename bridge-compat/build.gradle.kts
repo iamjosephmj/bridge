@@ -17,7 +17,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "com.github.iamjosephmj.bridge"
                 artifactId = "bridge-compat"
-                version = "0.5.0-rc.5"
+                version = "0.5.0-rc.6"
                 from(components["release"])
             }
         }
