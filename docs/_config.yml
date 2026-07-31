@@ -6,7 +6,6 @@ plugins:
 color_scheme: light
 heading_anchors: true
 exclude:
-  - superpowers/
 aux_links:
   "Bridge on GitHub":
     - "https://github.com/iamjosephmj/bridge"

@@ -45,4 +45,3 @@ In-memory-first reads over a `kv` table in `bridge.db`: lock-free `ConcurrentHas
 - Usage and adoption tiers: [README](../README.md)
 - Measured results, citable tables: [RESULTS.md](RESULTS.md)
 - Migration guide: [MIGRATION.md](MIGRATION.md)
-- Design specs: [`docs/superpowers/specs/`](superpowers/specs/)
