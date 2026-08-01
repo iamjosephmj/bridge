@@ -212,39 +212,7 @@ Full guide: [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
 ![Constraint chips light up one by one — charging, unmetered, batteryNotLow, deviceIdle — then the work dispatches as a multiplexed JobWorkItem.](docs/assets/tier2-runtime.svg)
 
-The complete engine — the layer every result in [Measurements](#measurements) runs on.
-
-#### Enqueue with the constraint DSL
-
-```kotlin
-// Application.onCreate — register worker factories at every process start
-Bridge.initializeAsync(this) {
-    worker("sync") { SyncWorker() }          // BridgeWorker: suspend fun run(ctx): RunResult
-}
-
-Bridge.enqueue(workRequest("nightly-sync", "sync") {
-    network()                    // any connected network (unmetered() for Wi-Fi-class)
-    charging()
-    batteryNotLow()
-    storageNotLow()
-    deviceIdle()                 // JobInfo.setRequiresDeviceIdle
-    contentTrigger("content://media/photos", descendants = true)  // JobInfo.TriggerContentUri
-    importance(Importance.LOW)   // feeds the policy engine, not just the platform:
-                                 // LOW yields under quota and thread pressure; HIGH never waits
-    maxThreadPressure(PressureLevel.MEDIUM)  // dispatch only while runnable threads <= cores x 2;
-                                 // overrides the importance-derived pressure default
-    initialDelay(10 * 60_000L)   // exact-path setMinimumLatency
-    maxAttempts(5)
-    mustCompleteBy(tomorrow6amMs)  // deadline escalation: DEFAULT -> EXPEDITED -> while-idle alarm
-})
-
-// Repeating work — each cycle is a journaled generation; cancel ends the series:
-Bridge.enqueue(workRequest("heartbeat", "sync") {
-    periodic(30 * 60_000L)       // >= 15 min, the platform floor
-})
-```
-
-Enqueue has KEEP semantics per unique name. `initializeAsync` keeps journal-open and reconciliation off the main thread; early callers suspend on `Bridge.awaitReady()`.
+The complete engine — the layer every result in [Measurements](#measurements) runs on. Its enqueue surface is the constraint DSL shown in [Usage](#usage): platform constraints compiled to real `JobInfo`, policy inputs (importance, thread pressure), and scheduling shape (initial delay, backoff, attempts cap, deadline escalation, periodic generations). What follows is what the engine adds beyond enqueue.
 
 #### Chunked resumption
 
