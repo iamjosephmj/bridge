@@ -5,7 +5,7 @@ nav_order: 12
 
 # Raw device-run numbers, citable
 
-The README renders these as designed panels; this file keeps the raw markdown tables verbatim for citing, diffing, and copy-pasting. All results measured on a physical **Pixel 6 Pro, API 36** (2026-07), same workload corpus on both backends. Raw reports: [`bench/scripts/reports/`](../bench/scripts/reports/).
+The README renders these as designed panels; this file keeps the raw markdown tables verbatim for citing, diffing, and copy-pasting. All results measured on physical hardware, same workload corpus on both backends. Raw reports: [`bench/scripts/reports/`](../bench/scripts/reports/).
 
 ## 1 vs 20 — force-stop replay
 

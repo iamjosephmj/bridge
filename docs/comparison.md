@@ -17,7 +17,7 @@ A direct capability comparison, including the rows WorkManager currently wins. R
 | Measured per-run cost | HealthStats deltas; flags expensive work declared unimportant | No | |
 | Deadline escalation | `mustCompleteBy`: DEFAULT → EXPEDITED → while-idle alarm, each step journaled | Expedited flag only | |
 | Importance-aware quota budgeting | Explicit, journaled shed/hold decisions in demoted buckets | Silent platform deferral | |
-| Thread-pressure admission | Runnable threads vs cores classify LOW / MEDIUM / HIGH; per-request `maxThreadPressure` | No | Device-verified (Pixel hardware) |
+| Thread-pressure admission | Runnable threads vs cores classify LOW / MEDIUM / HIGH; per-request `maxThreadPressure` | No | Device-verified |
 | Doze strategy | Maintenance-window burst-drain, doze-exit dispatch, rhythm prediction | Platform default | Simulated scenarios |
 | Constraints (charging, network, battery/storage-not-low, device-idle, content-URI triggers) | Full surface | Full surface | |
 | Periodic work and initial delay | Yes — journaled generations, exact-path latency | Yes | |
@@ -29,7 +29,7 @@ A direct capability comparison, including the rows WorkManager currently wins. R
 
 ## Measured results
 
-Measured on physical hardware, API 36 (2026-07). Identical workloads on both backends.
+Measured on physical hardware. Identical workloads on both backends.
 
 | Scenario | Bridge | WorkManager |
 |---|---|---|
