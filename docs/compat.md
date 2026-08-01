@@ -44,12 +44,12 @@ If the process dies during `createPostRequest`, the next attempt starts at `crea
 
 | Area | Coverage |
 |---|---|
-| One-time work | `OneTimeWorkRequest`, `enqueueUniqueWork` (KEEP), `setInitialDelay` |
+| One-time work | `OneTimeWorkRequest`, `enqueueUniqueWork` (KEEP / REPLACE), `setInitialDelay` |
 | Periodic work | `PeriodicWorkRequest`, `enqueueUniquePeriodicWork` (KEEP / UPDATE) |
-| Constraints | Full `Constraints.Builder` surface: charging, network type, battery-not-low, storage-not-low, device-idle |
-| Data | `Data` / `workDataOf`, `setInputData`, `Worker.inputData`, `Result.success(data)`, `getOutputData` |
+| Constraints | Full `Constraints.Builder` surface: charging, network type, battery-not-low, storage-not-low, device-idle, content-URI triggers (`addContentUriTrigger`, update/max delays) |
+| Data | `Data` / `workDataOf`, `setInputData`, `Worker.inputData`, `Result.success(data)` / `failure(data)`, `getOutputData` |
 | Tags | `addTag`, `cancelAllWorkByTag` |
-| Observers | `getWorkInfoStateFlow` (LiveData via `asLiveData()`) |
+| Observers | `getWorkInfoStateFlow` (LiveData via `asLiveData()` — add `lifecycle-livedata-ktx` yourself; bridge-compat doesn't pull it in) |
 | Chains | `beginUniqueWork(...).then(...).enqueue()` — resumes at the failed link |
 | Multi-branch chains | `WorkContinuation.combine(...)` |
 | Introspection and control | `getWorkInfoState`, `cancelUniqueWork` |

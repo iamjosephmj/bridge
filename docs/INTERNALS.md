@@ -9,14 +9,18 @@ How `bridge-runtime` is built. Nothing here is needed to *use* Bridge — the [R
 
 ## Layer stack
 
-Inside `bridge-runtime`, layers stack strictly — each depends only on those below it:
+Layers stack strictly — each depends only on those below it. Most live in
+`bridge-runtime`; the **signals** layer (and the shared `Diagnosis` /
+`DeviceCauses` types) live in `bridge-glassbox`, which `bridge-runtime`
+re-exports via `api(project(":bridge-glassbox"))`:
 
 | Layer | Components | Responsibility |
 |---|---|---|
 | **durable** | DurableScope: step / delay / await | Deterministic replay of suspend blocks |
-| **diagnostics** | Diagnoser · Verdict · Ledger · BridgeReport | Fold journal + signals into answers |
+| **diagnostics** | Diagnoser · Verdict · Ledger · BridgeReport (Diagnosis / DeviceCauses in glassbox) | Fold journal + signals into answers |
 | **policy** | PolicyEngine | Admission, quota, thread pressure, deadline escalation, doze strategy, rhythm |
-| **signals** | SignalHub | 12 platform signals, budgeted transition log |
+| **exec** | WorkRunner · BlackBox · CostMeter · DeathAttributor | Run workers: chunk loop + resume index, crash breadcrumbs, HealthStats deltas, `ApplicationExitInfo` attribution |
+| **signals** | SignalHub (in bridge-glassbox) | 12 platform signals, budgeted transition log |
 | **dispatch** | Dispatcher · JobGateway (multiplexed / 1:1) · AlarmGateway · Reconciler | Get work onto the platform and back |
 | **journal** | Append-only WorkEvent log · SQLite · KvStore | Durable ground truth |
 

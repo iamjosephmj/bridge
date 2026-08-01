@@ -38,7 +38,7 @@ Bridge.report().render(now)
 // nightly-sync        SUCCEEDED
 // telemetry           ENQUEUED   HeldByPolicy(thread pressure MEDIUM (runnable 12 / 8 cores)
 //                                — deferring importance 1 work)
-// publish-post        ENQUEUED   DurableParked(delay until 14:02)
+// publish-post        ENQUEUED   DurableParked(delay until 1785561720000)
 // conformance: MULTIPLEXED · signal log: 412 transitions / oldest 3d
 ```
 

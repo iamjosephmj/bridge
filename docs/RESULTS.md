@@ -25,12 +25,14 @@ The README renders these as designed panels; this file keeps the raw markdown ta
 
 | item | workmanager says | bridge says |
 |---|---|---|
-| ping | **RUNNING** | `DeferredByDoze(deep) [REPORTED]` |
-| medium_sync | SUCCEEDED | `DeferredByDoze(deep) [REPORTED]` |
-| large_chunked | **RUNNING** | `DeferredByDoze(deep) [REPORTED]` |
-| large_chunked-uc | **RUNNING** | `DeferredByDoze(deep) [REPORTED]` |
+| ping-none | SUCCEEDED | `Finished [INFERRED]` |
+| ping-unmetered_charging | **RUNNING** | `DeferredByDoze(deep=true) [REPORTED]` |
+| medium_sync-none | **RUNNING** | `Finished [INFERRED]` |
+| medium_sync-unmetered_charging | SUCCEEDED | `DeferredByDoze(deep=true) [REPORTED]` |
+| large_chunked-none | **RUNNING** | `DeferredByDoze(deep=true) [REPORTED]` |
+| large_chunked-unmetered_charging | **RUNNING** | `DeferredByDoze(deep=true) [REPORTED]` |
 
-<sub>WorkManager reports <b>RUNNING</b> for jobs the forced idle has stopped — a stale answer, not just an empty one. Bridge's verdicts carry <code>basis=REPORTED</code>: they come from <code>getPendingJobReasons</code>, the platform's own explanation, not inference.</sub>
+<sub>WorkManager reports <b>RUNNING</b> for jobs the forced idle has stopped — a stale answer, not just an empty one (in <code>medium_sync-none</code> it reports RUNNING for work Bridge's copy had already finished). Bridge's verdicts for still-pending items carry <code>basis=REPORTED</code>: they come from <code>getPendingJobReasons</code>, the platform's own explanation, not inference; completed items answer <code>Finished</code>.</sub>
 
 ## Durable acceptance — force-stop mid-delay
 
@@ -54,15 +56,17 @@ Durable block force-stopped mid-`delay(20s)`, relaunched after the timer elapsed
 | Explain stalled work | Typed verdict + platform evidence (`[REPORTED]`) | `ENQUEUED` (and can report stale `RUNNING`) | **device-verified** (stall scenario) |
 | Durable coroutines (suspend blocks surviving death) | Yes — deterministic replay, journaled steps/timers/awaits | No | **device-verified** (force-stop mid-delay) |
 | Chains resume at the failed link | Yes — links compile to chunks | No — chain restarts | verified in instrumented suite |
-| Per-run history with death forensics | `ledger()`: `ApplicationExitInfo`, device context, cost | None (keeps no run history) | |
+| Per-run history with death forensics | `ledger()`: `Died(exitReason)` attributed via `ApplicationExitInfo`, device context, cost | None (keeps no run history) | |
 | Measured per-run cost | HealthStats deltas; flags "expensive work declared unimportant" | None | |
 | Deadline escalation | `mustCompleteBy`: DEFAULT → EXPEDITED → while-idle alarm, each step journaled | Expedited flag only | |
 | Importance-aware quota budgeting | LOW/MIN sheds explicitly in demoted buckets, never silently | Silent platform deferral | |
 | Doze strategy | Maintenance-window burst-drain, doze-exit freshness dispatch, rhythm prediction | Platform default | |
-| Constraints | charging, network/unmetered, battery/storage-not-low, device-idle | same, plus content-URI triggers | |
+| Constraints | charging, network/unmetered, battery/storage-not-low, device-idle, content-URI triggers | same | |
 | Periodic + initial delay | Yes (journaled generations / exact-path latency) | Yes | |
+| `Data` payloads | Yes — journaled input + per-attempt output | Yes — latest output only | **device-verified** (round trip) |
+| Tags (query / cancel by tag) | Yes | Yes | **device-verified** |
+| Work observers | Flow (`stateFlow` / `eventsFlow`); LiveData via `asLiveData()` | LiveData / Flow | **device-verified** |
+| Multi-branch chains | Yes — prerequisite DAG (`after(...)` / `combine`) | Yes | **device-verified** (DAG join) |
 | **Where WorkManager still wins** | | | |
 | OEM maturity | one device of hardware evidence | a decade across every OEM's process killer | honest gap |
-| `Data` payloads, tags, observers (LiveData/Flow), content-URI triggers | not yet | yes | roadmap |
-| Multi-branch chains | sequential only | yes | roadmap |
 | Ecosystem (Hilt integration, docs, Stack Overflow mass) | new | vast | |

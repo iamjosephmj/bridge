@@ -35,7 +35,7 @@ Enqueue has KEEP semantics per unique name.
 
 - `MIN` / `LOW` work yields under bucket quota and under thread pressure.
 - `DEFAULT` work yields only under HIGH thread pressure.
-- `HIGH` importance and deadline work never wait on policy.
+- `HIGH` importance work never waits on thread pressure. Only *deadline* work (`mustCompleteBy`) bypasses every policy gate — thermal holds and quota-window admission apply regardless of importance.
 
 ### Thread pressure
 
@@ -128,7 +128,7 @@ Bridge.enqueue(workRequest("poll-orders", "sync") {
 On top of that ride two Bridge behaviors:
 
 - **`maxAttempts` is the cap.** The attempt that exceeds it is journaled as terminal `FAILED` — the ledger shows which attempt died and why.
-- **Crashes are not retries.** A process crash triggers the platform's own ~30-minute crash backoff; diagnostics surface it as `ThrottledAfterCrashes(n)` rather than leaving the gap unexplained. And parks (`RunResult.Parked`, durable timers/awaits) never burn attempts and never enter the backoff ladder at all.
+- **Crashes are not retries.** A process crash triggers the platform's own ~30-minute crash backoff; once two or more crash-or-retry stops accumulate, diagnostics surface the gap as `ThrottledAfterCrashes(n)` rather than leaving it unexplained. And parks (`RunResult.Parked`, durable timers/awaits) never burn attempts and never enter the backoff ladder at all.
 
 ## Periodic work
 
@@ -200,10 +200,14 @@ chunk hands a cursor, session id, or running total to its successors across deat
 
 ```kotlin
 class PagedSyncWorker : ChunkedWorker {
+    private var cursor: String? = null                    // in-run carry
     override suspend fun runChunk(ctx: RunContext, chunkIndex: Int): RunResult {
-        val cursor = ctx.input.getString("cursor")        // previous chunk's checkpoint
-        val page = api.fetchPage(cursor)
+        // ctx.input is fixed at run start: after a resume it holds the last
+        // journaled cursor; within a run, carry the cursor in memory.
+        val from = cursor ?: ctx.input.getString("cursor")
+        val page = api.fetchPage(from)
         db.save(page.items)
+        cursor = page.nextCursor
         ctx.setOutput(bridgeDataOf("cursor" to page.nextCursor))  // part of this checkpoint
         return RunResult.Success
     }

@@ -15,8 +15,11 @@ GlassBox.install(this)
 
 // Anywhere, later:
 Log.i(TAG, GlassBox.explain().render())
-// device: DeferredByStandbyBucket(RARE), DeferredByDoze(deep)
-// jobs:   3 pending — DeferredByDoze(deep) [REPORTED]
+// device: DeferredByDoze(deep=true), DeferredByStandbyBucket(bucket=40)
+// jobs:   DeferredByDoze(deep=true) [REPORTED]
+//   DOZE = Doze(mode=DEEP)
+//   STANDBY_BUCKET = Bucket(bucket=40)
+//   ... one evidence line per sampled signal
 ```
 
 ## The Explanation type
@@ -30,6 +33,6 @@ Log.i(TAG, GlassBox.explain().render())
 
 ## The signal hub
 
-Glassbox reads twelve platform signals into snapshots and persists their transitions: standby bucket, Doze, background restriction, Data Saver, pending-job reasons, network validation, battery-optimization exemption, maintenance windows, process deaths, thermal status, charge time, and thread pressure. Sampling is pull-based — signals are read when you ask for an explanation, not polled.
+Glassbox reads twelve platform signals into snapshots and persists their transitions: standby bucket, Doze, background restriction, Data Saver, pending-job reasons, network validation, battery-optimization exemption, maintenance windows, process deaths, thermal status, charge time, and thread pressure. Sampling is never polled — snapshots are taken when platform broadcasts fire and again on demand when you ask for an explanation.
 
 The same hub powers the full runtime's [diagnostics](diagnostics.html) when you adopt later tiers.

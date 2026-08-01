@@ -53,7 +53,7 @@ class App : Application() {
 }
 ```
 
-`initializeAsync` keeps journal-open and reconciliation off the main thread. Early callers suspend on `Bridge.awaitReady()`; `scope().launch` and `handle.await()` gate on readiness internally.
+`initializeAsync` keeps journal-open and reconciliation off the main thread. `enqueue` throws if called before init completes — early callers should suspend on `Bridge.awaitReady()` first (or use the synchronous `Bridge.initialize`); `scope().launch` and `handle.await()` gate on readiness internally.
 
 ## A first worker
 

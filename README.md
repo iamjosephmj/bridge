@@ -56,7 +56,9 @@ Bridge.initializeAsync(this) {
 /*
  * One enqueue, the whole surface. KEEP semantics per unique name:
  * re-enqueueing a live name is a no-op, so unconditional
- * enqueue-on-startup is safe.
+ * enqueue-on-startup is safe. Enqueue before init completes throws —
+ * call from a coroutine after Bridge.awaitReady(), or use the
+ * synchronous Bridge.initialize(context) { ... } form.
  */
 Bridge.enqueue(workRequest("nightly-sync", "sync") {
 
@@ -72,7 +74,7 @@ Bridge.enqueue(workRequest("nightly-sync", "sync") {
     /*
      * Policy inputs — these feed Bridge's own engine, not just the platform.
      * importance: LOW yields under bucket quota and thread pressure; HIGH
-     * never waits. maxThreadPressure: dispatch only while runnable threads
+     * never waits on thread pressure (only deadline work bypasses every gate). maxThreadPressure: dispatch only while runnable threads
      * stay at or below the level (MEDIUM = cores x 2), overriding the
      * importance-derived default in either direction. Every policy hold is
      * journaled and visible in whyPending() — nothing is silently deferred.
@@ -153,8 +155,11 @@ GlassBox.install(this)
 
 // Anywhere, later:
 Log.i(TAG, GlassBox.explain().render())
-// device: DeferredByStandbyBucket(RARE), DeferredByDoze(deep)
-// jobs:   3 pending — DeferredByDoze(deep) [REPORTED]
+// device: DeferredByDoze(deep=true), DeferredByStandbyBucket(bucket=40)
+// jobs:   DeferredByDoze(deep=true) [REPORTED]
+//   DOZE = Doze(mode=DEEP)
+//   STANDBY_BUCKET = Bucket(bucket=40)
+//   ... one evidence line per sampled signal
 ```
 
 `GlassBox.explain()` returns a typed `Explanation`: device-level causes, per-job platform-reason causes, basis (`REPORTED` vs `INFERRED`), and the raw signal evidence.
@@ -196,9 +201,9 @@ Covered surface:
 
 | Area | Coverage |
 |---|---|
-| One-time work | `OneTimeWorkRequest`, `enqueueUniqueWork` (KEEP), `setInitialDelay` |
+| One-time work | `OneTimeWorkRequest`, `enqueueUniqueWork` (KEEP / REPLACE), `setInitialDelay` |
 | Periodic work | `PeriodicWorkRequest`, `enqueueUniquePeriodicWork` (KEEP / UPDATE) |
-| Constraints | Full `Constraints.Builder` surface: charging, network type, battery-not-low, storage-not-low, device-idle |
+| Constraints | Full `Constraints.Builder` surface: charging, network type, battery-not-low, storage-not-low, device-idle, content-URI triggers |
 | Data | `Data` / `workDataOf`, `setInputData`, `Worker.inputData`, `Result.success(data)`, `getOutputData` — outputs relay link-to-link, surviving mid-chain death |
 | Tags | `addTag`, `cancelAllWorkByTag` |
 | Observers | `getWorkInfoStateFlow` (LiveData via `asLiveData()`) |
@@ -295,7 +300,7 @@ Bridge.report().render(now)
 // nightly-sync        SUCCEEDED
 // telemetry           ENQUEUED   HeldByPolicy(thread pressure MEDIUM (runnable 12 / 8 cores)
 //                                — deferring importance 1 work)
-// publish-post        ENQUEUED   DurableParked(delay until 14:02)
+// publish-post        ENQUEUED   DurableParked(delay until 1785561720000)
 // conformance: MULTIPLEXED · signal log: 412 transitions / oldest 3d
 ```
 
@@ -338,7 +343,7 @@ val handle = Bridge.scope().launch("publish-post") {
 
 handle.join()                    // suspends until terminal state
 val end = handle.await()         // same, returning SUCCEEDED / FAILED / CANCELLED
-handle.whyPending()              // e.g. DurableParked(delay until 14:02)
+handle.whyPending()              // e.g. DurableParked(delay until 1785561720000) — raw wake time in epoch ms
 ```
 
 The contract is small: effects live inside `step()`, and code between steps stays deterministic (time via `now()`, randomness via `random()`). Shape changes mid-flight fail loudly via a positional structure guard rather than corrupting silently. Parks are first-class (`RunResult.Parked`): they never burn attempts and never read as crashes.
@@ -353,7 +358,7 @@ Device-verified: force-stopped mid-`delay(20s)` and relaunched after the timer e
 
 ![A small device with a fast-forwarding clock: multi-day Doze regimes asserted in milliseconds on the JVM.](docs/assets/tier4-sim.svg)
 
-Multi-day device regimes asserted in milliseconds of JUnit. [`bridge-sim`](bridge-sim/README.md) scripts signal timelines and a fake clock over the real journal, dispatcher, runner, and diagnoser. Seven canonical scenarios ship as tests, including the stall mirror of the device result and the durable signature test.
+Multi-day device regimes asserted in milliseconds of JUnit. [`bridge-sim`](bridge-sim/README.md) scripts signal timelines and a fake clock over the real journal, dispatcher, runner, and diagnoser. Thirty-one scenario tests across six suites ship with the module, including the stall mirror of the device result and the durable signature test.
 
 ```kotlin
 simulate {
@@ -399,7 +404,7 @@ Measured on physical hardware, API 36 (2026-07). Identical workloads were run ag
 
 | Scenario | Bridge | WorkManager |
 |---|---|---|
-| Force-stop mid-upload (20 chunks) | Resumed at the in-flight chunk — **1** chunk replayed | Restarted from chunk 0 — **20** chunks replayed |
+| Force-stop mid-upload (200 MB / 40 chunks) | Resumed at the in-flight chunk — **1** chunk replayed | Restarted from chunk 0 — **20** chunks replayed |
 | Time to complete after kill | **61,350 ms** | 72,346 ms |
 | Stall diagnosis under forced idle | `DeferredByDoze(deep)` `[REPORTED]` | `RUNNING` — stale; the job had already been stopped |
 | Durable coroutine force-stopped mid-`delay(20s)` | **SUCCEEDED**, each step exactly once | Not supported |
@@ -436,7 +441,7 @@ Bridge is stable and device-verified end to end: the full constraint surface, `i
 
 | Document | Contents |
 |---|---|
-| [`docs/MIGRATION.md`](docs/MIGRATION.md) | Three-stage migration guide: glass box, import swap, native adoption |
+| [`docs/MIGRATION.md`](docs/MIGRATION.md) | Three-stage migration guide: import swap, diagnostics, native adoption |
 | [`docs/INTERNALS.md`](docs/INTERNALS.md) | Implementation reference: layer stack, journal, replay, policy engine, signal hub |
 | [`docs/RESULTS.md`](docs/RESULTS.md) | Measured results as citable tables |
 | [`bridge-sim/README.md`](bridge-sim/README.md) | Simulator guide and gating model |

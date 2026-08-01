@@ -39,13 +39,18 @@ BridgeWorkManager.beginUniqueWork("publish", ExistingWorkPolicy.KEEP, uploadRequ
     .enqueue()
 ```
 
-**Not covered in v0.4** (keep these on WorkManager until they land natively):
-periodic work, input/output `Data`, tags, LiveData/Flow observers, multi-branch
-chains. `Bridge.initialize {}` must run before compat calls (Application.onCreate).
+**Covered** (0.5.0-rc.6): periodic work, input/output `Data`, tags, Flow observers
+(`getWorkInfoStateFlow`; LiveData via `asLiveData()`), multi-branch chains
+(`WorkContinuation.combine`), REPLACE and UPDATE policies — the full table is in
+[Tier 1](compat.html). **Not covered** (keep these on WorkManager for now):
+`CoroutineWorker`, expedited work (`setExpedited`), custom backoff
+(`setBackoffCriteria`), progress (`setProgress`), multi-item queries
+(`WorkQuery` / `getWorkInfosByTag`). `Bridge.initializeAsync(context) { ... }`
+(or the synchronous `initialize`) must run before compat calls (Application.onCreate).
 
-## Stage 2 — use the glass box without changing workers
+## Stage 2 — turn on diagnostics without changing workers
 
-Even before touching your workers, Bridge answers questions WorkManager cannot:
+Once work runs through the compat façade it is journaled, so the runtime's diagnostics answer questions WorkManager cannot (for diagnostics *without any migration at all*, see [Tier 0 — Glassbox](glassbox.html)):
 
 ```kotlin
 Bridge.whyPending("sync").render(now)   // the cause, not just ENQUEUED

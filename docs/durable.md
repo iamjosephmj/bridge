@@ -32,7 +32,7 @@ val handle = Bridge.scope().launch("publish-post") {
 
 handle.join()                    // suspends until terminal state
 val end = handle.await()         // same, returning SUCCEEDED / FAILED / CANCELLED
-handle.whyPending()              // e.g. DurableParked(delay until 14:02)
+handle.whyPending()              // e.g. DurableParked(delay until 1785561720000) — raw wake time in epoch ms
 ```
 
 ## The contract

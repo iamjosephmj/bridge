@@ -21,8 +21,10 @@ A direct capability comparison, including the rows WorkManager currently wins. R
 | Doze strategy | Maintenance-window burst-drain, doze-exit dispatch, rhythm prediction | Platform default | Simulated scenarios |
 | Constraints (charging, network, battery/storage-not-low, device-idle, content-URI triggers) | Full surface | Full surface | |
 | Periodic work and initial delay | Yes — journaled generations, exact-path latency | Yes | |
-| `Data` payloads, tags, work observers (LiveData/Flow) | Not yet | Yes | |
-| Multi-branch chains | Sequential only | Yes | |
+| `Data` payloads | Yes — journaled input and per-attempt output, visible in `ledger()` | Yes — latest output only | Device-verified (round trip) |
+| Tags (query and cancel by tag) | Yes | Yes | Device-verified |
+| Work observers | `Flow` (`stateFlow` / `eventsFlow`; LiveData via `asLiveData()`) | LiveData / Flow | Device-verified (flow-observed completion) |
+| Multi-branch chains | Yes — prerequisite DAG: `after(...)` / `WorkContinuation.combine`, branch outputs merged into the join | Yes | Device-verified (DAG join) |
 | Ecosystem (Hilt integration, documentation, community) | New | Extensive | |
 
 ## Measured results
@@ -31,7 +33,7 @@ Measured on physical hardware, API 36 (2026-07). Identical workloads on both bac
 
 | Scenario | Bridge | WorkManager |
 |---|---|---|
-| Force-stop mid-upload (20 chunks) | Resumed at the in-flight chunk — **1** chunk replayed | Restarted from chunk 0 — **20** chunks replayed |
+| Force-stop mid-upload (200 MB / 40 chunks) | Resumed at the in-flight chunk — **1** chunk replayed | Restarted from chunk 0 — **20** chunks replayed |
 | Time to complete after kill | **61,350 ms** | 72,346 ms |
 | Stall diagnosis under forced idle | `DeferredByDoze(deep)` `[REPORTED]` | `RUNNING` — stale; the job had already been stopped |
 | Durable coroutine force-stopped mid-`delay(20s)` | **SUCCEEDED**, each step exactly once | Not supported |

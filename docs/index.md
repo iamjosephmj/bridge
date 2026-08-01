@@ -31,7 +31,9 @@ Bridge.initializeAsync(this) {
 /*
  * One enqueue, the whole surface. KEEP semantics per unique name:
  * re-enqueueing a live name is a no-op, so unconditional
- * enqueue-on-startup is safe.
+ * enqueue-on-startup is safe. Enqueue before init completes throws —
+ * call from a coroutine after Bridge.awaitReady(), or use the
+ * synchronous Bridge.initialize(context) { ... } form.
  */
 Bridge.enqueue(workRequest("nightly-sync", "sync") {
 
@@ -47,7 +49,7 @@ Bridge.enqueue(workRequest("nightly-sync", "sync") {
     /*
      * Policy inputs — these feed Bridge's own engine, not just the platform.
      * importance: LOW yields under bucket quota and thread pressure; HIGH
-     * never waits. maxThreadPressure: dispatch only while runnable threads
+     * never waits on thread pressure (only deadline work bypasses every gate). maxThreadPressure: dispatch only while runnable threads
      * stay at or below the level (MEDIUM = cores x 2), overriding the
      * importance-derived default in either direction. Every policy hold is
      * journaled and visible in whyPending() — nothing is silently deferred.

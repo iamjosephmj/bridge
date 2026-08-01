@@ -19,13 +19,20 @@ simulate {
 
 `SimulatedGateway` applies scripted gates in a fixed order:
 
-1. background-restricted blocks everything
-2. deep Doze blocks except during scripted maintenance windows
-3. Data Saver (and no unmetered network) blocks unmetered-constrained work
-4. charging constraint gates on the scripted charging flag
-5. standby buckets delay the *first* dispatch by the platform's documented deferral
-   floors — WORKING_SET ~2h, FREQUENT ~8h, RARE ~24h
-6. a retry-stop parks the item for 30 simulated minutes (crash backoff)
+1. content-trigger work is runnable only after a scripted `contentChanged` on one of
+   its uris at or after enqueue — earlier changes don't count, mirroring the
+   platform's per-schedule observer registration
+2. background-restricted blocks everything
+3. Doze: deep Doze blocks except during scripted maintenance windows — but
+   device-idle work is *inverted*: it runs only while the device is dozing
+4. battery-not-low and storage-not-low gate on the scripted flags
+5. network-required work gates on `NETWORK_VALIDATED`
+6. Data Saver (and no unmetered network) blocks unmetered-constrained work
+7. charging constraint gates on the scripted charging flag
+8. standby buckets delay the *first* dispatch by the platform's documented deferral
+   floors — WORKING_SET ~2h, FREQUENT ~8h, RARE ~24h; expedited jobs bypass the
+   floor (modeling the platform's relaxed quota — fidelity disclaimer below applies)
+9. a retry-stop parks the item for 30 simulated minutes (crash backoff)
 
 It makes **no attempt to reproduce real JobScheduler heuristics**, which vary by OEM
 anyway. `completedWithin()` is a logic assertion about Bridge's behavior under a scripted

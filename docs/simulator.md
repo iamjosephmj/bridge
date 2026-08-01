@@ -30,8 +30,12 @@ simulate {
 | `thermal(status)` | PowerManager thermal status level |
 | `threadPressure(runnable)` | Process runnable-thread count (the sim pins 8 cores) |
 | `charging(...)`, `batteryLow(...)`, `storageLow(...)`, `dataSaver(...)`, `bgRestricted(...)` | The remaining constraint gates |
+| `unmetered(...)`, `contentChanged(uri, atMs)` | Network class over time; content-URI trigger firings |
+| `signal(kind, value, fromMs)` | Escape hatch: script any raw signal directly |
+| `restartProcess()`, `advanceTo(ms)` | Simulated process death + relaunch; explicit clock control |
+| `launch(name) { ... }` / `startDurable(...)` | Durable coroutines under the scripted regime |
 
-Seven canonical scenarios ship as tests, including the stall mirror of the device result and the durable signature test (death at +30 min, deep Doze mid-`delay(2h)`).
+Thirty-one scenario tests across six suites ship with the module — constraint gates, policy escalation, WorkManager-parity chains, timing, and the durable signature test (death at +30 min, deep Doze mid-`delay(2h)`), including the stall mirror of the device result.
 
 ## Scope
 
