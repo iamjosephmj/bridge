@@ -3,7 +3,6 @@ package io.github.iamjosephmj.bench
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import java.io.File
 
@@ -37,7 +36,7 @@ class BenchReceiver : BroadcastReceiver() {
                 val prefs = context.getSharedPreferences("durable-fs-counters", Context.MODE_PRIVATE)
                 val events = io.github.iamjosephmj.bridge.Bridge.events("durable-fs")
                 val json = """{"scenario": "durable-force-stop",
- "device": {"model": "${Build.MODEL}", "sdk": ${Build.VERSION.SDK_INT}},
+ "device": {"model": "physical-device", "sdk": 0},
  "state": "${io.github.iamjosephmj.bridge.Bridge.state("durable-fs").runState}",
  "firstStepExecutions": ${prefs.getInt("first", 0)},
  "secondStepExecutions": ${prefs.getInt("second", 0)},
@@ -68,8 +67,8 @@ class BenchReceiver : BroadcastReceiver() {
               "render": "$render"}}"""
                 }
                 val json = """{"scenario": "stall",
- "device": {"model": "${Build.MODEL}", "manufacturer": "${Build.MANUFACTURER}",
-            "sdk": ${Build.VERSION.SDK_INT}},
+ "device": {"model": "physical-device", "manufacturer": "generic",
+            "sdk": 0},
  "items": [
 $entries
  ]}"""
@@ -82,9 +81,10 @@ $entries
                 val backend: Backend = if (intent.getStringExtra("backend") == "workmanager")
                     WorkManagerBackend(context) else BridgeBackend(context)
                 val source = if (backend.name == "workmanager") "self-instrumented" else "bridge-events"
+                // Reports are published in-repo: device identity stays generic by design.
                 val json = Report.toJson(backend.collect(), mapOf(
-                    "model" to Build.MODEL, "manufacturer" to Build.MANUFACTURER,
-                    "sdk" to Build.VERSION.SDK_INT.toString(),
+                    "model" to "physical-device", "manufacturer" to "generic",
+                    "sdk" to "0",
                     "source" to source))
                 val out = File(context.getExternalFilesDir(null),
                     "report-${backend.name}-${System.currentTimeMillis()}.json")
