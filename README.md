@@ -269,6 +269,41 @@ Bridge.enqueue(workRequest("backup", "photo-backup") {
 
 Every completed chunk is journaled. After a stop, crash, or force-stop mid-run, the next attempt starts at `WorkState.nextChunk`, not chunk 0. This is the exact configuration behind the 1-vs-20 result in [Measurements](#measurements).
 
+Bridge never splits the work itself — it can't know how to cut your file. It supplies the loop, the per-chunk checkpoint, and the resume index; *you* define what a `chunkIndex` means, and the mapping must be deterministic from the index plus journaled input alone, because a resumed attempt runs in a brand-new process. For a file upload, that's pure arithmetic:
+
+```kotlin
+class FileUploadWorker(private val api: UploadApi) : ChunkedWorker {
+    override suspend fun runChunk(ctx: RunContext, chunkIndex: Int): RunResult {
+        val file = File(ctx.input.getString("path") ?: return RunResult.Failure)
+
+        // Deterministic slicing: chunk 3 is ALWAYS the same byte range,
+        // no matter which process or attempt computes it.
+        val sliceSize = (file.length() + 9) / 10          // ceil-divide across chunks(10)
+        val start = chunkIndex * sliceSize
+        val end = minOf(start + sliceSize, file.length()) // last chunk may be short
+
+        val bytes = RandomAccessFile(file, "r").use { raf ->
+            raf.seek(start)
+            ByteArray((end - start).toInt()).also { raf.readFully(it) }
+        }
+
+        // At-least-once per chunk: if the process dies after the upload but before
+        // the checkpoint commits, this chunk re-runs — key the server on
+        // (uploadId, partNumber) so a repeat overwrites instead of duplicating.
+        api.uploadPart(uploadId = ctx.workId, partNumber = chunkIndex, bytes)
+        return RunResult.Success
+    }
+}
+
+Bridge.enqueue(workRequest("upload-video-42", "file-upload") {
+    chunks(10, estimatedUpBytes = 50L * 1024 * 1024)
+    input("path" to "/data/user/0/…/video42.mp4")   // journaled — survives process death
+    network()
+})
+```
+
+State can checkpoint alongside position: call `ctx.setOutput(...)` before returning `Success` and the data rides inside that chunk's journal event, coming back merged into `ctx.input` on resume — how a chunk hands a cursor, session id, or running total to its successors across death. Full contract in [the book](https://iamjosephmj.github.io/bridge/runtime.html#chunked-resumption).
+
 #### Diagnostics
 
 Three questions Bridge always answers: why isn't it running, what happened last time, and how is everything. All three are total functions — no nulls to defend against; unknown names get an `UnknownWork` verdict.
