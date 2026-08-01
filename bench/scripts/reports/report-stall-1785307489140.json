@@ -1,6 +1,6 @@
 {"scenario": "stall",
- "device": {"model": "Pixel 6 Pro", "manufacturer": "Google",
-            "sdk": 36},
+ "device": {"model": "physical-device", "manufacturer": "generic",
+            "sdk": 0},
  "items": [
   {"item": "ping-none",
    "workmanager": {"state": "SUCCEEDED"},

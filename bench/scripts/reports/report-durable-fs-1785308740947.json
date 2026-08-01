@@ -1,5 +1,5 @@
 {"scenario": "durable-force-stop",
- "device": {"model": "Pixel 6 Pro", "sdk": 36},
+ "device": {"model": "physical-device", "sdk": 0},
  "state": "SUCCEEDED",
  "firstStepExecutions": 1,
  "secondStepExecutions": 1,
